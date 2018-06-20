@@ -53,17 +53,7 @@ index b324e3a..7689597 100644
    std::vector<COverlay*> render;
    std::vector<SElement>& list = m_buffers[idx];
 -  float posY = 0.0f;
-+  float posY = 200.0f;
++  float posY = 550.0f;
    for (std::vector<SElement>::iterator it = list.begin(); it != list.end(); ++it)
    {
      COverlay* o = nullptr;
-@@ -121,7 +121,7 @@
- 
-     COverlayText *text = dynamic_cast<COverlayText*>(o);
-     if (text)
--      text->PrepareRender("arial.ttf", 1, 16, 0, m_font, m_fontBorder);
-+      text->PrepareRender("teletext.ttf", 1, 12, 0, m_font, m_fontBorder);
- 
-     RESOLUTION_INFO res = g_graphicsContext.GetResInfo(g_graphicsContext.GetVideoResolution());
- 
-
