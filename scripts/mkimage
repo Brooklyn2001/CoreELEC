@@ -1,22 +1,7 @@
 #!/bin/bash
-
 ################################################################################
-#      This file is part of LibreELEC - https://libreelec.tv
-#      Copyright (C) 2016-present Team LibreELEC
-#      Copyright (C) 2009-2016 Stephan Raue (stephan@openelec.tv)
-#
-#  LibreELEC is free software: you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation, either version 2 of the License, or
-#  (at your option) any later version.
-#
-#  LibreELEC is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License
-#  along with LibreELEC.  If not, see <http://www.gnu.org/licenses/>.
+#      This file is part of Alex@ELEC - http://www.alexelec.in.ua
+#      Copyright (C) 2011-present Alexandr Zuyev (alex@alexelec.in.ua)
 ################################################################################
 
 ################################################################################
@@ -255,18 +240,6 @@ EOF
       echo "image: skipping u-boot. no mkimage script found"
     fi
 
-    if [ -e "$LE_TMP/aml_autoscript" ]; then
-      echo "Creating Amlogic ZIP env-update package"
-	  pushd $LE_TMP > /dev/null
-	  zip -q env-update.zip aml_autoscript
-      echo "Signing the env-update package"
-      mkdir -p sign
-      SIGNAPK_DIR="$ROOT/tools/signapk"
-      java -Xmx1024m -jar $SIGNAPK_DIR/signapk.jar -w $SIGNAPK_DIR/testkey.x509.pem $SIGNAPK_DIR/testkey.pk8 env-update.zip sign/aml_autoscript.zip
-	  popd > /dev/null
-      mcopy "$LE_TMP/sign/aml_autoscript.zip" ::
-    fi
-
     echo "image: copying files to part1..."
     mcopy $TARGET_IMG/$IMAGE_NAME.kernel "::/$KERNEL_NAME"
     mcopy $TARGET_IMG/$IMAGE_NAME.system ::/SYSTEM
@@ -349,15 +322,6 @@ fi # bootloader
 # gzip
   echo "image: compressing..."
   gzip < $DISK > $DISK.gz
-
-# set owner
-  if [ -n "$SUDO_USER" ] ; then
-    chown $SUDO_USER: $DISK.gz
-  fi
-  # create sha256 checksum of image
-  ( cd $TARGET_IMG
-    sha256sum $(basename $DISK).gz > $(basename $DISK).gz.sha256
-  )
 
 # cleanup
   cleanup
