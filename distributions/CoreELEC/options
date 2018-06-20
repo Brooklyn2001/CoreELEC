@@ -21,7 +21,7 @@
   GREETING4=""
 
 # Root password to integrate in the target system
-  ROOT_PASSWORD="coreelec"
+  ROOT_PASSWORD="mcpc"
 
 # Install glibc locales to the build (yes / no)
   GLIBC_LOCALES="yes"
@@ -190,7 +190,7 @@
 
 # Distribution Specific source location
   DISTRO_MIRROR="http://sources.libreelec.tv/mirror"
-  DISTRO_SRC="http://sources.libreelec.tv/$LIBREELEC_VERSION"
+  DISTRO_SRC="http://sources.libreelec.tv/devel"
 
 
 # Addon Server Url

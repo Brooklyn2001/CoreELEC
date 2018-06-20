@@ -23,6 +23,13 @@ else
   PROJECT="$PROJECT"
 fi
 
+# determines DEVICE, if not forced by user
+if [ -z "$DEVICE" ]; then
+  DEVICE="S905"                # S905, S912
+else
+  DEVICE="$DEVICE"
+fi
+
 # determines TARGET_ARCH, if not forced by user (x86_64 / arm)
 # default is x86_64
 if [ -z "$ARCH" ]; then
@@ -96,11 +103,6 @@ fi
 # the nearest multiple of 16 kilobytes.  Keep in mind this per project .ccache
 # directory.
   CCACHE_CACHE_SIZE="10G"
-
-# read options from $HOME if available
-  if [ -f "$HOME/.libreelec/options" ]; then
-    . $HOME/.libreelec/options
-  fi
 
 # overwrite OEM_SUPPORT via commandline
 if [ "$OEM" = yes -o "$OEM" = no ]; then

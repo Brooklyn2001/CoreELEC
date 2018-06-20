@@ -1,19 +1,6 @@
 ################################################################################
-#      This file is part of OpenELEC - http://www.openelec.tv
-#      Copyright (C) 2009-2016 Stephan Raue (stephan@openelec.tv)
-#
-#  OpenELEC is free software: you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation, either version 2 of the License, or
-#  (at your option) any later version.
-#
-#  OpenELEC is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License
-#  along with OpenELEC.  If not, see <http://www.gnu.org/licenses/>.
+#      This file is part of Alex@ELEC - http://www.alexelec.in.ua
+#      Copyright (C) 2011-present Alexandr Zuyev (alex@alexelec.in.ua)
 ################################################################################
 
 PKG_NAME="glibc"
@@ -111,12 +98,7 @@ build-programs=yes
 EOF
 
   # binaries to install into target
-  GLIBC_INCLUDE_BIN="getent ldd locale"
-
-  # Generic "installer" needs localedef to define drawing chars
-  if [ "$PROJECT" = "Generic" ]; then
-    GLIBC_INCLUDE_BIN+=" localedef"
-  fi
+  GLIBC_INCLUDE_BIN="getent ldd locale localedef"
 }
 
 post_makeinstall_target() {
@@ -136,21 +118,23 @@ post_makeinstall_target() {
   rm -rf $INSTALL/usr/lib/*.map
   rm -rf $INSTALL/var
 
-# remove locales and charmaps
-  rm -rf $INSTALL/usr/share/i18n/charmaps
-
-# add UTF-8 charmap for Generic (charmap is needed for installer)
-  if [ "$PROJECT" = "Generic" ]; then
+# create locale
+  if [ "$GLIBC_LOCALES" = yes ]; then
+    mkdir -p $INSTALL/usr/share/i18n/locales
+      cp $PKG_BUILD/localedata/locales/* $INSTALL/usr/share/i18n/locales/
     mkdir -p $INSTALL/usr/share/i18n/charmaps
-    cp -PR $PKG_BUILD/localedata/charmaps/UTF-8 $INSTALL/usr/share/i18n/charmaps
-    gzip $INSTALL/usr/share/i18n/charmaps/UTF-8
-  fi
-
-  if [ ! "$GLIBC_LOCALES" = yes ]; then
+      cp $PKG_BUILD/localedata/charmaps/* $INSTALL/usr/share/i18n/charmaps/
+      cp $PKG_BUILD/localedata/SUPPORTED $INSTALL/usr/share/i18n/
+      ln -s /storage/.config/locale $INSTALL/usr/lib/locale
+  else
+    # remove locales and charmaps
+    rm -rf $INSTALL/usr/share/i18n/charmaps
     rm -rf $INSTALL/usr/share/i18n/locales
 
     mkdir -p $INSTALL/usr/share/i18n/locales
       cp -PR $PKG_BUILD/localedata/locales/POSIX $INSTALL/usr/share/i18n/locales
+    mkdir -p $INSTALL/usr/share/i18n/charmaps
+      cp -PR $PKG_BUILD/localedata/charmaps/UTF* $INSTALL/usr/share/i18n/charmaps
   fi
 
 # create default configs

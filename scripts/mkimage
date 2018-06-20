@@ -255,6 +255,18 @@ EOF
       echo "image: skipping u-boot. no mkimage script found"
     fi
 
+    if [ -e "$LE_TMP/aml_autoscript" ]; then
+      echo "Creating Amlogic ZIP env-update package"
+	  pushd $LE_TMP > /dev/null
+	  zip -q env-update.zip aml_autoscript
+      echo "Signing the env-update package"
+      mkdir -p sign
+      SIGNAPK_DIR="$ROOT/tools/signapk"
+      java -Xmx1024m -jar $SIGNAPK_DIR/signapk.jar -w $SIGNAPK_DIR/testkey.x509.pem $SIGNAPK_DIR/testkey.pk8 env-update.zip sign/aml_autoscript.zip
+	  popd > /dev/null
+      mcopy "$LE_TMP/sign/aml_autoscript.zip" ::
+    fi
+
     echo "image: copying files to part1..."
     mcopy $TARGET_IMG/$IMAGE_NAME.kernel "::/$KERNEL_NAME"
     mcopy $TARGET_IMG/$IMAGE_NAME.system ::/SYSTEM
@@ -336,7 +348,7 @@ fi # bootloader
 
 # gzip
   echo "image: compressing..."
-  gzip $DISK
+  gzip < $DISK > $DISK.gz
 
 # set owner
   if [ -n "$SUDO_USER" ] ; then

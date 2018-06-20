@@ -1,5 +1,8 @@
 # VERSION: set full version, use "devel" for development version
-  LIBREELEC_VERSION="devel"
+  LIBREELEC_VERSION="8.99.01"
+
+# BUILD: set build name
+  LIBREELEC_BUILD="ae@fork"
 
 # OS_VERSION: OS Version
   OS_VERSION="9.0"
