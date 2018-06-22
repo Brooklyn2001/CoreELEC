@@ -1,0 +1,159 @@
+diff -Naurp kodi-87c7f9b/system/keymaps/keyboard.xml kodi-87c7f9b-patch/system/keymaps/keyboard.xml
+--- kodi-87c7f9b/system/keymaps/keyboard.xml	2018-06-22 14:02:46.000000000 +0300
++++ kodi-87c7f9b-patch/system/keymaps/keyboard.xml	2018-06-22 15:17:40.000000000 +0300
+@@ -108,6 +108,10 @@
+       <green>ActivateWindow(Videos)</green>
+       <yellow>ActivateWindow(Music)</yellow>
+       <blue>ActivateWindow(Pictures)</blue>
++      <f1>ActivateWindow(TVChannels)</f1>
++      <f2>ActivateWindow(Videos)</f2>
++      <f3>ActivateWindow(Music)</f3>
++      <f4>ActivateWindow(Pictures)</f4>
+       <!-- Multimedia keyboard keys -->
+       <browser_back>Back</browser_back>
+       <browser_forward/>
+@@ -357,6 +361,7 @@
+       <i>Info</i>
+       <o>PlayerProcessInfo</o>
+       <o mod="ctrl,shift">PlayerDebug</o>
++      <o mod="longpress">PlayerDebug</o>
+       <z>AspectRatio</z>
+       <zoom>AspectRatio</zoom>
+       <t>ShowSubtitles</t>
+@@ -370,12 +375,11 @@
+       <down mod="longpress">NextSubtitle</down>
+       <left mod="alt">PlayerControl(tempodown)</left>
+       <right mod="alt">PlayerControl(tempoup)</right>
+-      <a>AudioDelay</a>
+-      <a mod="ctrl">AudioNextLanguage</a>
++      <a>AudioNextLanguage</a>
++      <a mod="longpress">AudioDelay</a>
+       <leftquote>AudioNextLanguage</leftquote>
+       <escape>Fullscreen</escape>
+       <c>Playlist</c>
+-      <v>ActivateWindow(Teletext)</v>
+       <text>ActivateWindow(Teletext)</text>
+       <up mod="ctrl">SubtitleShiftUp</up>
+       <down mod="ctrl">SubtitleShiftDown</down>
+@@ -561,7 +565,7 @@
+       <zoom>AspectRatio</zoom>
+       <t>ShowSubtitles</t>
+       <l>NextSubtitle</l>
+-      <a>AudioDelay</a>
++      <a>AudioNextLanguage</a>
+       <escape>Fullscreen</escape>
+       <return>Select</return>
+       <enter>Select</enter>      <!-- backspace>Fullscreen</backspace -->
+@@ -666,8 +670,8 @@
+   </NumericInput>
+   <FullscreenLiveTV>
+     <keyboard>
+-      <left>StepBack</left>
+-      <right>StepForward</right>
++      <left>ActivateWindow(PVROSDChannels)</left>
++      <right>ActivateWindow(PVRChannelGuide)</right>
+       <up>Up</up>
+       <down>Down</down>
+       <return>OSD</return>
+@@ -676,7 +680,7 @@
+       <c>ActivateWindow(PVROSDChannels)</c>
+       <return mod="longpress">ActivateWindow(PVROSDChannels)</return>
+       <enter mod="longpress">ActivateWindow(PVROSDChannels)</enter>
+-      <leftquote>AudioNextLanguage</leftquote>
++      <a>AudioNextLanguage</a>
+       <pageup>ChannelUp</pageup>
+       <pagedown>ChannelDown</pagedown>
+       <period mod="longpress">ChannelNumberSeparator</period>
+diff -Naurp kodi-87c7f9b/system/peripherals.xml kodi-87c7f9b-patch/system/peripherals.xml
+--- kodi-87c7f9b/system/peripherals.xml	2018-06-22 14:02:46.000000000 +0300
++++ kodi-87c7f9b-patch/system/peripherals.xml	2018-06-22 14:06:01.000000000 +0300
+@@ -9,7 +9,7 @@
+   </peripheral>
+ 
+   <peripheral bus="cec" name="CEC Adapter" mapTo="cec">
+-    <setting key="enabled" type="bool" value="1" label="305" order="1" />
++    <setting key="enabled" type="bool" value="0" label="305" order="1" />
+     <setting key="activate_source" type="bool" value="1" label="36020" order="2" />
+     <setting key="wake_devices" type="enum" value="36037" label="36007" lvalues="36037|36038|36039|231" order="3" />
+     <setting key="standby_devices" type="enum" value="36037" label="36008" lvalues="36037|36038|36039|231" order="4" />
+diff -Naurp kodi-87c7f9b/system/settings/settings.xml kodi-87c7f9b-patch/system/settings/settings.xml
+--- kodi-87c7f9b/system/settings/settings.xml	2018-06-22 14:02:46.000000000 +0300
++++ kodi-87c7f9b-patch/system/settings/settings.xml	2018-06-22 14:28:50.000000000 +0300
+@@ -73,7 +73,7 @@
+         </setting>
+         <setting id="videoplayer.stretch43" type="integer" label="173" help="36171">
+           <level>2</level>
+-          <default>0</default> <!-- ViewModeNormal -->
++          <default>4</default> <!-- ViewModeNormal -->
+           <constraints>
+             <options>
+               <option label="630">0</option> <!-- ViewModeNormal -->
+@@ -242,7 +242,7 @@
+       <group id="5" label="14233">
+         <setting id="videoplayer.teletextenabled" type="boolean" label="23050" help="36174">
+           <level>3</level>
+-          <default>true</default>
++          <default>false</default>
+           <control type="toggle" />
+         </setting>
+         <setting id="videoplayer.teletextscale" type="boolean" parent="videoplayer.teletextenabled" label="23055" help="36175">
+@@ -866,12 +866,12 @@
+         </setting>
+         <setting id="filelists.showhidden" type="boolean" label="21330" help="36127">
+           <level>2</level>
+-          <default>false</default>
++          <default>true</default>
+           <control type="toggle" />
+         </setting>
+         <setting id="filelists.allowfiledeletion" type="boolean" label="14071" help="36125">
+           <level>2</level>
+-          <default>false</default>
++          <default>true</default>
+           <dependencies>
+             <dependency type="enable">
+               <or>
+@@ -1278,7 +1278,7 @@
+       <group id="1" label="128">
+         <setting id="epg.pastdaystodisplay" type="integer" label="19229" help="36219">
+           <level>2</level>
+-          <default>1</default>
++          <default>0</default>
+           <constraints>
+             <minimum>0</minimum>
+             <step>1</step>
+@@ -1290,7 +1290,7 @@
+         </setting>
+         <setting id="epg.futuredaystodisplay" type="integer" label="19182" help="36220">
+           <level>2</level>
+-          <default>3</default>
++          <default>2</default>
+           <constraints>
+             <minimum>1</minimum>
+             <step>1</step>
+@@ -1323,7 +1323,7 @@
+       <group id="2" label="14303">
+         <setting id="epg.epgupdate" type="integer" label="19071" help="36221">
+           <level>2</level>
+-          <default>120</default>
++          <default>180</default>
+           <constraints>
+             <minimum>15</minimum>
+             <step>15</step>
+@@ -2648,7 +2648,7 @@
+         <setting id="input.enablemouse" type="boolean" label="21369" help="36377">
+           <level>0</level>
+           <control type="toggle" />
+-          <default>true</default>
++          <default>false</default>
+         </setting>
+         <setting id="input.asknewcontrollers" type="boolean">
+           <level>0</level>
+@@ -2907,7 +2907,7 @@
+       <group id="2" label="14111">
+         <setting id="eventlog.enabled" type="boolean" label="14112" help="36460">
+           <level>1</level>
+-          <default>true</default>
++          <default>false</default>
+           <control type="toggle" />
+         </setting>
+         <setting id="eventlog.enablednotifications" type="boolean" parent="eventlog.enabled" label="14113" help="36461">

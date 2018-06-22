@@ -1,5 +1,12 @@
 <settings version="2">
-  <general>
-    <settinglevel>2</settinglevel>
-  </general>
+    <setting id="audiooutput.volumesteps">50</setting>
+    <setting id="pvrmanager.syncchannelgroups">true</setting>
+    <setting id="services.airplay">false</setting>
+    <general>
+        <settinglevel>3</settinglevel>
+    </general>
+    <audio>
+        <mute>false</mute>
+        <fvolumelevel>0.500000</fvolumelevel>
+    </audio>
 </settings>
