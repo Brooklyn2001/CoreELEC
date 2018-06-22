@@ -18,3 +18,5 @@
 # gpio-rc-recv  *               justboom
 # *             rc-rc6-mce      rc6_mce_new
 # *             *               hauppauge_new
+
+meson-ir        *               mecool_kbd

@@ -1,22 +1,7 @@
 ################################################################################
-#      This file is part of OpenELEC - http://www.openelec.tv
-#      Copyright (C) 2009-2016 Stephan Raue (stephan@openelec.tv)
-#
-#  OpenELEC is free software: you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation, either version 2 of the License, or
-#  (at your option) any later version.
-#
-#  OpenELEC is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License
-#  along with OpenELEC.  If not, see <http://www.gnu.org/licenses/>.
+#      This file is part of Alex@ELEC - http://www.alexelec.in.ua
+#      Copyright (C) 2011-present Alexandr Zuyev (alex@alexelec.in.ua)
 ################################################################################
-
-# with 1.0.0 repeat delay is broken. test on upgrade
 
 PKG_NAME="v4l-utils"
 PKG_VERSION="1.14.1"
@@ -103,14 +88,9 @@ post_makeinstall_target() {
 
   default_multi_maps="rc6_mce xbox_360 zotac_ad10 hp_mce xbox_one cubox_i"
 
-  create_multi_keymap libreelec_multi "RC6 NEC" $default_multi_maps
-  if [ "$DEVICE" = "KVIM" -o "$DEVICE" = "KVIM2" ]; then
-    create_multi_keymap libreelec_multi_amlogic "RC6 NEC" $default_multi_maps \
-        odroid wetek_hub wetek_play_2 tanix kvim kvim2
-  else
-    create_multi_keymap libreelec_multi_amlogic "RC6 NEC" $default_multi_maps \
+  create_multi_keymap multi_ext "RC6 NEC" $default_multi_maps
+  create_multi_keymap multi_amlogic "RC6 NEC" $default_multi_maps \
         odroid wetek_hub wetek_play_2 minix_neo tanix mecool
-  fi
 
 
   # use multi-keymap instead of default one
@@ -121,8 +101,8 @@ post_makeinstall_target() {
 #
 # use combined multi-table on MCE receivers
 # *		rc-rc6-mce	rc6_mce
-*		rc-rc6-mce	libreelec_multi
+*		rc-rc6-mce	multi_ext
 # multi-table for amlogic devices
-meson-ir	*		libreelec_multi_amlogic
+meson-ir	*		multi_amlogic
 EOF
 }
