@@ -1,0 +1,138 @@
+diff -Naurp CoreELEC-settings-238e0c2/language/English/strings.po CoreELEC-settings-238e0c2-patch/language/English/strings.po
+--- CoreELEC-settings-238e0c2/language/English/strings.po	2018-06-06 15:36:56.000000000 +0300
++++ CoreELEC-settings-238e0c2-patch/language/English/strings.po	2018-06-22 11:03:12.000000000 +0300
+@@ -165,7 +165,7 @@ msgid "Set to ON to delay Kodi startup u
+ msgstr ""
+ 
+ msgctxt "#737"
+-msgid "737"
++msgid "Set seconds to wait for network. If the timer runs out Shell will start regardless if network is up or not."
+ msgstr ""
+ 
+ msgctxt "#738"
+@@ -200,6 +200,10 @@ msgctxt "#745"
+ msgid "Set to ON to enable the cron daemon"
+ msgstr ""
+ 
++msgctxt "#746"
++msgid "Set to ON to enable the eventlirc daemon"
++msgstr ""
++
+ msgctxt "#750"
+ msgid "750"
+ msgstr ""
+@@ -832,6 +836,14 @@ msgctxt "#32390"
+ msgid "Settings addon is not yet ready, please try again later."
+ msgstr ""
+ 
++msgctxt "#32391"
++msgid "Eventlirc"
++msgstr ""
++
++msgctxt "#32392"
++msgid "Enable Eventlirc"
++msgstr ""
++
+ msgctxt "#32393"
+ msgid "** SAFE MODE! ** SAFE MODE! ** SAFE MODE! **"
+ msgstr ""
+diff -Naurp CoreELEC-settings-238e0c2/src/defaults.py CoreELEC-settings-238e0c2-patch/src/defaults.py
+--- CoreELEC-settings-238e0c2/src/defaults.py	2018-06-06 15:36:56.000000000 +0300
++++ CoreELEC-settings-238e0c2-patch/src/defaults.py	2018-06-22 11:29:58.000000000 +0300
+@@ -28,6 +28,10 @@ XBMC_USER_HOME = os.environ.get('XBMC_US
+ CONFIG_CACHE = os.environ.get('CONFIG_CACHE', '/storage/.cache')
+ USER_CONFIG = os.environ.get('USER_CONFIG', '/storage/.config')
+ 
++BIN_DIR_EXT = '%s/addons/service.coreelec.settings/resources/bin' % XBMC_USER_HOME
++BIN_DIR_INT = '/usr/share/kodi/addons/service.coreelec.settings/resources/bin'
++SCRIPT_DIR = lambda : (BIN_DIR_EXT if os.path.exists(BIN_DIR_EXT) else BIN_DIR_INT)
++
+ ################################################################################
+ # Connamn Module
+ ################################################################################
+@@ -106,5 +110,6 @@ _services = {
+     'bluez': ['bluetooth.service'],
+     'obexd': ['obex.service'],
+     'crond': ['cron.service'],
++    'eventlircd': ['eventlircd.service'],
+     'iptables': ['iptables.service'],
+     }
+diff -Naurp CoreELEC-settings-238e0c2/src/resources/lib/modules/services.py CoreELEC-settings-238e0c2-patch/src/resources/lib/modules/services.py
+--- CoreELEC-settings-238e0c2/src/resources/lib/modules/services.py	2018-06-06 15:36:56.000000000 +0300
++++ CoreELEC-settings-238e0c2-patch/src/resources/lib/modules/services.py	2018-06-22 11:09:50.000000000 +0300
+@@ -252,6 +252,21 @@ class services:
+                             },
+                         },
+                     },
++                'eventlircd': {
++                    'order': 7,
++                    'name': 32391,
++                    'not_supported': [],
++                    'settings': {
++                        'eventlircd_autostart': {
++                            'order': 1,
++                            'name': 32392,
++                            'value': None,
++                            'action': 'initialize_eventlircd',
++                            'type': 'bool',
++                            'InfoText': 746,
++                            },
++                        },
++                    },
+                 }
+ 
+             self.oe = oeMain
+@@ -268,6 +283,7 @@ class services:
+             self.initialize_avahi(service=1)
+             self.initialize_cron(service=1)
+             self.init_bluetooth(service=1)
++            self.initialize_eventlircd(service=1)
+             self.oe.dbg_log('services::start_service', 'exit_function', 0)
+         except Exception, e:
+             self.oe.dbg_log('services::start_service', 'ERROR: (%s)' % repr(e))
+@@ -375,6 +391,9 @@ class services:
+                 else:
+                     self.struct['bluez']['hidden'] = 'true'
+ 
++            # LIRCD
++            self.struct['eventlircd']['settings']['eventlircd_autostart']['value'] = self.oe.get_service_state('eventlircd')
++
+             self.oe.dbg_log('services::load_values', 'exit_function', 0)
+         except Exception, e:
+             self.oe.dbg_log('services::load_values', 'ERROR: (%s)' % repr(e))
+@@ -520,6 +539,23 @@ class services:
+             self.oe.set_busy(0)
+             self.oe.dbg_log('services::init_obex', 'ERROR: (' + repr(e) + ')', 4)
+ 
++    def initialize_eventlircd(self, **kwargs):
++        try:
++            self.oe.dbg_log('services::initialize_eventlircd', 'enter_function', 0)
++            self.oe.set_busy(1)
++            if 'listItem' in kwargs:
++                self.set_value(kwargs['listItem'])
++            state = 0
++            options = {}
++            if self.struct['eventlircd']['settings']['eventlircd_autostart']['value'] == '1':
++                state = 1
++            self.oe.set_service('eventlircd', options, state)
++            self.oe.set_busy(0)
++            self.oe.dbg_log('services::initialize_eventlircd', 'exit_function', 0)
++        except Exception, e:
++            self.oe.set_busy(0)
++            self.oe.dbg_log('services::initialize_eventlircd', 'ERROR: (' + repr(e) + ')', 4)
++
+     def exit(self):
+         try:
+             self.oe.dbg_log('services::exit', 'enter_function', 0)
+diff -Naurp CoreELEC-settings-238e0c2/src/service.py CoreELEC-settings-238e0c2-patch/src/service.py
+--- CoreELEC-settings-238e0c2/src/service.py	2018-06-06 15:36:56.000000000 +0300
++++ CoreELEC-settings-238e0c2-patch/src/service.py	2018-06-22 11:36:16.000000000 +0300
+@@ -65,8 +65,6 @@ class service_thread(threading.Thread):
+     def run(self):
+         try:
+             self.oe.dbg_log('_service_::run', 'enter_function', 0)
+-            if self.oe.read_setting('coreelec', 'wizard_completed') == None:
+-                threading.Thread(target=self.oe.openWizard).start()
+             while self.stopped == False:
+                 self.oe.dbg_log('_service_::run', 'WAITING:', 1)
+                 (conn, addr) = self.sock.accept()
