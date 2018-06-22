@@ -1,5 +1,4 @@
 <advancedsettings>
-  <!-- <loglevel hide="false">2</loglevel> -->
   <splash>false</splash>
   <showexitbutton>false</showexitbutton>
   <remotedelay>1</remotedelay>
