@@ -1,0 +1,14 @@
+#!/bin/sh
+################################################################################
+#      This file is part of Alex@ELEC - http://www.alexelec.in.ua
+#      Copyright (C) 2011-present Alexandr Zuyev (alex@alexelec.in.ua)
+################################################################################
+
+CHROOT_DIR="/storage/.config/acestream"
+
+pkill -9 -f "/acestream.engine/python/bin/python" &>/dev/null
+pkill -9 -f "/system/bin/acestream.sh" &>/dev/null
+
+umount $CHROOT_DIR/proc &>/dev/null
+umount $CHROOT_DIR/sys &>/dev/null
+umount $CHROOT_DIR/dev &>/dev/null
