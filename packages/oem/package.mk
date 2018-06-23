@@ -16,4 +16,5 @@ PKG_LONGDESC="OEM: Metapackage for various OEM packages"
 
 # torrent services
   PKG_DEPENDS_TARGET="$PKG_DEPENDS_TARGET scan-m3u"
+  PKG_DEPENDS_TARGET="$PKG_DEPENDS_TARGET noxbit"
   PKG_DEPENDS_TARGET="$PKG_DEPENDS_TARGET acestream-aml"
