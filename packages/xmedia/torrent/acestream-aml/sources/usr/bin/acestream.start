@@ -27,6 +27,8 @@ if [ ! -f $ETC_DIR/hosts ]; then
   cp -f /run/connman/hosts $ETC_DIR/hosts
   echo "67.215.246.10 router.bittorrent.com" >> $ETC_DIR/hosts
   echo "212.129.33.59 dht.transmissionbt.com" >> $ETC_DIR/hosts
+  echo "82.221.103.244 router.utorrent.com" >> $ETC_DIR/hosts
+  echo "216.239.35.8 time.google.com" >> $ETC_DIR/hosts
 fi
 
 if [ ! -f $CHROOT_DIR/installed.busybox ]; then
