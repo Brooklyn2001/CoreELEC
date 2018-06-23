@@ -26,4 +26,5 @@ makeinstall_target() {
 
 post_install() {
   enable_service acestream.service
+  enable_service aceupd-playlist.service
 }
