@@ -1,0 +1,1070 @@
+diff -Naurp CoreELEC-settings-238e0c2/language/English/strings.po CoreELEC-settings-238e0c2-patch/language/English/strings.po
+--- CoreELEC-settings-238e0c2/language/English/strings.po	2018-06-24 16:36:20.000000000 +0300
++++ CoreELEC-settings-238e0c2-patch/language/English/strings.po	2018-06-24 17:53:36.000000000 +0300
+@@ -871,3 +871,243 @@ msgstr ""
+ msgctxt "#32399"
+ msgid "Public"
+ msgstr ""
++
++########## ACESTREAM #########
++
++msgctxt "#34000"
++msgid "Ace & Nox"
++msgstr ""
++
++msgctxt "#3400"
++msgid "AceStream and Noxbit services config."
++msgstr ""
++
++msgctxt "#34010"
++msgid "AceStream Engine"
++msgstr ""
++
++msgctxt "#34011"
++msgid "Enable"
++msgstr ""
++
++msgctxt "#3411"
++msgid "Ace Stream is an innovative multimedia platform of a new generation. Ace Stream uses in its core, P2P (peer-to-peer) technology, BitTorrent protocol, which is acknowledged as the most effective protocol to transfer content."
++msgstr ""
++
++msgctxt "#34012"
++msgid "Debug"
++msgstr ""
++
++msgctxt "#3412"
++msgid "Enable advanced debugging AceStream."
++msgstr ""
++
++########## NOXBIT #########
++
++msgctxt "#34070"
++msgid "Noxbit Service"
++msgstr ""
++
++msgctxt "#34071"
++msgid "Enable"
++msgstr ""
++
++msgctxt "#3471"
++msgid "Noxbit is a unique tool to stream and watch gigabytes of content at really high bit rates."
++msgstr ""
++
++msgctxt "#34072"
++msgid "User ID (UID):"
++msgstr ""
++
++msgctxt "#3472"
++msgid "Enter your UID to access the service Noxbit (https://account.noxbit.com/user/login)."
++msgstr ""
++
++msgctxt "#34073"
++msgid "Password:"
++msgstr ""
++
++msgctxt "#3473"
++msgid "Enter the password to access the service Noxbit (https://account.noxbit.com/user/login)."
++msgstr ""
++
++msgctxt "#34074"
++msgid "Clear cache"
++msgstr ""
++
++msgctxt "#3474"
++msgid "The cache on the disk is removed before the start Noxbit."
++msgstr ""
++
++msgctxt "#34075"
++msgid "Cache dir"
++msgstr ""
++
++msgctxt "#3475"
++msgid "Choose a directory to store cache Noxbit."
++msgstr ""
++
++########## TTV-LIST #########
++
++msgctxt "#34050"
++msgid "TTV playlist"
++msgstr ""
++
++msgctxt "#3450"
++msgid "Create AceStream and Noxbit playlist for Torrent-TV."
++msgstr ""
++
++msgctxt "#34051"
++msgid "AceStream & Noxbit TTV playlist"
++msgstr ""
++
++msgctxt "#3451"
++msgid "Select the required channel group."
++msgstr ""
++
++msgctxt "#34060"
++msgid "Create playlist"
++msgstr ""
++
++msgctxt "#34061"
++msgid "External IP"
++msgstr ""
++
++msgctxt "#3461"
++msgid "Use external IP-address in playlist."
++msgstr ""
++
++msgctxt "#34062"
++msgid "For:"
++msgstr ""
++
++msgctxt "#3462"
++msgid "Playlist for AceStream and/or Noxbit."
++msgstr ""
++
++msgctxt "#34063"
++msgid "Execute ->"
++msgstr ""
++
++msgctxt "#3463"
++msgid "Create a playlist for Torrent-TV (/storage/ttv-m3u/)."
++msgstr ""
++
++msgctxt "#34064"
++msgid "Login"
++msgstr ""
++
++msgctxt "#3464"
++msgid "Login from site http://torrent-tv.ru"
++msgstr ""
++
++msgctxt "#34065"
++msgid "Password"
++msgstr ""
++
++msgctxt "#3465"
++msgid "Password from site http://torrent-tv.ru"
++msgstr ""
++
++msgctxt "#34066"
++msgid "Channel Source:"
++msgstr ""
++
++msgctxt "#3466"
++msgid "Channel source for AceStream: Trash (http://pomoyka.win) or Site (http://torrent-tv.ru)."
++msgstr ""
++
++msgctxt "#34067"
++msgid "Update playlists"
++msgstr ""
++
++msgctxt "#3467"
++msgid "Automatically update playlists before Kodi starts."
++msgstr ""
++
++########## TRANSMISSION #########
++
++msgctxt "#46000"
++msgid "Transmission"
++msgstr ""
++
++msgctxt "#4600"
++msgid "Configuration Transmission: a fast, easy and free BitTorrent client"
++msgstr ""
++
++msgctxt "#46010"
++msgid "BitTorrent-client"
++msgstr ""
++
++msgctxt "#46011"
++msgid "Enable Transmission"
++msgstr ""
++
++msgctxt "#4611"
++msgid "Enabled Transmission autostart"
++msgstr ""
++
++msgctxt "#46012"
++msgid "Enable Transmission Secure"
++msgstr ""
++
++msgctxt "#4612"
++msgid "Use authentification"
++msgstr ""
++
++msgctxt "#46013"
++msgid "User Name"
++msgstr ""
++
++msgctxt "#4613"
++msgid "Username for authentification"
++msgstr ""
++
++msgctxt "#46014"
++msgid "Password"
++msgstr ""
++
++msgctxt "#4614"
++msgid "Password for authentification"
++msgstr ""
++
++msgctxt "#46015"
++msgid "Enabled IPs"
++msgstr ""
++
++msgctxt "#4615"
++msgid "Allowed IP addresses (comma-delimited)"
++msgstr ""
++
++msgctxt "#46016"
++msgid "Download Directory"
++msgstr ""
++
++msgctxt "#4616"
++msgid "Select directory for download"
++msgstr ""
++
++msgctxt "#46017"
++msgid "Incomplete Directory"
++msgstr ""
++
++msgctxt "#4617"
++msgid "Select Incomplete directory"
++msgstr ""
++
++msgctxt "#46018"
++msgid "Watch Directory"
++msgstr ""
++
++msgctxt "#4618"
++msgid "Select Watch directory"
++msgstr ""
++
++msgctxt "#46019"
++msgid "Debug level"
++msgstr ""
++
++msgctxt "#4619"
++msgid "Select Debug level"
++msgstr ""
+diff -Naurp CoreELEC-settings-238e0c2/src/defaults.py CoreELEC-settings-238e0c2-patch/src/defaults.py
+--- CoreELEC-settings-238e0c2/src/defaults.py	2018-06-24 16:36:20.000000000 +0300
++++ CoreELEC-settings-238e0c2-patch/src/defaults.py	2018-06-24 19:01:29.000000000 +0300
+@@ -54,6 +54,48 @@ bluetooth = {
+     }
+ 
+ ################################################################################
++# AceStream & Noxbit Module
++################################################################################
++
++ace = {
++    'ENABLED': True,
++    #ACESTREAM
++    'D_ACE_DEBUG'     : '0',
++    'ACE_GET_SRC'     : "%s/ace-get.sh" % SCRIPT_DIR(),
++    #NOXBIT
++    'D_NOX_UID'  : '',
++    'D_NOX_PAS'  : '',
++    'D_NOX_DEL'  : '0',
++    'D_NOX_DIR'  : '/tmp/noxbit',
++    }
++
++aceplist = {
++    'ENABLED'        : True,
++    #TTV-LIST
++    'D_CAT_SHOW'     : '1',
++    'D_CAT_COMM'     : '1',
++    'D_CAT_FILMS'    : '1',
++    'D_CAT_EROS'     : '1',
++    'D_CAT_NEWS'     : '1',
++    'D_CAT_REGION'   : '0',
++    'D_CAT_MUSIC'    : '0',
++    'D_CAT_CHILDREN' : '0',
++    'D_CAT_SPORT'    : '0',
++    'D_CAT_RELIGION' : '0',
++    'D_CAT_MAN'      : '0',
++    'D_CAT_LEARN'    : '0',
++    'D_CAT_ALLFON'   : '0',
++    'D_ACETTV_IP'    : '0',
++    'D_TTV_LOGIN'    : '',
++    'D_TTV_PASSW'    : '',
++    'D_TTV_SOFT'     : 'AceStream',
++    'D_TRANSLATE'    : 'Trash-TTV',
++    'D_ACETTV_UPD'   : '0',
++    'TTV_DEL_LIST'   : "rm -fr /storage/.config/acestream/ttv-m3u/*",
++    'TTV_RUN_LIST'   : "/usr/bin/ttvget-live",
++    }
++
++################################################################################
+ # Service Module
+ ################################################################################
+ 
+@@ -112,4 +154,6 @@ _services = {
+     'crond': ['cron.service'],
+     'eventlircd': ['eventlircd.service'],
+     'iptables': ['iptables.service'],
++    'acestream': ['acestream.service'],
++    'noxbit': ['noxbit.service'],
+     }
+diff -Naurp CoreELEC-settings-238e0c2/src/resources/bin/ace-get.sh CoreELEC-settings-238e0c2-patch/src/resources/bin/ace-get.sh
+--- CoreELEC-settings-238e0c2/src/resources/bin/ace-get.sh	1970-01-01 03:00:00.000000000 +0300
++++ CoreELEC-settings-238e0c2-patch/src/resources/bin/ace-get.sh	2018-02-03 13:35:44.000000000 +0200
+@@ -0,0 +1,29 @@
++#!/bin/sh
++################################################################################
++#      This file is part of Alex@ELEC - http://www.alexelec.in.ua
++#      Copyright (C) 2011-present Alexandr Zuyev (alex@alexelec.in.ua)
++################################################################################
++
++URL_LAST="https://raw.githubusercontent.com/AlexELEC/acestream-aml/master/latest"
++URL_MAIN="https://github.com/AlexELEC/acestream-aml/releases/download"
++
++ACE_DIR="/storage/.config/acestream"
++TEMP_DIR="/storage/.kodi/temp"
++
++################################ MAIN ##########################################
++
++VER=$(curl -s "$URL_LAST")
++
++# download URL
++  if [ "$1" == "url" ] ; then
++      echo "$URL_MAIN/$VER/acestream-aml-$VER.tar.bz2"
++
++# unpack
++  elif [ "$1" == "unpack" ] ; then
++      mkdir -p $ACE_DIR
++      tar -jxf $TEMP_DIR/acestream-aml-$VER.tar.bz2 -C $ACE_DIR
++      rm -f $TEMP_DIR/acestream-aml-$VER.tar.bz2
++      touch $ACE_DIR/installed.acestream
++  fi
++
++exit 0
+diff -Naurp CoreELEC-settings-238e0c2/src/resources/lib/modules/aceplist.py CoreELEC-settings-238e0c2-patch/src/resources/lib/modules/aceplist.py
+--- CoreELEC-settings-238e0c2/src/resources/lib/modules/aceplist.py	1970-01-01 03:00:00.000000000 +0300
++++ CoreELEC-settings-238e0c2-patch/src/resources/lib/modules/aceplist.py	2018-06-24 17:26:30.000000000 +0300
+@@ -0,0 +1,444 @@
++# -*- coding: utf-8 -*-
++################################################################################
++#      This file is part of Alex@ELEC - http://www.alexelec.in.ua
++#      Copyright (C) 2011-present Alexandr Zuyev (alex@alexelec.in.ua)
++################################################################################
++
++import os
++import glob
++import xbmc
++import xbmcgui
++
++class aceplist:
++
++    ENABLED=False
++
++    D_CAT_SHOW = None
++    D_CAT_COMM = None
++    D_CAT_FILMS = None
++    D_CAT_EROS = None
++    D_CAT_NEWS = None
++    D_CAT_REGION = None
++    D_CAT_MUSIC = None
++    D_CAT_CHILDREN = None
++    D_CAT_SPORT = None
++    D_CAT_RELIGION = None
++    D_CAT_MAN = None
++    D_CAT_LEARN = None
++    D_CAT_ALLFON = None
++    D_ACETTV_IP = None
++    D_TTV_LOGIN = None
++    D_TTV_PASSW = None
++    D_TTV_SOFT = None
++    D_TRANSLATE = None
++    D_ACETTV_UPD = None
++    TTV_DEL_LIST = None
++    TTV_RUN_LIST = None
++
++    menu = {'92': {
++        'name': 34050,
++        'menuLoader': 'load_menu',
++        'listTyp': 'list',
++        'InfoText': 3450,
++        }}
++
++    def __init__(self, oeMain):
++        try:
++            oeMain.dbg_log('aceplist::__init__', 'enter_function', 0)
++            self.struct = {
++                'acettv': {
++                    'order': 1,
++                    'name': 34051,
++                    'not_supported': [],
++                    'settings': {
++                        'cat_show': {
++                            'order': 1,
++                            'name': 'Развлекательные',
++                            'value': '1',
++                            'action': 'initialize_acettv',
++                            'type': 'bool',
++                            'InfoText': 3451,
++                            },
++                        'cat_comm': {
++                            'order': 2,
++                            'name': 'Общие',
++                            'value': '1',
++                            'action': 'initialize_acettv',
++                            'type': 'bool',
++                            'InfoText': 3451,
++                            },
++                        'cat_films': {
++                            'order': 3,
++                            'name': 'Фильмы',
++                            'value': '1',
++                            'action': 'initialize_acettv',
++                            'type': 'bool',
++                            'InfoText': 3451,
++                            },
++                        'cat_eros': {
++                            'order': 4,
++                            'name': 'Эротика',
++                            'value': '1',
++                            'action': 'initialize_acettv',
++                            'type': 'bool',
++                            'InfoText': 3451,
++                            },
++                        'cat_news': {
++                            'order': 5,
++                            'name': 'Новостные',
++                            'value': '1',
++                            'action': 'initialize_acettv',
++                            'type': 'bool',
++                            'InfoText': 3451,
++                            },
++                        'cat_region': {
++                            'order': 6,
++                            'name': 'Региональные',
++                            'value': '0',
++                            'action': 'initialize_acettv',
++                            'type': 'bool',
++                            'InfoText': 3451,
++                            },
++                        'cat_music': {
++                            'order': 7,
++                            'name': 'Музыка',
++                            'value': '0',
++                            'action': 'initialize_acettv',
++                            'type': 'bool',
++                            'InfoText': 3451,
++                            },
++                        'cat_children': {
++                            'order': 8,
++                            'name': 'Детские',
++                            'value': '0',
++                            'action': 'initialize_acettv',
++                            'type': 'bool',
++                            'InfoText': 3451,
++                            },
++                        'cat_sport': {
++                            'order': 9,
++                            'name': 'Спорт',
++                            'value': '0',
++                            'action': 'initialize_acettv',
++                            'type': 'bool',
++                            'InfoText': 3451,
++                            },
++                        'cat_religion': {
++                            'order': 10,
++                            'name': 'Религиозные',
++                            'value': '0',
++                            'action': 'initialize_acettv',
++                            'type': 'bool',
++                            'InfoText': 3451,
++                            },
++                        'cat_man': {
++                            'order': 11,
++                            'name': 'Мужские',
++                            'value': '0',
++                            'action': 'initialize_acettv',
++                            'type': 'bool',
++                            'InfoText': 3451,
++                            },
++                        'cat_learn': {
++                            'order': 12,
++                            'name': 'Познавательные',
++                            'value': '0',
++                            'action': 'initialize_acettv',
++                            'type': 'bool',
++                            'InfoText': 3451,
++                            },
++                        'cat_allfon': {
++                            'order': 13,
++                            'name': 'Allfon',
++                            'value': '0',
++                            'action': 'initialize_acettv',
++                            'type': 'bool',
++                            'InfoText': 3451,
++                            },
++                        },
++                    },
++                'acerun': {
++                    'order': 2,
++                    'name': 34060,
++                    'not_supported': [],
++                    'settings': {
++                        'acettv_ip': {
++                            'order': 1,
++                            'name': 34061,
++                            'value': '0',
++                            'action': 'initialize_acerun',
++                            'type': 'bool',
++                            'InfoText': 3461,
++                            },
++                        'ttv_login': {
++                            'order': 2,
++                            'name': 34064,
++                            'value': None,
++                            'action': 'initialize_acerun',
++                            'type': 'text',
++                            'InfoText': 3464,
++                            },
++                        'ttv_passw': {
++                            'order': 3,
++                            'name': 34065,
++                            'value': None,
++                            'action': 'initialize_acerun',
++                            'type': 'text',
++                            'InfoText': 3465,
++                            },
++                        'ttv_soft': {
++                            'order': 4,
++                            'name': 34062,
++                            'value': 'AceStream',
++                            'values': ['All', 'AceStream', 'Noxbit'],
++                            'action': 'initialize_acerun',
++                            'type': 'multivalue',
++                            'InfoText': 3462,
++                            },
++                        'translate': {
++                            'order': 5,
++                            'name': 34066,
++                            'value': 'Trash-TTV',
++                            'values': ['Trash-All', 'Trash-Ace', 'Trash-TTV', 'Site-TTV'],
++                            'action': 'initialize_acerun',
++                            'type': 'multivalue',
++                            'InfoText': 3466,
++                            },
++                        'acettv_upd': {
++                            'order': 6,
++                            'name': 34067,
++                            'value': '0',
++                            'action': 'initialize_acerun',
++                            'type': 'bool',
++                            'InfoText': 3467,
++                            },
++                        'acettv_run': {
++                            'order': 7,
++                            'name': 34063,
++                            'value': '0',
++                            'action': 'execute_acettv',
++                            'type': 'button',
++                            'InfoText': 3463,
++                            },
++                        },
++                    },
++            }
++
++            self.oe = oeMain
++            oeMain.dbg_log('aceplist::__init__', 'exit_function', 0)
++        except Exception, e:
++            self.oe.dbg_log('aceplist::__init__', 'ERROR: (%s)' % repr(e))
++
++    def start_service(self):
++        try:
++            self.oe.dbg_log('aceplist::start_service', 'enter_function', 0)
++            self.load_values()
++            self.initialize_acettv_onerun()
++            self.initialize_acerun()
++            self.oe.dbg_log('aceplist::start_service', 'exit_function', 0)
++        except Exception, e:
++            self.oe.dbg_log('aceplist::start_service', 'ERROR: (%s)' % repr(e))
++
++    def stop_service(self):
++        try:
++            self.oe.dbg_log('aceplist::stop_service', 'enter_function', 0)
++            self.oe.dbg_log('aceplist::stop_service', 'exit_function', 0)
++        except Exception, e:
++            self.oe.dbg_log('aceplist::stop_service', 'ERROR: (' + repr(e) + ')')
++
++    def do_init(self):
++        try:
++            self.oe.dbg_log('aceplist::do_init', 'exit_function', 0)
++            self.load_values()
++            self.oe.dbg_log('aceplist::do_init', 'exit_function', 0)
++        except Exception, e:
++            self.oe.dbg_log('aceplist::do_init', 'ERROR: (%s)' % repr(e))
++
++    def set_value(self, listItem):
++        try:
++            self.oe.dbg_log('aceplist::set_value', 'enter_function', 0)
++            self.struct[listItem.getProperty('category')]['settings'][listItem.getProperty('entry')]['value'] = listItem.getProperty('value')
++            self.oe.dbg_log('aceplist::set_value', 'exit_function', 0)
++        except Exception, e:
++            self.oe.dbg_log('aceplist::set_value', 'ERROR: (' + repr(e) + ')')
++
++    def load_menu(self, focusItem):
++        try:
++            self.oe.dbg_log('aceplist::load_menu', 'enter_function', 0)
++            self.oe.winOeMain.build_menu(self.struct)
++            self.oe.dbg_log('aceplist::load_menu', 'exit_function', 0)
++        except Exception, e:
++            self.oe.dbg_log('aceplist::load_menu', 'ERROR: (%s)' % repr(e))
++
++    def load_values(self):
++        try:
++            self.oe.dbg_log('aceplist::load_values', 'enter_function', 0)
++
++            # TTV-LIST
++            self.struct['acettv']['settings']['cat_show']['value'] = \
++            self.oe.get_service_option('acettv', 'CAT_SHOW', self.D_CAT_SHOW).replace('"', '')
++
++            self.struct['acettv']['settings']['cat_comm']['value'] = \
++            self.oe.get_service_option('acettv', 'CAT_COMM', self.D_CAT_COMM).replace('"', '')
++
++            self.struct['acettv']['settings']['cat_films']['value'] = \
++            self.oe.get_service_option('acettv', 'CAT_FILMS', self.D_CAT_FILMS).replace('"', '')
++
++            self.struct['acettv']['settings']['cat_eros']['value'] = \
++            self.oe.get_service_option('acettv', 'CAT_EROS', self.D_CAT_EROS).replace('"', '')
++
++            self.struct['acettv']['settings']['cat_news']['value'] = \
++            self.oe.get_service_option('acettv', 'CAT_NEWS', self.D_CAT_NEWS).replace('"', '')
++
++            self.struct['acettv']['settings']['cat_region']['value'] = \
++            self.oe.get_service_option('acettv', 'CAT_REGION', self.D_CAT_REGION).replace('"', '')
++
++            self.struct['acettv']['settings']['cat_music']['value'] = \
++            self.oe.get_service_option('acettv', 'CAT_MUSIC', self.D_CAT_MUSIC).replace('"', '')
++
++            self.struct['acettv']['settings']['cat_children']['value'] = \
++            self.oe.get_service_option('acettv', 'CAT_CHILDREN', self.D_CAT_CHILDREN).replace('"', '')
++
++            self.struct['acettv']['settings']['cat_sport']['value'] = \
++            self.oe.get_service_option('acettv', 'CAT_SPORT', self.D_CAT_SPORT).replace('"', '')
++
++            self.struct['acettv']['settings']['cat_religion']['value'] = \
++            self.oe.get_service_option('acettv', 'CAT_RELIGION', self.D_CAT_RELIGION).replace('"', '')
++
++            self.struct['acettv']['settings']['cat_man']['value'] = \
++            self.oe.get_service_option('acettv', 'CAT_MAN', self.D_CAT_MAN).replace('"', '')
++
++            self.struct['acettv']['settings']['cat_learn']['value'] = \
++            self.oe.get_service_option('acettv', 'CAT_LEARN', self.D_CAT_LEARN).replace('"', '')
++
++            self.struct['acettv']['settings']['cat_allfon']['value'] = \
++            self.oe.get_service_option('acettv', 'CAT_ALLFON', self.D_CAT_ALLFON).replace('"', '')
++
++            # TTV-LIST Create
++            self.struct['acerun']['settings']['ttv_login']['value'] = \
++            self.oe.get_service_option('acerun', 'TTV_LOGIN', self.D_TTV_LOGIN).replace('"', '')
++
++            self.struct['acerun']['settings']['ttv_passw']['value'] = \
++            self.oe.get_service_option('acerun', 'TTV_PASSW', self.D_TTV_PASSW).replace('"', '')
++
++            self.struct['acerun']['settings']['ttv_soft']['value'] = \
++            self.oe.get_service_option('acerun', 'TTV_SOFT', self.D_TTV_SOFT).replace('"', '')
++
++            self.struct['acerun']['settings']['acettv_ip']['value'] = \
++            self.oe.get_service_option('acerun', 'ACETTV_IP', self.D_ACETTV_IP).replace('"', '')
++
++            self.struct['acerun']['settings']['translate']['value'] = \
++            self.oe.get_service_option('acerun', 'TRANSLATE', self.D_TRANSLATE).replace('"', '')
++
++            self.struct['acerun']['settings']['acettv_upd']['value'] = \
++            self.oe.get_service_option('acerun', 'ACETTV_UPD', self.D_ACETTV_UPD).replace('"', '')
++
++            self.oe.dbg_log('aceplist::load_values', 'exit_function', 0)
++        except Exception, e:
++            self.oe.dbg_log('aceplist::load_values', 'ERROR: (%s)' % repr(e))
++
++    def initialize_acettv_onerun(self, **kwargs):
++        try:
++            self.oe.dbg_log('aceplist::initialize_acettv_onerun', 'enter_function', 0)
++            self.oe.set_busy(1)
++            if 'listItem' in kwargs:
++                self.set_value(kwargs['listItem'])
++            options = {}
++            state = 1
++            options['CAT_SHOW'] = '"%s"' % self.struct['acettv']['settings']['cat_show']['value']
++            options['CAT_COMM'] = '"%s"' % self.struct['acettv']['settings']['cat_comm']['value']
++            options['CAT_FILMS'] = '"%s"' % self.struct['acettv']['settings']['cat_films']['value']
++            options['CAT_EROS'] = '"%s"' % self.struct['acettv']['settings']['cat_eros']['value']
++            options['CAT_NEWS'] = '"%s"' % self.struct['acettv']['settings']['cat_news']['value']
++            options['CAT_REGION'] = '"%s"' % self.struct['acettv']['settings']['cat_region']['value']
++            options['CAT_MUSIC'] = '"%s"' % self.struct['acettv']['settings']['cat_music']['value']
++            options['CAT_CHILDREN'] = '"%s"' % self.struct['acettv']['settings']['cat_children']['value']
++            options['CAT_SPORT'] = '"%s"' % self.struct['acettv']['settings']['cat_sport']['value']
++            options['CAT_RELIGION'] = '"%s"' % self.struct['acettv']['settings']['cat_religion']['value']
++            options['CAT_MAN'] = '"%s"' % self.struct['acettv']['settings']['cat_man']['value']
++            options['CAT_LEARN'] = '"%s"' % self.struct['acettv']['settings']['cat_learn']['value']
++            options['CAT_ALLFON'] = '"%s"' % self.struct['acettv']['settings']['cat_allfon']['value']
++            self.oe.set_service('acettv', options, state)
++            self.oe.set_busy(0)
++            self.oe.dbg_log('aceplist::initialize_acettv_onerun', 'exit_function', 0)
++        except Exception, e:
++            self.oe.set_busy(0)
++            self.oe.dbg_log('aceplist::initialize_acettv_onerun', 'ERROR: (%s)' % repr(e), 4)
++
++    def initialize_acettv(self, **kwargs):
++        try:
++            self.oe.dbg_log('aceplist::initialize_acettv', 'enter_function', 0)
++            self.oe.set_busy(1)
++            if 'listItem' in kwargs:
++                self.set_value(kwargs['listItem'])
++            options = {}
++            state = 1
++            options['CAT_SHOW'] = '"%s"' % self.struct['acettv']['settings']['cat_show']['value']
++            options['CAT_COMM'] = '"%s"' % self.struct['acettv']['settings']['cat_comm']['value']
++            options['CAT_FILMS'] = '"%s"' % self.struct['acettv']['settings']['cat_films']['value']
++            options['CAT_EROS'] = '"%s"' % self.struct['acettv']['settings']['cat_eros']['value']
++            options['CAT_NEWS'] = '"%s"' % self.struct['acettv']['settings']['cat_news']['value']
++            options['CAT_REGION'] = '"%s"' % self.struct['acettv']['settings']['cat_region']['value']
++            options['CAT_MUSIC'] = '"%s"' % self.struct['acettv']['settings']['cat_music']['value']
++            options['CAT_CHILDREN'] = '"%s"' % self.struct['acettv']['settings']['cat_children']['value']
++            options['CAT_SPORT'] = '"%s"' % self.struct['acettv']['settings']['cat_sport']['value']
++            options['CAT_RELIGION'] = '"%s"' % self.struct['acettv']['settings']['cat_religion']['value']
++            options['CAT_MAN'] = '"%s"' % self.struct['acettv']['settings']['cat_man']['value']
++            options['CAT_LEARN'] = '"%s"' % self.struct['acettv']['settings']['cat_learn']['value']
++            options['CAT_ALLFON'] = '"%s"' % self.struct['acettv']['settings']['cat_allfon']['value']
++            self.oe.set_service('acettv', options, state)
++            self.oe.execute(self.TTV_DEL_LIST, 0)
++            self.oe.set_busy(0)
++            self.oe.dbg_log('aceplist::initialize_acettv', 'exit_function', 0)
++        except Exception, e:
++            self.oe.set_busy(0)
++            self.oe.dbg_log('aceplist::initialize_acettv', 'ERROR: (%s)' % repr(e), 4)
++
++    def initialize_acerun(self, **kwargs):
++        try:
++            self.oe.dbg_log('aceplist::initialize_acerun', 'enter_function', 0)
++            self.oe.set_busy(1)
++            if 'listItem' in kwargs:
++                self.set_value(kwargs['listItem'])
++            options = {}
++            state = 1
++            options['TTV_SOFT'] = '"%s"' % self.struct['acerun']['settings']['ttv_soft']['value']
++            options['ACETTV_IP'] = '"%s"' % self.struct['acerun']['settings']['acettv_ip']['value']
++            options['TTV_LOGIN'] = '"%s"' % self.struct['acerun']['settings']['ttv_login']['value']
++            options['TTV_PASSW'] = '"%s"' % self.struct['acerun']['settings']['ttv_passw']['value']
++            options['TRANSLATE'] = '"%s"' % self.struct['acerun']['settings']['translate']['value']
++            options['ACETTV_UPD'] = '"%s"' % self.struct['acerun']['settings']['acettv_upd']['value']
++            self.oe.set_service('acerun', options, state)
++            self.oe.set_busy(0)
++            self.oe.dbg_log('aceplist::initialize_acerun', 'exit_function', 0)
++        except Exception, e:
++            self.oe.set_busy(0)
++            self.oe.dbg_log('aceplist::initialize_acerun', 'ERROR: (%s)' % repr(e), 4)
++
++    def execute_acettv(self, listItem=None):
++        try:
++            self.oe.dbg_log('aceplist::execute_acettv', 'enter_function', 0)
++            if os.path.exists(self.TTV_RUN_LIST):
++                self.oe.notify(self.oe._(32363), 'Create TTV playlist...')
++                self.oe.set_busy(1)
++                message = self.oe.execute(self.TTV_RUN_LIST, 1).strip()
++                self.oe.set_busy(0)
++                if message == 'Done! Playlist created.':
++                    dialog = xbmcgui.Dialog()
++                    ret = dialog.yesno('TTV playlist', 'Playlist created. Restart Kodi?')
++                    if ret:
++                        xbmc.executebuiltin('RestartApp')
++                else:
++                    dialog = xbmcgui.Dialog()
++                    dialog.notification('TTV playlist',
++                                        '%s' % message,
++                                        xbmcgui.NOTIFICATION_INFO, 3000)
++        except Exception, e:
++            self.oe.dbg_log('aceplist::execute_acettv', 'ERROR: (' + repr(e) + ')')
++
++    def exit(self):
++        try:
++            self.oe.dbg_log('aceplist::exit', 'enter_function', 0)
++            self.oe.dbg_log('aceplist::exit', 'exit_function', 0)
++        except Exception, e:
++            self.oe.dbg_log('aceplist::exit', 'ERROR: (%s)' % repr(e), 4)
+diff -Naurp CoreELEC-settings-238e0c2/src/resources/lib/modules/ace.py CoreELEC-settings-238e0c2-patch/src/resources/lib/modules/ace.py
+--- CoreELEC-settings-238e0c2/src/resources/lib/modules/ace.py	1970-01-01 03:00:00.000000000 +0300
++++ CoreELEC-settings-238e0c2-patch/src/resources/lib/modules/ace.py	2018-06-24 17:07:29.000000000 +0300
+@@ -0,0 +1,279 @@
++# -*- coding: utf-8 -*-
++################################################################################
++#      This file is part of Alex@ELEC - http://www.alexelec.in.ua
++#      Copyright (C) 2011-present Alexandr Zuyev (alex@alexelec.in.ua)
++################################################################################
++
++import os
++import glob
++import xbmc
++import xbmcgui
++
++class ace:
++
++    ENABLED=False
++    D_ACE_DEBUG = None
++    ACE_GET_SRC = None
++    D_NOX_UID = None
++    D_NOX_PAS = None
++    D_NOX_DEL = None
++    D_NOX_DIR = None
++
++    menu = {'91': {
++        'name': 34000,
++        'menuLoader': 'load_menu',
++        'listTyp': 'list',
++        'InfoText': 3400,
++        }}
++
++    def __init__(self, oeMain):
++        try:
++            oeMain.dbg_log('ace::__init__', 'enter_function', 0)
++            self.struct = {
++                'acestream': {
++                    'order': 1,
++                    'name': 34010,
++                    'not_supported': [],
++                    'settings': {
++                        'enable_acestream': {
++                            'order': 1,
++                            'name': 34011,
++                            'value': None,
++                            'action': 'initialize_acestream',
++                            'type': 'bool',
++                            'InfoText': 3411,
++                            },
++                        'ace_debug': {
++                            'order': 2,
++                            'name': 34012,
++                            'value': None,
++                            'action': 'initialize_acestream',
++                            'type': 'bool',
++                            'parent': {
++                                'entry': 'enable_acestream',
++                                'value': ['1']
++                                },
++                            'InfoText': 3412,
++                            },
++                        },
++                    },
++                'noxbit': {
++                    'order': 2,
++                    'name': 34070,
++                    'not_supported': [],
++                    'settings': {
++                        'enable_noxbit': {
++                            'order': 1,
++                            'name': 34071,
++                            'value': None,
++                            'action': 'initialize_noxbit',
++                            'type': 'bool',
++                            'InfoText': 3471,
++                            },
++                        'nox_uid': {
++                            'order': 2,
++                            'name': 34072,
++                            'value': None,
++                            'action': 'initialize_noxbit',
++                            'type': 'text',
++                            'parent': {
++                                'entry': 'enable_noxbit',
++                                'value': ['1']
++                                },
++                            'InfoText': 3472,
++                            },
++                        'nox_pas': {
++                            'order': 3,
++                            'name': 34073,
++                            'value': None,
++                            'action': 'initialize_noxbit',
++                            'type': 'text',
++                            'parent': {
++                                'entry': 'enable_noxbit',
++                                'value': ['1']
++                                },
++                            'InfoText': 3473,
++                            },
++                        'nox_del': {
++                            'order': 4,
++                            'name': 34074,
++                            'value': None,
++                            'action': 'initialize_noxbit',
++                            'type': 'bool',
++                            'parent': {
++                                'entry': 'enable_noxbit',
++                                'value': ['1']
++                                },
++                            'InfoText': 3474,
++                            },
++                        'nox_dir': {
++                            'order': 5,
++                            'name': 34075,
++                            'value': None,
++                            'action': 'initialize_noxbit',
++                            'type': 'folder',
++                            'parent': {
++                                'entry': 'enable_noxbit',
++                                'value': ['1']
++                                },
++                            'InfoText': 3475,
++                            },
++                        },
++                    },
++            }
++
++            self.oe = oeMain
++            oeMain.dbg_log('ace::__init__', 'exit_function', 0)
++        except Exception, e:
++            self.oe.dbg_log('ace::__init__', 'ERROR: (%s)' % repr(e))
++
++    def start_service(self):
++        try:
++            self.oe.dbg_log('ace::start_service', 'enter_function', 0)
++            self.load_values()
++            self.initialize_acestream()
++            self.initialize_noxbit()
++            self.oe.dbg_log('ace::start_service', 'exit_function', 0)
++        except Exception, e:
++            self.oe.dbg_log('ace::start_service', 'ERROR: (%s)' % repr(e))
++
++    def stop_service(self):
++        try:
++            self.oe.dbg_log('ace::stop_service', 'enter_function', 0)
++            self.oe.dbg_log('ace::stop_service', 'exit_function', 0)
++        except Exception, e:
++            self.oe.dbg_log('ace::stop_service', 'ERROR: (' + repr(e) + ')')
++
++    def do_init(self):
++        try:
++            self.oe.dbg_log('ace::do_init', 'exit_function', 0)
++            self.load_values()
++            self.oe.dbg_log('ace::do_init', 'exit_function', 0)
++        except Exception, e:
++            self.oe.dbg_log('ace::do_init', 'ERROR: (%s)' % repr(e))
++
++    def set_value(self, listItem):
++        try:
++            self.oe.dbg_log('ace::set_value', 'enter_function', 0)
++            self.struct[listItem.getProperty('category')]['settings'][listItem.getProperty('entry')]['value'] = listItem.getProperty('value')
++            self.oe.dbg_log('ace::set_value', 'exit_function', 0)
++        except Exception, e:
++            self.oe.dbg_log('ace::set_value', 'ERROR: (' + repr(e) + ')')
++
++    def load_menu(self, focusItem):
++        try:
++            self.oe.dbg_log('ace::load_menu', 'enter_function', 0)
++            self.oe.winOeMain.build_menu(self.struct)
++            self.oe.dbg_log('ace::load_menu', 'exit_function', 0)
++        except Exception, e:
++            self.oe.dbg_log('ace::load_menu', 'ERROR: (%s)' % repr(e))
++
++    def load_values(self):
++        try:
++            self.oe.dbg_log('ace::load_values', 'enter_function', 0)
++
++            #ACESTREAM
++            self.struct['acestream']['settings']['enable_acestream']['value'] = \
++                    self.oe.get_service_state('acestream')
++
++            self.struct['acestream']['settings']['ace_debug']['value'] = \
++            self.oe.get_service_option('acestream', 'ACE_DEBUG', self.D_ACE_DEBUG).replace('"', '')
++
++            #NOXBIT
++            self.struct['noxbit']['settings']['enable_noxbit']['value'] = \
++                    self.oe.get_service_state('noxbit')
++
++            self.struct['noxbit']['settings']['nox_uid']['value'] = \
++            self.oe.get_service_option('noxbit', 'NOX_UID', self.D_NOX_UID).replace('"', '')
++
++            self.struct['noxbit']['settings']['nox_pas']['value'] = \
++            self.oe.get_service_option('noxbit', 'NOX_PAS', self.D_NOX_PAS).replace('"', '')
++
++            self.struct['noxbit']['settings']['nox_del']['value'] = \
++            self.oe.get_service_option('noxbit', 'NOX_DEL', self.D_NOX_DEL).replace('"', '')
++
++            self.struct['noxbit']['settings']['nox_dir']['value'] = \
++            self.oe.get_service_option('noxbit', 'NOX_DIR', self.D_NOX_DIR).replace('"', '')
++
++            self.oe.dbg_log('ace::load_values', 'exit_function', 0)
++        except Exception, e:
++            self.oe.dbg_log('ace::load_values', 'ERROR: (%s)' % repr(e))
++
++    def initialize_acestream(self, **kwargs):
++        try:
++            self.oe.dbg_log('ace::initialize_acestream', 'enter_function', 0)
++            self.oe.set_busy(1)
++            if 'listItem' in kwargs:
++                self.set_value(kwargs['listItem'])
++            options = {}
++            state = 0
++            if self.struct['acestream']['settings']['enable_acestream']['value'] == '1':
++
++                if not os.path.exists('/storage/.config/acestream/installed.acestream'):
++                    ace_status = self.get_ace_source()
++                    if ace_status == 'OK':
++                        self.oe.notify(self.oe._(32363), 'Run AceStream engine...')
++                    else:
++                        self.struct['acestream']['settings']['enable_acestream']['value'] = '0'
++                        self.oe.set_busy(0)
++                        xbmcDialog = xbmcgui.Dialog()
++                        answer = xbmcDialog.ok('Install AceStream',
++                            'Error: The program is not installed, try again.')
++                        return
++
++                options['ACE_DEBUG'] = '"%s"' % self.struct['acestream']['settings']['ace_debug']['value']
++                state = 1
++
++            self.oe.set_service('acestream', options, state)
++            self.oe.set_busy(0)
++            self.oe.dbg_log('ace::initialize_acestream', 'exit_function', 0)
++        except Exception, e:
++            self.oe.set_busy(0)
++            self.oe.dbg_log('ace::initialize_acestream', 'ERROR: (%s)' % repr(e), 4)
++
++    def get_ace_source(self, listItem=None, silent=False):
++        try:
++            self.oe.dbg_log('ace::get_ace_source', 'enter_function', 0)
++            ace_url = self.oe.execute(self.ACE_GET_SRC + ' url', 1).strip()
++            self.download_file = ace_url
++            self.oe.set_busy(0)
++            if hasattr(self, 'download_file'):
++                downloaded = self.oe.download_file(self.download_file, self.oe.TEMP + self.download_file.split('/')[-1], silent)
++                if not downloaded is None:
++                    self.oe.notify(self.oe._(32363), 'Unpack AceStream...')
++                    self.oe.set_busy(1)
++                    self.oe.execute(self.ACE_GET_SRC + ' unpack', 0)
++                    self.oe.dbg_log('ace::get_ace_source', 'exit_function', 0)
++                    return 'OK'
++            self.oe.dbg_log('ace::get_ace_source', 'exit_function', 0)
++            return 'ERROR'
++        except Exception, e:
++            self.oe.dbg_log('ace::get_ace_source', 'ERROR: (%s)' % repr(e), 4)
++
++    def initialize_noxbit(self, **kwargs):
++        try:
++            self.oe.dbg_log('ace::initialize_noxbit', 'enter_function', 0)
++            self.oe.set_busy(1)
++            if 'listItem' in kwargs:
++                self.set_value(kwargs['listItem'])
++            options = {}
++            state = 0
++            if self.struct['noxbit']['settings']['enable_noxbit']['value'] == '1':
++                options['NOX_UID'] = '"%s"' % self.struct['noxbit']['settings']['nox_uid']['value']
++                options['NOX_PAS'] = '"%s"' % self.struct['noxbit']['settings']['nox_pas']['value']
++                options['NOX_DEL'] = '"%s"' % self.struct['noxbit']['settings']['nox_del']['value']
++                options['NOX_DIR'] = '"%s"' % self.struct['noxbit']['settings']['nox_dir']['value']
++                state = 1
++            self.oe.set_service('noxbit', options, state)
++            self.oe.set_busy(0)
++            self.oe.dbg_log('ace::initialize_noxbit', 'exit_function', 0)
++        except Exception, e:
++            self.oe.set_busy(0)
++            self.oe.dbg_log('ace::initialize_noxbit', 'ERROR: (%s)' % repr(e), 4)
++
++    def exit(self):
++        try:
++            self.oe.dbg_log('ace::exit', 'enter_function', 0)
++            self.oe.dbg_log('ace::exit', 'exit_function', 0)
++        except Exception, e:
++            self.oe.dbg_log('ace::exit', 'ERROR: (%s)' % repr(e), 4)
