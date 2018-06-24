@@ -308,7 +308,9 @@ fi
 case "$TTV_SOFT" in
   AceStream)
     if [ "$TRANSLATE" == "Site-TTV" ]; then
-      [ -x /usr/bin/ttvget-direct ] && /usr/bin/ttvget-direct
+      ret_msg=`/usr/bin/ttvget-direct`
+      echo "$ret_msg"
+      exit
     else
       ace_run
     fi

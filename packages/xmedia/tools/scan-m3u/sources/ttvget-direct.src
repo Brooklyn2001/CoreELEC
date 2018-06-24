@@ -158,4 +158,5 @@ echo '#EXTM3U' > $TTV_M3U_FILE
 cat $PART_FILES >> $TTV_M3U_FILE
 rm -fr $PART_DIR
 
+echo "Done! Playlist created."
 exit
