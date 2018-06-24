@@ -27,7 +27,8 @@ unpack() {
   echo "-----------------------------------------------------------"
   echo -e $RED"****** Tvheadend version:"$ENDCOLOR $YELLOW"$TVH_VERSION_NUMBER"$ENDCOLOR $RED"******"$ENDCOLOR
   echo "-----------------------------------------------------------"
-  sed -e 's/VER="0.0.0~unknown"/VER="'$TVH_VERSION_NUMBER' ~ Alex@ELEC"/g' -i support/version
+  cp -f $PKG_DIR/src/version support/version
+  sed -e 's|@TVH_VERSION_NUMBER@|'$TVH_VERSION_NUMBER'|g' -i support/version
   sed -e 's|'/usr/bin/pngquant'|'$TOOLCHAIN/bin/pngquant'|g' -i support/mkbundle
   cd $ROOT
 }
