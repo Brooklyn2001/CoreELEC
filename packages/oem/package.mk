@@ -20,4 +20,5 @@ PKG_LONGDESC="OEM: Metapackage for various OEM packages"
   PKG_DEPENDS_TARGET="$PKG_DEPENDS_TARGET acestream-aml"
 
 # tv services
+  PKG_DEPENDS_TARGET="$PKG_DEPENDS_TARGET oscam"
   PKG_DEPENDS_TARGET="$PKG_DEPENDS_TARGET tvheadend"
