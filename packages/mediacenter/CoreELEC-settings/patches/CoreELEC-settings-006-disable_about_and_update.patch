@@ -1,0 +1,33 @@
+diff -Naurp CoreELEC-settings-238e0c2/src/defaults.py CoreELEC-settings-238e0c2-patch/src/defaults.py
+--- CoreELEC-settings-238e0c2/src/defaults.py	2018-06-25 12:09:14.000000000 +0300
++++ CoreELEC-settings-238e0c2-patch/src/defaults.py	2018-06-25 12:10:50.000000000 +0300
+@@ -167,7 +167,7 @@ system = {
+     'RESTORE_DIR': '/storage/.restore/',
+     }
+ 
+-about = {'ENABLED': True}
++about = {'ENABLED': False}
+ 
+ xdbus = {'ENABLED': True}
+ 
+diff -Naurp CoreELEC-settings-238e0c2/src/resources/lib/modules/system.py CoreELEC-settings-238e0c2-patch/src/resources/lib/modules/system.py
+--- CoreELEC-settings-238e0c2/src/resources/lib/modules/system.py	2018-06-06 15:36:56.000000000 +0300
++++ CoreELEC-settings-238e0c2-patch/src/resources/lib/modules/system.py	2018-06-25 12:11:36.000000000 +0300
+@@ -132,7 +132,7 @@ class system:
+                     'settings': {
+                         'AutoUpdate': {
+                             'name': 32014,
+-                            'value': 'auto',
++                            'value': 'manual',
+                             'action': 'set_auto_update',
+                             'type': 'multivalue',
+                             'values': ['auto', 'manual'],
+@@ -141,7 +141,7 @@ class system:
+                             },
+                         'UpdateNotify': {
+                             'name': 32365,
+-                            'value': '1',
++                            'value': '0',
+                             'action': 'set_value',
+                             'type': 'bool',
+                             'InfoText': 715,
