@@ -333,6 +333,19 @@ post_makeinstall_target() {
     done
   fi
 
+  # install addons config AE
+  if [ -d $PKG_DIR/config/weather.gismeteo ]; then
+      cp -R $PKG_DIR/config/weather.gismeteo $INSTALL/usr/share/kodi/config
+  fi
+
+  if [ -d $PKG_DIR/config/script.skinshortcuts ]; then
+      cp -R $PKG_DIR/config/script.skinshortcuts $INSTALL/usr/share/kodi/config
+  fi
+
+  if [ -d $PKG_DIR/config/skin.aeon.nox.ae ]; then
+      cp -R $PKG_DIR/config/skin.aeon.nox.ae $INSTALL/usr/share/kodi/config
+  fi
+
   # more binaddons cross compile badness meh
   sed -e "s:INCLUDE_DIR /usr/include/kodi:INCLUDE_DIR $SYSROOT_PREFIX/usr/include/kodi:g" \
       -e "s:CMAKE_MODULE_PATH /usr/lib/kodi /usr/share/kodi/cmake:CMAKE_MODULE_PATH $SYSROOT_PREFIX/usr/share/kodi/cmake:g" \
