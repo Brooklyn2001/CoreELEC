@@ -5,7 +5,12 @@
     <setting id="locale.language">resource.language.ru_ru</setting>
     <setting id="locale.timezone">Europe/Kiev</setting>
     <setting id="locale.timezonecountry">Ukraine</setting>
+    <setting id="lookandfeel.enablerssfeeds">true</setting>
     <setting id="pvrmanager.syncchannelgroups">true</setting>
+    <setting id="pvrplayback.enableradiords">false</setting>
+    <setting id="pvrplayback.fps">1</setting>
+    <setting id="pvrplayback.signalquality">true</setting>
+    <setting id="pvrplayback.switchtofullscreen">false</setting>
     <setting id="services.airplay">false</setting>
     <general>
         <settinglevel>3</settinglevel>
