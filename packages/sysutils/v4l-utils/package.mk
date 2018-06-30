@@ -90,7 +90,7 @@ post_makeinstall_target() {
 
   create_multi_keymap multi_ext "RC6 NEC" $default_multi_maps
   create_multi_keymap multi_amlogic "RC6 NEC" $default_multi_maps \
-        odroid wetek_hub wetek_play_2 minix_neo tanix mecool
+        odroid wetek_hub wetek_play_2 minix_neo tanix mecool a95x
 
 
   # use multi-keymap instead of default one
