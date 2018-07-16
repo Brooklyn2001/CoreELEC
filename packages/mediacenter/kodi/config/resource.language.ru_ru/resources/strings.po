@@ -1121,9 +1121,13 @@ msgctxt "#306"
 msgid "Non-interleaved"
 msgstr "Без чередования"
 
+msgctxt "#307"
+msgid "Media default"
+msgstr "По умолчанию"
+
 msgctxt "#308"
-msgid "Original stream's language"
-msgstr "Язык потока по умолчанию"
+msgid "Original language"
+msgstr "Оригинальный язык"
 
 msgctxt "#309"
 msgid "User interface language"
@@ -3988,6 +3992,10 @@ msgstr "Закладки видео"
 msgctxt "#10126"
 msgid "File browser"
 msgstr "Браузер файлов"
+
+msgctxt "#10127"
+msgid "channels"
+msgstr "каналы"
 
 msgctxt "#10128"
 msgid "Network setup"
@@ -8021,6 +8029,10 @@ msgctxt "#19268"
 msgid "Hide \"No information available\" labels"
 msgstr "Не отображать метки \"Сведения недоступны\""
 
+msgctxt "#19269"
+msgid "Preselect playing channel in lists"
+msgstr " Предварительный выбор игрового канала в списках"
+
 msgctxt "#19270"
 msgid "Group Items"
 msgstr "Группировать записи"
@@ -8136,6 +8148,18 @@ msgstr "Каналы по вертикали"
 msgctxt "#19298"
 msgid "Horizontal channels"
 msgstr "Каналы по горизонтали"
+
+msgctxt "#19299"
+msgid "Expires"
+msgstr "Срок действия"
+
+msgctxt "#19300"
+msgid "Vertical channels, no group selector"
+msgstr "Вертикальные каналы, без выбора группы"
+
+msgctxt "#19301"
+msgid "Horizontal channels, no group selector"
+msgstr "Горизонтальные каналы, без выбора группы"
 
 msgctxt "#19499"
 msgid "Other / Unknown"
@@ -12845,6 +12869,10 @@ msgctxt "#35165"
 msgid "Keyboard player"
 msgstr "Клавиатура"
 
+msgctxt "#35166"
+msgid "All keys"
+msgstr " Все ключи"
+
 msgctxt "#35171"
 msgid "Mouse"
 msgstr "Мышь"
@@ -12917,13 +12945,13 @@ msgctxt "#35222"
 msgid "Exit"
 msgstr "Выход"
 
-msgctxt "#35223"
-msgid "Input settings"
-msgstr "Настройки ввода"
-
 msgctxt "#35225"
 msgid "Video filter"
 msgstr "Видеофильтр"
+
+msgctxt "#35226"
+msgid "Advanced settings"
+msgstr "Дополнительные настройки"
 
 msgctxt "#35250"
 msgid "Add games..."
@@ -13348,10 +13376,6 @@ msgstr "Экспортировать медиатеку видео в файлы
 msgctxt "#36151"
 msgid "This category contains the settings for how video playback is handled."
 msgstr "Категория содержит настройки обработки и воспроизведения видео."
-
-msgctxt "#36152"
-msgid "Enable automatic playback of the next file in the list."
-msgstr "Включить автоматическое воспроизведение следующего файла в списке."
 
 msgctxt "#36153"
 msgid "Adjust the method used to process and display video."
@@ -15361,6 +15385,14 @@ msgctxt "#39024"
 msgid "Dependencies"
 msgstr "Зависимости"
 
+msgctxt "#39025"
+msgid "Gender"
+msgstr "Пол"
+
+msgctxt "#39030"
+msgid "Source"
+msgstr "Источник"
+
 msgctxt "#39100"
 msgid "Perform on startup"
 msgstr "Выполнить при запуске"
@@ -15373,6 +15405,34 @@ msgctxt "#39102"
 msgid "Play Radio"
 msgstr "Играть радио"
 
+msgctxt "#39103"
+msgid "Unable to configure network location. Invalid path given."
+msgstr "Невозможно настроить сетевое расположение. Введен неправильный путь."
+
+msgctxt "#39104"
+msgid "View as text"
+msgstr "Посмотреть как текст"
+
+msgctxt "#39105"
+msgid "default"
+msgstr "по умолчанию"
+
+msgctxt "#39106"
+msgid "forced"
+msgstr "форсировано"
+
+msgctxt "#39108"
+msgid "audio description"
+msgstr "Описание аудио"
+
 msgctxt "#39109"
 msgid "Select Program"
 msgstr "Выбрать программу"
+
+msgctxt "#39110"
+msgid "Select Resolution"
+msgstr "Выберите разрешение"
+
+msgctxt "#39111"
+msgid "original"
+msgstr "Оригинал"
