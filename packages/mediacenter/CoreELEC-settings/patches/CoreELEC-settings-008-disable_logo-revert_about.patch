@@ -7,7 +7,7 @@ diff -Naurp CoreELEC-settings-238e0c2/skins/Default/1080i/service-CoreELEC-Setti
              </control>
 -            <control type="image">
 -                <left>0</left>
--                <top>744</top>
+-                <top>770</top>
 -                <width>400</width>
 -                <height>3</height>
 -                <texture colordiffuse="FF12B2E7" border="2">dialogs/separator-grey.png</texture>
@@ -15,9 +15,9 @@ diff -Naurp CoreELEC-settings-238e0c2/skins/Default/1080i/service-CoreELEC-Setti
 -            <control type="image">
 -                <description>LOGO</description>
 -                <left>20</left>
--                <top>750</top>
+-                <top>760</top>
 -                <width>360</width>
--                <height>160</height>
+-                <height>150</height>
 -                <aspectratio>keep</aspectratio>
 -                <texture>$INFO[Window.Property(DIST_MEDIA)]/Logo.png</texture>
 -            </control>
