@@ -1,6 +1,6 @@
 ################################################################################
 #      This file is part of LibreELEC - https://libreelec.tv
-#      Copyright (C) 2016-present Team LibreELEC
+#      Copyright (C) 2018-present Team LibreELEC
 #
 #  LibreELEC is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -16,16 +16,17 @@
 #  along with LibreELEC.  If not, see <http://www.gnu.org/licenses/>.
 ################################################################################
 
-PKG_NAME="game.libretro.craft"
-PKG_VERSION="ad9f584"
-PKG_SHA256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-PKG_REV="106"
-# no openGL suport in retroplayer yet
-PKG_ARCH="none"
+PKG_NAME="game.libretro.uae4arm"
+PKG_VERSION="ae25a26"
+PKG_SHA256="5c6b1cc5a5200a47d090e8dee884ee24726c191887d412c738a1a165139dc297"
+PKG_REV="100"
+PKG_ARCH="arm"
 PKG_LICENSE="GPL"
-PKG_SITE="https://github.com/kodi-game/game.libretro.craft"
-PKG_DEPENDS_TARGET="toolchain kodi-platform libretro-craft"
-PKG_LONGDESC="game.libretro.2048: A simple Minecraft clone"
+PKG_SITE="https://github.com/kodi-game/game.libretro.uae4arm"
+PKG_URL="https://github.com/kodi-game/game.libretro.uae4arm/archive/$PKG_VERSION.tar.gz"
+PKG_DEPENDS_TARGET="toolchain kodi-platform libretro-uae4arm"
+PKG_SECTION=""
+PKG_LONGDESC="game.libretro.uae4arm: uae4arm emulator for Kodi"
 
 PKG_IS_ADDON="yes"
 PKG_ADDON_TYPE="kodi.gameclient"
