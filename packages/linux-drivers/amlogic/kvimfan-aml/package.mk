@@ -1,7 +1,6 @@
 ################################################################################
 #      This file is part of CoreELEC - https://coreelec.org
 #      Copyright (C) 2018-present CoreELEC (team (at) coreelec.org)
-#      Copyright (C) 2018 Arthur Liberman (arthur_liberman (at) hotmail.com)
 #
 #  CoreELEC is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -17,21 +16,22 @@
 #  along with CoreELEC.  If not, see <http://www.gnu.org/licenses/>.
 ################################################################################
 
-PKG_NAME="openvfd"
-PKG_VERSION="2df85d9"
-PKG_SHA256="f45e6a0293a9c49610af36f1ae6846cc6cdf77d90c9e7b6ec21cb1d0f23d11f4"
-PKG_ARCH="arm aarch64"
+PKG_NAME="kvimfan-aml"
+PKG_VERSION="0.1"
+PKG_REV="101"
+PKG_ARCH="any"
 PKG_LICENSE="GPL"
-PKG_SITE="https://github.com/arthur-liberman/linux_openvfd"
-PKG_URL="https://github.com/arthur-liberman/linux_openvfd/archive/$PKG_VERSION.tar.gz"
-PKG_SOURCE_DIR="linux_openvfd-$PKG_VERSION*"
+PKG_SITE=""
+PKG_URL=""
+PKG_DEPENDS_TARGET="toolchain"
+PKG_SECTION="driver"
+PKG_SECTION="service/system"
+PKG_SHORTDESC="Khadas VIM2 fan control service"
+PKG_LONGDESC="Khadas VIM2 fan control service"
+PKG_IS_KERNEL_PKG="yes"
+PKG_TOOLCHAIN="manual"
 PKG_DEPENDS_TARGET="toolchain linux"
 PKG_NEED_UNPACK="$LINUX_DEPENDS"
-PKG_SECTION="driver"
-PKG_SHORTDESC="openvfd: Driver for VFD displays"
-PKG_LONGDESC="openvfd: Driver for VFD displays"
-
-PKG_TOOLCHAIN="manual"
 
 pre_make_target() {
   unset LDFLAGS
@@ -40,17 +40,15 @@ pre_make_target() {
 make_target() {
   kernel_make -C "$(kernel_path)" M="$PKG_BUILD/driver"
 
-  make OpenVFDService
+  make kvimfan_Service
 }
-
 makeinstall_target() {
   mkdir -p $INSTALL/$(get_full_module_dir)/$PKG_NAME
     find $PKG_BUILD/ -name \*.ko -not -path '*/\.*' -exec cp {} $INSTALL/$(get_full_module_dir)/$PKG_NAME \;
 
   mkdir -p $INSTALL/usr/sbin
-    cp -P OpenVFDService $INSTALL/usr/sbin
+    cp -P kvimfan_Service $INSTALL/usr/sbin
 }
-
 post_install() {
-  enable_service openvfd.service
+  enable_service kvimfan.service
 }
