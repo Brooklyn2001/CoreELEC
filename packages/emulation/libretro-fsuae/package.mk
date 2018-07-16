@@ -1,6 +1,6 @@
 ################################################################################
 #      This file is part of LibreELEC - https://libreelec.tv
-#      Copyright (C) 2016-present Team LibreELEC
+#      Copyright (C) 2018-present Team LibreELEC
 #
 #  LibreELEC is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -16,31 +16,36 @@
 #  along with LibreELEC.  If not, see <http://www.gnu.org/licenses/>.
 ################################################################################
 
-PKG_NAME="libretro-mgba"
-PKG_VERSION="d98de4a"
-PKG_SHA256="cca97b095137a3ad43915776d535960b6cbcbbf5e0da54d371a638c747f5aae8"
-PKG_ARCH="any"
-PKG_LICENSE="MPL 2.0"
-PKG_SITE="https://github.com/libretro/mgba"
-PKG_URL="https://github.com/libretro/mgba/archive/$PKG_VERSION.tar.gz"
-PKG_SOURCE_DIR="mgba-$PKG_VERSION*"
-PKG_DEPENDS_TARGET="toolchain kodi-platform libepoxy libzip SDL2"
+PKG_NAME="libretro-fsuae"
+PKG_VERSION="7990f7a"
+PKG_SHA256="ad8a499e86ad782a0ecbdc4452c7fb70e1fabff42a2e5fbb081ec1b1f314a897"
+PKG_ARCH="x86_64"
+PKG_LICENSE="GPLv3"
+PKG_SITE="https://github.com/libretro/libretro-fsuae"
+PKG_URL="https://github.com/libretro/libretro-fsuae/archive/$PKG_VERSION.tar.gz"
+PKG_DEPENDS_TARGET="toolchain libmpeg2 openal-soft"
 PKG_SECTION="emulation"
-PKG_SHORTDESC="game.libretro.mgba: mGBA for Kodi"
-PKG_LONGDESC="game.libretro.mgba: mGBA for Kodi"
+PKG_LONGDESC="FS-UAE amiga emulator."
+PKG_BUILD_FLAGS="-lto"
+PKG_TOOLCHAIN="autotools"
 
-PKG_LIBNAME="mgba_libretro.so"
+PKG_LIBNAME="fsuae_libretro.so"
 PKG_LIBPATH="$PKG_LIBNAME"
-PKG_LIBVAR="MGBA_LIB"
+PKG_LIBVAR="FSUAE_LIB"
+
+if [ "$TARGET_ARCH" = "arm" ] && target_has_feature neon; then
+  PKG_CONFIGURE_OPTS_TARGET="--disable-jit --enable-neon"
+fi
 
 pre_configure_target() {
-  # fails to build in subdirs
   cd $PKG_BUILD
   rm -rf .$TARGET_NAME
+  export ac_cv_func_realloc_0_nonnull=yes
 }
 
 make_target() {
-  make -f Makefile.libretro
+  make -j1 CC="$CC" gen
+  make CC="$CC"
 }
 
 makeinstall_target() {

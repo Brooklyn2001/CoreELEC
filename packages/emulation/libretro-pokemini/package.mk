@@ -1,6 +1,6 @@
 ################################################################################
 #      This file is part of LibreELEC - https://libreelec.tv
-#      Copyright (C) 2016-present Team LibreELEC
+#      Copyright (C) 2018-present Team LibreELEC
 #
 #  LibreELEC is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -16,54 +16,25 @@
 #  along with LibreELEC.  If not, see <http://www.gnu.org/licenses/>.
 ################################################################################
 
-PKG_NAME="libretro-craft"
-PKG_VERSION="03e3ecb"
-PKG_SHA256="d1f6f687159452b2f0d61264e5e59b7c5776d2a82a2a21759ebd88abeacf77c6"
+PKG_NAME="libretro-pokemini"
+PKG_VERSION="36a3f63"
+PKG_SHA256="487508fed406893d19332521d6f3791e726b5b9cdf99e93f4796b45d6aa4f872"
 PKG_ARCH="any"
 PKG_LICENSE="GPLv3"
-PKG_SITE="https://github.com/libretro/Craft"
-PKG_URL="https://github.com/libretro/Craft/archive/$PKG_VERSION.tar.gz"
-PKG_SOURCE_DIR="Craft-$PKG_VERSION*"
+PKG_SITE="https://github.com/libretro/pokemini"
+PKG_URL="https://github.com/libretro/pokemini/archive/$PKG_VERSION.tar.gz"
+PKG_SOURCE_DIR="PokeMini-$PKG_VERSION*"
 PKG_DEPENDS_TARGET="toolchain kodi-platform"
 PKG_SECTION="emulation"
-PKG_SHORTDESC="A simple Minecraft clone written in C using modern OpenGL (shaders)"
-PKG_LONGDESC="A simple Minecraft clone written in C using modern OpenGL (shaders)"
+PKG_LONGDESC="libretro wrapper for PokeMini emulator."
+PKG_TOOLCHAIN="make"
 
-PKG_LIBNAME="craft_libretro.so"
+PKG_LIBNAME="pokemini_libretro.so"
 PKG_LIBPATH="$PKG_LIBNAME"
-PKG_LIBVAR="CRAFT_LIB"
+PKG_LIBVAR="POKEMINI_LIB"
 
-pre_configure_target() {
-  # fails to build in subdirs
+configure_target() {
   cd $PKG_BUILD
-  rm -rf .$TARGET_NAME
-}
-
-make_target() {
-
-  if [ -z "$DEVICE" ]; then
-    PKG_DEVICE_NAME=$PROJECT
-  else
-    PKG_DEVICE_NAME=$DEVICE
-  fi
-
-  case $PKG_DEVICE_NAME in
-    RPi|RPi2)
-      make -f Makefile.libretro platform=${PKG_DEVICE_NAME,,}
-      ;;
-    Generic)
-      make -f Makefile.libretro
-      ;;
-    *)
-      if [[ "$TARGET_CPU" = "cortex-a9" ]] || [[ "$TARGET_CPU" = *"cortex-a53" ]] || [[ "$TARGET_CPU" = "cortex-a17" ]]; then
-        if [ "$TARGET_ARCH" = "aarch64" ]; then
-          make -f Makefile.libretro platform=aarch64
-        else
-          make -f Makefile.libretro platform=armv7-neon-gles-cortex-a9
-        fi
-      fi
-      ;;
-  esac
 }
 
 makeinstall_target() {

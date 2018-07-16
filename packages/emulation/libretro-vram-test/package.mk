@@ -1,6 +1,6 @@
 ################################################################################
 #      This file is part of LibreELEC - https://libreelec.tv
-#      Copyright (C) 2016-present Team LibreELEC
+#      Copyright (C) 2018-present Team LibreELEC
 #
 #  LibreELEC is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -16,31 +16,26 @@
 #  along with LibreELEC.  If not, see <http://www.gnu.org/licenses/>.
 ################################################################################
 
-PKG_NAME="libretro-mgba"
-PKG_VERSION="d98de4a"
-PKG_SHA256="cca97b095137a3ad43915776d535960b6cbcbbf5e0da54d371a638c747f5aae8"
+PKG_NAME="libretro-vram-test"
+PKG_VERSION="6b90ce9"
+PKG_SHA256="2bd1b3af783a028355eb4b4c416f09802313a9a69759e716377b55012f7bb4ae"
 PKG_ARCH="any"
-PKG_LICENSE="MPL 2.0"
-PKG_SITE="https://github.com/libretro/mgba"
-PKG_URL="https://github.com/libretro/mgba/archive/$PKG_VERSION.tar.gz"
-PKG_SOURCE_DIR="mgba-$PKG_VERSION*"
-PKG_DEPENDS_TARGET="toolchain kodi-platform libepoxy libzip SDL2"
+PKG_LICENSE="MIT"
+PKG_SITE="https://github.com/libretro/libretro-samples"
+PKG_URL="https://github.com/libretro/libretro-samples/archive/$PKG_VERSION.tar.gz"
+PKG_DEPENDS_TARGET="toolchain"
 PKG_SECTION="emulation"
-PKG_SHORTDESC="game.libretro.mgba: mGBA for Kodi"
-PKG_LONGDESC="game.libretro.mgba: mGBA for Kodi"
+PKG_LONGDESC="VRAM Test from libretro"
+PKG_SOURCE_DIR="libretro-samples-*"
+PKG_TOOLCHAIN="manual"
 
-PKG_LIBNAME="mgba_libretro.so"
-PKG_LIBPATH="$PKG_LIBNAME"
-PKG_LIBVAR="MGBA_LIB"
-
-pre_configure_target() {
-  # fails to build in subdirs
-  cd $PKG_BUILD
-  rm -rf .$TARGET_NAME
-}
+PKG_LIBNAME="testsw_vram_libretro.so"
+PKG_LIBPATH="$PKG_BUILD/video/software/rendering_direct_to_vram/$PKG_LIBNAME"
+PKG_LIBVAR="VRAM-TEST_LIB"
 
 make_target() {
-  make -f Makefile.libretro
+  cd $PKG_BUILD/video/software/rendering_direct_to_vram
+  make
 }
 
 makeinstall_target() {
