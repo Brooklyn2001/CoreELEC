@@ -1,5 +1,5 @@
 # VERSION: set full version, use "devel" for development version
-  LIBREELEC_VERSION="8.99.01"
+  LIBREELEC_VERSION="8.99.02"
 
 # BUILD: set build name
   LIBREELEC_BUILD="ae-fork"
@@ -8,4 +8,4 @@
   OS_VERSION="9.0"
 
 # ADDON_VERSION: Addon version
-  ADDON_VERSION="8.90.4"
+  ADDON_VERSION="9.0"
