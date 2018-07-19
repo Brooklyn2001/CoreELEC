@@ -52,6 +52,13 @@ if [ ! -d $HOME/.kodi/userdata/addon_data/skin.aeon.nox.ae ]; then
   fi
 fi
 
+if [ ! -d $HOME/.kodi/userdata/addon_data/skin.aeon.madnox.ae ]; then
+  if [ -d /usr/share/kodi/config/skin.aeon.madnox.ae ]; then
+    mkdir -p $HOME/.kodi/userdata/addon_data
+    cp -R /usr/share/kodi/config/skin.aeon.madnox.ae $HOME/.kodi/userdata/addon_data
+  fi
+fi
+
 KODI_ARGS=""
 
 echo "KODI_ARGS=\"$KODI_ARGS\"" > /run/libreelec/kodi.conf

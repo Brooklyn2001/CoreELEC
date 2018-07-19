@@ -1,0 +1,7 @@
+#!/bin/sh
+
+cp /etc/ssl/cacert.pem.system /run/libreelec/cacert.pem
+
+[ -f /storage/.config/cacert.pem ] && cat /storage/.config/cacert.pem >>/run/libreelec/cacert.pem
+
+exit 0

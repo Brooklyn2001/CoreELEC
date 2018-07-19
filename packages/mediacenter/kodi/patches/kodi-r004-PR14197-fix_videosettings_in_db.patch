@@ -1,0 +1,214 @@
+From 8f7a1ce875de56ccda15e2e86d64acbec30c0e3a Mon Sep 17 00:00:00 2001
+From: Rainer Hochecker <fernetmenta@online.de>
+Date: Wed, 18 Jul 2018 15:50:33 +0200
+Subject: [PATCH] fix videosettings for items not stored in db
+
+---
+ xbmc/Application.cpp                             | 12 +++--
+ xbmc/pvr/PVRGUIActions.cpp                       |  4 +-
+ xbmc/video/VideoDatabase.cpp                     | 62 +++++++++++++++++++-----
+ xbmc/video/VideoDatabase.h                       | 18 +++++--
+ xbmc/video/dialogs/GUIDialogAudioSettings.cpp    |  2 +-
+ xbmc/video/dialogs/GUIDialogSubtitleSettings.cpp |  2 +-
+ xbmc/video/dialogs/GUIDialogVideoSettings.cpp    |  2 +-
+ 7 files changed, 78 insertions(+), 24 deletions(-)
+
+diff --git a/xbmc/Application.cpp b/xbmc/Application.cpp
+index 462c7224444f..4e842e116ed7 100644
+--- a/xbmc/Application.cpp
++++ b/xbmc/Application.cpp
+@@ -3520,14 +3520,18 @@ void CApplication::RequestVideoSettings(const CFileItem &fileItem)
+ 
+ void CApplication::StoreVideoSettings(const CFileItem &fileItem, CVideoSettings vs)
+ {
+-  if (vs != CMediaSettings::GetInstance().GetDefaultVideoSettings())
++  CVideoDatabase dbs;
++  if (dbs.Open())
+   {
+-    CVideoDatabase dbs;
+-    if (dbs.Open())
++    if (vs != CMediaSettings::GetInstance().GetDefaultVideoSettings())
+     {
+       dbs.SetVideoSettings(fileItem, vs);
+-      dbs.Close();
+     }
++    else
++    {
++      dbs.EraseVideoSettings(fileItem);
++    }
++    dbs.Close();
+   }
+ }
+ 
+diff --git a/xbmc/pvr/PVRGUIActions.cpp b/xbmc/pvr/PVRGUIActions.cpp
+index 912c1ede8e70..e7a9369e4934 100644
+--- a/xbmc/pvr/PVRGUIActions.cpp
++++ b/xbmc/pvr/PVRGUIActions.cpp
+@@ -1599,8 +1599,8 @@ namespace PVR
+ 
+       if (videoDatabase.Open())
+       {
+-        videoDatabase.EraseVideoSettings("pvr://channels/");
+-        videoDatabase.EraseVideoSettings(CPVRRecordingsPath::PATH_RECORDINGS);
++        videoDatabase.EraseAllVideoSettings("pvr://channels/");
++        videoDatabase.EraseAllVideoSettings(CPVRRecordingsPath::PATH_RECORDINGS);
+         videoDatabase.Close();
+       }
+     }
+diff --git a/xbmc/video/VideoDatabase.cpp b/xbmc/video/VideoDatabase.cpp
+index e87154c55e8c..1ce60a9c672c 100644
+--- a/xbmc/video/VideoDatabase.cpp
++++ b/xbmc/video/VideoDatabase.cpp
+@@ -4310,7 +4310,8 @@ bool CVideoDatabase::GetVideoSettings(int idFile, CVideoSettings &settings)
+ 
+ void CVideoDatabase::SetVideoSettings(const CFileItem &item, const CVideoSettings &settings)
+ {
+-  SetVideoSettings(GetFileId(item), settings);
++  int idFile = AddFile(item);
++  SetVideoSettings(idFile, settings);
+ }
+ 
+ /// \brief Sets the settings for a particular video file
+@@ -5598,24 +5599,63 @@ bool CVideoDatabase::UpdateVideoSortTitle(int idDb, const std::string& strNewSor
+ }
+ 
+ /// \brief EraseVideoSettings() Erases the videoSettings table and reconstructs it
+-void CVideoDatabase::EraseVideoSettings(const std::string &path /* = ""*/)
++void CVideoDatabase::EraseVideoSettings(const CFileItem &item)
++{
++  int idFile = GetFileId(item);
++  if (idFile < 0)
++    return;
++
++  try
++  {
++    std::string sql = PrepareSQL("DELETE FROM settings WHERE idFile=%i", idFile);
++
++    CLog::Log(LOGINFO, "Deleting settings information for files %s", item.GetPath().c_str());
++    m_pDS->exec(sql);
++  }
++  catch (...)
++  {
++    CLog::Log(LOGERROR, "%s failed", __FUNCTION__);
++  }
++}
++
++void CVideoDatabase::EraseAllVideoSettings()
+ {
+   try
+   {
+     std::string sql = "DELETE FROM settings";
+ 
+-    if (!path.empty())
+-    {
+-      Filter pathFilter;
+-      pathFilter.AppendWhere(PrepareSQL("idFile IN (SELECT idFile FROM files INNER JOIN path ON path.idPath = files.idPath AND path.strPath LIKE \"%s%%\")", path.c_str()));
+-      sql += std::string(" WHERE ") + pathFilter.where.c_str();
++    CLog::Log(LOGINFO, "Deleting all video settings");
++    m_pDS->exec(sql);
++  }
++  catch (...)
++  {
++    CLog::Log(LOGERROR, "%s failed", __FUNCTION__);
++  }
++}
++
++void CVideoDatabase::EraseAllVideoSettings(std::string path)
++{
++  std::string itemsToDelete;
+ 
+-      CLog::Log(LOGINFO, "Deleting settings information for all files under %s", path.c_str());
++  try
++  {
++    std::string sql = PrepareSQL("SELECT files.idFile FROM files WHERE idFile IN (SELECT idFile FROM files INNER JOIN path ON path.idPath = files.idPath AND path.strPath LIKE \"%s%%\")", path.c_str());
++    m_pDS->query(sql);
++    while (!m_pDS->eof())
++    {
++      std::string file = m_pDS->fv("files.idFile").get_asString() + ",";
++      itemsToDelete += file;
++      m_pDS->next();
+     }
+-    else
+-      CLog::Log(LOGINFO, "Deleting settings information for all files");
++    m_pDS->close();
+ 
+-    m_pDS->exec(sql);
++    if (!itemsToDelete.empty())
++    {
++      itemsToDelete = "(" + StringUtils::TrimRight(itemsToDelete, ",") + ")";
++
++      sql = "DELETE FROM settings WHERE idFile IN " + itemsToDelete;
++      m_pDS->exec(sql);
++    }
+   }
+   catch (...)
+   {
+diff --git a/xbmc/video/VideoDatabase.h b/xbmc/video/VideoDatabase.h
+index f024d79624fd..cf263328908d 100644
+--- a/xbmc/video/VideoDatabase.h
++++ b/xbmc/video/VideoDatabase.h
+@@ -600,11 +600,21 @@ class CVideoDatabase : public CDatabase
+   void SetVideoSettings(int idFile, const CVideoSettings &settings);
+ 
+   /**
+-   * Erases settings for all files beginning with the specified path. Defaults
+-   * to an empty path, meaning all settings will be erased.
+-   * @param path partial path, e.g. pvr://channels
++   * Erases video settings for file item
++   * @param fileitem
+    */
+-  void EraseVideoSettings(const std::string &path = "");
++  void EraseVideoSettings(const CFileItem &item);
++
++  /**
++   * Erases all video settings
++   */
++  void EraseAllVideoSettings();
++
++  /**
++   * Erases video settings for files starting with path
++   * @param path pattern
++   */
++  void EraseAllVideoSettings(std::string path);
+ 
+   bool GetStackTimes(const std::string &filePath, std::vector<uint64_t> &times);
+   void SetStackTimes(const std::string &filePath, const std::vector<uint64_t> &times);
+diff --git a/xbmc/video/dialogs/GUIDialogAudioSettings.cpp b/xbmc/video/dialogs/GUIDialogAudioSettings.cpp
+index 7856caf9f204..248573e63aaf 100644
+--- a/xbmc/video/dialogs/GUIDialogAudioSettings.cpp
++++ b/xbmc/video/dialogs/GUIDialogAudioSettings.cpp
+@@ -172,7 +172,7 @@ void CGUIDialogAudioSettings::Save()
+   if (!db.Open())
+     return;
+ 
+-  db.EraseVideoSettings();
++  db.EraseAllVideoSettings();
+   db.Close();
+ 
+   CMediaSettings::GetInstance().GetDefaultVideoSettings() = g_application.GetAppPlayer().GetVideoSettings();
+diff --git a/xbmc/video/dialogs/GUIDialogSubtitleSettings.cpp b/xbmc/video/dialogs/GUIDialogSubtitleSettings.cpp
+index 500c682ea214..c243a7869768 100644
+--- a/xbmc/video/dialogs/GUIDialogSubtitleSettings.cpp
++++ b/xbmc/video/dialogs/GUIDialogSubtitleSettings.cpp
+@@ -199,7 +199,7 @@ void CGUIDialogSubtitleSettings::Save()
+   if (!db.Open())
+     return;
+ 
+-  db.EraseVideoSettings();
++  db.EraseAllVideoSettings();
+   db.Close();
+ 
+   CMediaSettings::GetInstance().GetDefaultVideoSettings() = g_application.GetAppPlayer().GetVideoSettings();
+diff --git a/xbmc/video/dialogs/GUIDialogVideoSettings.cpp b/xbmc/video/dialogs/GUIDialogVideoSettings.cpp
+index f4fe0a781bc4..1a4482517e00 100644
+--- a/xbmc/video/dialogs/GUIDialogVideoSettings.cpp
++++ b/xbmc/video/dialogs/GUIDialogVideoSettings.cpp
+@@ -241,7 +241,7 @@ void CGUIDialogVideoSettings::Save()
+     CVideoDatabase db;
+     if (!db.Open())
+       return;
+-    db.EraseVideoSettings();
++    db.EraseAllVideoSettings();
+     db.Close();
+ 
+     CMediaSettings::GetInstance().GetDefaultVideoSettings() = g_application.GetAppPlayer().GetVideoSettings();

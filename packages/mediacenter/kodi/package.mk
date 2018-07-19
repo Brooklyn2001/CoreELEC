@@ -4,8 +4,8 @@
 ################################################################################
 
 PKG_NAME="kodi"
-PKG_VERSION="eac2111"
-PKG_SHA256="671c9c578fe52e0daf7492f3251cf538ab73c75b4e80c324b2737a047d3093de"
+PKG_VERSION="3231481"
+PKG_SHA256="d70b0692868485f4f095caf37ca256789489cec4d544cdc0456344dc37cb7cfd"
 PKG_ARCH="any"
 PKG_LICENSE="GPL"
 PKG_SITE="http://www.kodi.tv"
@@ -318,7 +318,7 @@ post_makeinstall_target() {
 
   if [ "$DRIVER_ADDONS_SUPPORT" = "yes" ]; then
     xmlstarlet ed -L --subnode "/addons" -t elem -n "addon" -v "script.program.driverselect" $ADDON_MANIFEST
-  fi 
+  fi
 
   if [ "$DEVICE" = "Slice" -o "$DEVICE" = "Slice3" ]; then
     xmlstarlet ed -L --subnode "/addons" -t elem -n "addon" -v "service.slice" $ADDON_MANIFEST
@@ -344,6 +344,10 @@ post_makeinstall_target() {
 
   if [ -d $PKG_DIR/config/skin.aeon.nox.ae ]; then
       cp -R $PKG_DIR/config/skin.aeon.nox.ae $INSTALL/usr/share/kodi/config
+  fi
+
+  if [ -d $PKG_DIR/config/skin.aeon.madnox.ae ]; then
+      cp -R $PKG_DIR/config/skin.aeon.madnox.ae $INSTALL/usr/share/kodi/config
   fi
 
   # more binaddons cross compile badness meh
