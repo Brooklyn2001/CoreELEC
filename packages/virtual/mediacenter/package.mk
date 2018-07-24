@@ -25,9 +25,14 @@ PKG_LONGDESC="Mediacenter: Metapackage"
   PKG_DEPENDS_TARGET="$PKG_DEPENDS_TARGET Pillow \
                                           simplejson \
                                           pycryptodome"
+
+# settings addon
+  if [ -n "$DISTRO_PKG_SETTINGS" ]; then
+    PKG_DEPENDS_TARGET="$PKG_DEPENDS_TARGET $DISTRO_PKG_SETTINGS"
+  fi
+
 # other packages
-  PKG_DEPENDS_TARGET="$PKG_DEPENDS_TARGET CoreELEC-settings \
-                                          xmlstarlet"
+  PKG_DEPENDS_TARGET="$PKG_DEPENDS_TARGET xmlstarlet"
 
   if [ "$JOYSTICK_SUPPORT" = "yes" ]; then
     PKG_DEPENDS_TARGET="$PKG_DEPENDS_TARGET peripheral.joystick"
