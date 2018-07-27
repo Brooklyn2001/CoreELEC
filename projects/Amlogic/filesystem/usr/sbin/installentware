@@ -9,6 +9,7 @@ export PATH=/opt/bin:/opt/sbin:$PATH
 
 if [ ! -f /opt/bin/opkg ]; then
   wget -O - http://bin.entware.net/aarch64-k3.10/installer/generic.sh | /bin/sh
+  sed -i '3i. /opt/etc/profile' /opt/etc/init.d/rc.unslung
   echo ""
   read -p "Would you like to reboot now to finish installation (recommended) [y/N]? " choice
   case "$choice" in
