@@ -45,6 +45,7 @@ else
 fi
 
 FAKEROOT_SCRIPT=$BUILD/.fakeroot
+CURRENT_PKGBUILD=$ROOT/.current.build.pkg
 
 if [ -z "$INSTALL" ]; then
   INSTALL=$BUILD/image/system

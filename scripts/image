@@ -218,6 +218,7 @@ echo "$TOOLCHAIN/bin/mksquashfs \"$BUILD/image/system\" \"$TARGET_IMG/$IMAGE_NAM
 # run fakeroot
 $TOOLCHAIN/bin/fakeroot -- $FAKEROOT_SCRIPT
 rm -rf $FAKEROOT_SCRIPT
+rm -rf $CURRENT_PKGBUILD
 
 # set permissions
 chmod 0644 $TARGET_IMG/$IMAGE_NAME.system
