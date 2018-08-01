@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
-# Copyright (C) 2009-2016 Lukas Rusak (lrusak@libreelec.tv)
+# Copyright (C) 2009-2016 Stephan Raue (stephan@openelec.tv)
 # Copyright (C) 2018-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="pvr.stalker"
-PKG_VERSION="bfb875e"
-PKG_SHA256="684357c3449b22fd27d968ca18ec1132cd278a0afac5d59be2c981f91ef40731"
+PKG_VERSION="f84483c"
+PKG_SHA256="56259a25538981dffd69f3f93821255636bbb1f38a95748377309a6ee8da7ca4"
 PKG_REV="2"
 PKG_ARCH="any"
 PKG_LICENSE="GPL"
