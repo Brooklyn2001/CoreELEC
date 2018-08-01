@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
-# Copyright (C) 2011-present AlexELEC (http://www.alexelec.in.ua)
+# Copyright (C) 2018-present CoreELEC (https://coreelec.org)
 
 PKG_NAME="entware"
 PKG_VERSION=""
@@ -17,8 +17,8 @@ post_install() {
   mkdir -p $INSTALL/usr/sbin
     cp -P $PKG_DIR/scripts/installentware $INSTALL/usr/sbin
 
-    # Replace Entware URL
-    $SED -e "s/@ENTWARE_URL@/$ENTWARE_URL/g" \
+    # Replace Entware Arch
+    $SED -e "s/@ENTWARE_ARCH@/$ENTWARE_ARCH/g" \
          -i $INSTALL/usr/sbin/installentware
 
   enable_service entware.service
