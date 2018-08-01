@@ -31,3 +31,6 @@ mkpkg-temp
 
 # private dir
 /private/
+
+# current build pkg info
+/.current.build.pkg

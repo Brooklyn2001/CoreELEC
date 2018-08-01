@@ -1,11 +1,9 @@
-################################################################################
-#      This file is part of Alex@ELEC - http://www.alexelec.in.ua
-#      Copyright (C) 2011-present Alexandr Zuyev (alex@alexelec.in.ua)
-################################################################################
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (C) 2011-present AlexELEC (http://www.alexelec.in.ua)
 
 PKG_NAME="kodi"
-PKG_VERSION="743da9e"
-PKG_SHA256="cb4b406f9cef7aa3e077f20aecc601cb3f5e62d12ba15cdb5ad3b73edde662bd"
+PKG_VERSION="3f3a7f7"
+PKG_SHA256="e1c31f68d4556493e265a8fe5920f56cff642bf3d5b653f9953e8dbc1414e5ff"
 PKG_ARCH="any"
 PKG_LICENSE="GPL"
 PKG_SITE="http://www.kodi.tv"
