@@ -1,8 +1,7 @@
 #!/bin/bash
-################################################################################
-#      This file is part of Alex@ELEC - http://www.alexelec.in.ua
-#      Copyright (C) 2011-present Alexandr Zuyev (alex@alexelec.in.ua)
-################################################################################
+
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (C) 2011-present AlexELEC (http://www.alexelec.in.ua)
 
 unset _CACHE_PACKAGE_LOCAL _CACHE_PACKAGE_GLOBAL _DEBUG_DEPENDS_LIST _DEBUG_PACKAGE_LIST
 
@@ -81,7 +80,6 @@ ln -sf /var/media $INSTALL/media
 ln -sf /usr/lib $INSTALL/lib
 ln -sf /usr/bin $INSTALL/bin
 ln -sf /usr/sbin $INSTALL/sbin
-ln -sf /storage/.opt $INSTALL/opt
 
 echo "$TARGET_VERSION" > $INSTALL/etc/release
 
@@ -144,6 +142,12 @@ $SCRIPTS/install network
 
 # Remote support
 [ "$REMOTE_SUPPORT" = "yes" ] && $SCRIPTS/install remote
+
+# Entware support
+if [ "$ENTWARE_SUPPORT" = "yes" ]; then
+  ln -sf /storage/.opt $INSTALL/opt
+  $SCRIPTS/install entware
+fi
 
 # Install miscellaneous packages
 $SCRIPTS/install misc-packages
