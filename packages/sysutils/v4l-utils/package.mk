@@ -1,7 +1,5 @@
-################################################################################
-#      This file is part of Alex@ELEC - http://www.alexelec.in.ua
-#      Copyright (C) 2011-present Alexandr Zuyev (alex@alexelec.in.ua)
-################################################################################
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (C) 2009-2016 Stephan Raue (stephan@openelec.tv)
 
 PKG_NAME="v4l-utils"
 PKG_VERSION="1.14.1"
@@ -66,8 +64,8 @@ post_makeinstall_target() {
   rm -rf $INSTALL/etc/rc_keymaps
     ln -sf /storage/.config/rc_keymaps $INSTALL/etc/rc_keymaps
 
-  mkdir -p $INSTALL/usr/config
-    cp -PR $PKG_DIR/config/* $INSTALL/usr/config
+  #mkdir -p $INSTALL/usr/config
+  #  cp -PR $PKG_DIR/config/* $INSTALL/usr/config
 
   rm -rf $INSTALL/usr/lib/udev/rules.d
     mkdir -p $INSTALL/usr/lib/udev/rules.d
