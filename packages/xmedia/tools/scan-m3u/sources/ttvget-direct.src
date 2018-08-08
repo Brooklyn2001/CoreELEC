@@ -1,8 +1,7 @@
 #!/bin/sh
-################################################################################
-#      This file is part of Alex@ELEC - http://www.alexelec.in.ua
-#      Copyright (C) 2011-present Alexandr Zuyev (alex@alexelec.in.ua)
-################################################################################
+
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (C) 2011-present Alex@ELEC (http://alexelec.in.ua)
 
 SERVICE_DIR="/storage/.cache/services"
 M3U_DIR="/storage/ttv-m3u"
@@ -41,6 +40,7 @@ cat $INFILE |
       CH_LOGO=`echo $LINE | awk -F\\# '{print $4}' | sed 's/^[ \t]*//; s/[ \t]*$//'`
       CH_URL_ID=`curl -s "$TTV_API_URL/translation_stream.php?session=$TTV_SESSION&channel_id=$CH_ID&typeresult=json" | jq -r '.source'`
       CH_CID=$(get_cid $CH_URL_ID)
+      [ "$CH_CID" == '{"error":"BDecode failed"}' ] && continue
 
       echo "#EXTINF:-1 group-title=\"$CH_CAT\" tvg-logo=\"$CH_LOGO\",$CH_NAME" >> $INFILE.m3u
       echo "http://${URL_IP}:6878/ace/getstream?id=${CH_CID}&.mp4" >> $INFILE.m3u
@@ -143,20 +143,20 @@ for fpart in $(ls $PART_DIR); do
   build_m3u "$PART_DIR/$fpart" &
 done
 
+patern='ttv.part[1-9]'
 while true; do
-  usleep 100
-  if [ -d "$PART_DIR" ]; then
-      fcount=`find $PART_DIR -name "ttv.part[1-9]" | wc -l  2>/dev/null`
-      [ $fcount -eq 0 ] && break
-  else
-      break
-  fi
+  usleep 250
+  [ $(ls /tmp/ttv/$patern 2>/dev/null | wc -l) -lt 1 ] && break
 done
 
 PART_FILES=`ls $PART_DIR/*m3u`
-echo '#EXTM3U' > $TTV_M3U_FILE
-cat $PART_FILES >> $TTV_M3U_FILE
+if [ "$PART_FILES" != "" ]; then
+  echo '#EXTM3U' > $TTV_M3U_FILE
+  cat $PART_FILES >> $TTV_M3U_FILE
+  echo "Done! Playlist created."
+else
+  echo "Error create file: SITE-TTV.m3u"
+fi
 rm -fr $PART_DIR
 
-echo "Done! Playlist created."
 exit
