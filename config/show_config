@@ -163,7 +163,7 @@ show_config() {
 
   config_message="$config_message\n"
   config_message="$config_message\n $dashes$dashes$dashes"
-  config_message="$config_message\n End Configuration for $DISTRONAME"
+  config_message="$config_message\n End Configuration: $DISTRONAME-${DEVICE:-$PROJECT}.$TARGET_ARCH-$LIBREELEC_VERSION"
   config_message="$config_message\n $dashes$dashes$dashes"
   config_message="$config_message\n\n\n"
 
