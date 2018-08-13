@@ -1,24 +1,9 @@
-################################################################################
-#      This file is part of LibreELEC - https://libreelec.tv
-#      Copyright (C) 2018-present Team LibreELEC
-#
-#  LibreELEC is free software: you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation, either version 2 of the License, or
-#  (at your option) any later version.
-#
-#  LibreELEC is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License
-#  along with LibreELEC.  If not, see <http://www.gnu.org/licenses/>.
-################################################################################
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (C) 2018-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="stress-ng"
-PKG_VERSION="0.09.31"
-PKG_SHA256="a6e4287449b2694c4498a6b3836b911059392d263594ade1f6d224cb68b1c04c"
+PKG_VERSION="0.09.36"
+PKG_SHA256="16102abee20fe26b1a8784ab05c61b3e72474503bc50b9debc9f457cb4b4e228"
 PKG_ARCH="any"
 PKG_LICENSE="GPLv2"
 PKG_SITE="http://kernel.ubuntu.com/~cking/stress-ng/"
