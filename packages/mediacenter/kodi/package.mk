@@ -143,13 +143,6 @@ else
   KODI_UPNP="-DENABLE_UPNP=OFF"
 fi
 
-if [ "$KODI_SSHLIB_SUPPORT" = yes ]; then
-  PKG_DEPENDS_TARGET="$PKG_DEPENDS_TARGET libssh"
-  KODI_SSH="-DENABLE_SSH=ON"
-else
-  KODI_SSH="-DENABLE_SSH=OFF"
-fi
-
 if target_has_feature neon; then
   KODI_NEON="-DENABLE_NEON=ON"
 else
@@ -229,7 +222,6 @@ PKG_CMAKE_OPTS_TARGET="-DNATIVEPREFIX=$TOOLCHAIN \
                        $KODI_AVAHI \
                        $KODI_UPNP \
                        $KODI_MYSQL \
-                       $KODI_SSH \
                        $KODI_AIRPLAY \
                        $KODI_AIRTUNES \
                        $KODI_OPTICAL \
