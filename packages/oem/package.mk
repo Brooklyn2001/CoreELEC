@@ -1,7 +1,5 @@
-################################################################################
-#      This file is part of Alex@ELEC - http://www.alexelec.in.ua
-#      Copyright (C) 2011-present Alexandr Zuyev (alex@alexelec.in.ua)
-################################################################################
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (C) 2011-present Alex@ELEC (http://alexelec.in.ua)
 
 PKG_NAME="oem"
 PKG_VERSION=""
@@ -19,6 +17,7 @@ PKG_LONGDESC="OEM: Metapackage for various OEM packages"
   PKG_DEPENDS_TARGET="$PKG_DEPENDS_TARGET noxbit"
   PKG_DEPENDS_TARGET="$PKG_DEPENDS_TARGET acestream-aml"
   PKG_DEPENDS_TARGET="$PKG_DEPENDS_TARGET transmission"
+  PKG_DEPENDS_TARGET="$PKG_DEPENDS_TARGET torrserver"
 
 # tv services
   PKG_DEPENDS_TARGET="$PKG_DEPENDS_TARGET oscam"
