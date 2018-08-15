@@ -1,8 +1,8 @@
 #!/bin/sh
-################################################################################
-#      This file is part of Alex@ELEC - http://www.alexelec.in.ua
-#      Copyright (C) 2011-present Alexandr Zuyev (alex@alexelec.in.ua)
-################################################################################
+
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (C) 2009-2014 Stephan Raue (stephan@openelec.tv)
+# Copyright (C) 2011-present Alex@ELEC (http://alexelec.in.ua)
 
 KODI_ROOT=$HOME/.kodi
 
@@ -51,15 +51,3 @@ if [ ! -d $HOME/.kodi/userdata/addon_data/skin.aeon.nox.ae ]; then
     cp -R /usr/share/kodi/config/skin.aeon.nox.ae $HOME/.kodi/userdata/addon_data
   fi
 fi
-
-if [ ! -d $HOME/.kodi/userdata/addon_data/skin.aeon.madnox.ae ]; then
-  if [ -d /usr/share/kodi/config/skin.aeon.madnox.ae ]; then
-    mkdir -p $HOME/.kodi/userdata/addon_data
-    cp -R /usr/share/kodi/config/skin.aeon.madnox.ae $HOME/.kodi/userdata/addon_data
-  fi
-fi
-
-KODI_ARGS=""
-
-echo "KODI_ARGS=\"$KODI_ARGS\"" > /run/libreelec/kodi.conf
-echo "MALLOC_MMAP_THRESHOLD_=524288" >> /run/libreelec/kodi.conf
