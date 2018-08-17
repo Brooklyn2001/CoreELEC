@@ -1,8 +1,8 @@
 [Unit]
 Description=TorrServer Daemon
+Requires=network-online.target
 After=network-online.target
 Before=kodi.service
-Wants=network-online.target
 ConditionPathExists=/storage/.cache/services/torrserver.conf
 
 [Service]
