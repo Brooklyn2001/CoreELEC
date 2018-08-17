@@ -51,3 +51,5 @@ if [ ! -d $HOME/.kodi/userdata/addon_data/skin.aeon.nox.ae ]; then
     cp -R /usr/share/kodi/config/skin.aeon.nox.ae $HOME/.kodi/userdata/addon_data
   fi
 fi
+
+echo "MALLOC_MMAP_THRESHOLD_=8192" > /run/libreelec/kodi.conf
