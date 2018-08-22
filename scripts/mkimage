@@ -1,8 +1,9 @@
 #!/bin/bash
-################################################################################
-#      This file is part of Alex@ELEC - http://www.alexelec.in.ua
-#      Copyright (C) 2011-present Alexandr Zuyev (alex@alexelec.in.ua)
-################################################################################
+
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (C) 2009-2016 Stephan Raue (stephan@openelec.tv)
+# Copyright (C) 2016-present Team LibreELEC (https://libreelec.tv)
+# Copyright (C) 2011-present AlexELEC (http://www.alexelec.in.ua)
 
 ################################################################################
 # variables such as $ROOT $PATH etc... that are required for this
@@ -90,15 +91,6 @@ trap cleanup SIGINT
   fi
   sync
 
-if [ "$BOOTLOADER" = "syslinux" ]; then
-  # write mbr
-    echo "image: writing mbr..."
-    MBR="$TOOLCHAIN/share/syslinux/gptmbr.bin"
-    if [ -n "$MBR" ]; then
-      dd bs=440 count=1 conv=fsync,notrunc if="$MBR" of="$DISK" >"$SAVE_ERROR" 2>&1 || show_error
-    fi
-fi
-
 # create filesystem on part1
   echo "image: creating filesystem on part1..."
   OFFSET=$(( $SYSTEM_PART_START * 512 ))
@@ -111,126 +103,12 @@ fi
   alias mcopy="mcopy -i $DISK@@$OFFSET"
   alias mmd="mmd -i $DISK@@$OFFSET"
 
-  if [ "$BOOTLOADER" = "syslinux" -o "$BOOTLOADER" = "bcm2835-bootloader" -o "$BOOTLOADER" = "u-boot" ]; then
-    mformat -v "$DISTRO_BOOTLABEL" -N "$FAT_SERIAL_NUMBER" ::
-  fi
+  mformat -v "$DISTRO_BOOTLABEL" -N "$FAT_SERIAL_NUMBER" ::
   sync
 
-if [ "$BOOTLOADER" = "syslinux" ]; then
+if [ "$BOOTLOADER" = "u-boot" -a \( -n "$UBOOT_SYSTEM" -o "$UBOOT_VERSION" = "vendor" \) ]; then
   # create bootloader configuration
     echo "image: creating bootloader configuration..."
-    cat << EOF > "$LE_TMP"/syslinux.cfg
-SAY Wait for installer to start or press <TAB> for more options (live, run)
-DEFAULT installer
-TIMEOUT 50
-PROMPT 1
-
-LABEL installer
-  KERNEL /$KERNEL_NAME
-  APPEND boot=UUID=$UUID_SYSTEM installer quiet tty vga=current
-
-LABEL live
-  KERNEL /$KERNEL_NAME
-  APPEND boot=UUID=$UUID_SYSTEM live quiet tty vga=current
-
-LABEL run
-  KERNEL /$KERNEL_NAME
-  APPEND boot=UUID=$UUID_SYSTEM disk=UUID=$UUID_STORAGE portable quiet
-EOF
-
-    cat << EOF > "$LE_TMP"/grub.cfg
-set timeout="25"
-set default="Installer"
-menuentry "Installer" {
-	search --set -f /KERNEL
-	linux /KERNEL boot=UUID=$UUID_SYSTEM installer quiet tty vga=current
-}
-menuentry "Live" {
-	search --set -f /KERNEL
-	linux /KERNEL boot=UUID=$UUID_SYSTEM grub_live quiet tty vga=current
-}
-menuentry "Run" {
-	search --set -f /KERNEL
-	linux /KERNEL boot=UUID=$UUID_SYSTEM disk=UUID=$UUID_STORAGE grub_portable quiet
-}
-EOF
-
-    mcopy "$LE_TMP/syslinux.cfg" ::
-
-  # install syslinux
-    echo "image: installing syslinux to part1..."
-    syslinux.mtools --offset "$OFFSET" -i "$DISK"
-
-  # copy files
-    echo "image: copying files to part1..."
-    mcopy $TARGET_IMG/$IMAGE_NAME.kernel "::/$KERNEL_NAME"
-    mcopy $TARGET_IMG/$IMAGE_NAME.system ::/SYSTEM
-    mcopy $RELEASE_DIR/target/KERNEL.md5 "::/$KERNEL_NAME.md5"
-    mcopy $RELEASE_DIR/target/SYSTEM.md5 ::/SYSTEM.md5
-
-    mmd EFI EFI/BOOT
-    mcopy $TOOLCHAIN/share/syslinux/bootx64.efi ::/EFI/BOOT
-    mcopy $TOOLCHAIN/share/syslinux/ldlinux.e64 ::/EFI/BOOT
-    mcopy $TOOLCHAIN/share/grub/bootia32.efi ::/EFI/BOOT
-    mcopy "$LE_TMP"/grub.cfg ::/EFI/BOOT
-elif [ "$BOOTLOADER" = "bcm2835-bootloader" ]; then
-  # create bootloader configuration
-    echo "image: creating bootloader configuration..."
-    cat << EOF > "$LE_TMP"/cmdline.txt
-boot=UUID=$UUID_SYSTEM disk=UUID=$UUID_STORAGE quiet $EXTRA_CMDLINE
-EOF
-
-    mcopy "$LE_TMP/cmdline.txt" ::
-
-  # copy files
-    echo "image: copying files to part1..."
-    mcopy $TARGET_IMG/$IMAGE_NAME.kernel "::/$KERNEL_NAME"
-    mcopy $TARGET_IMG/$IMAGE_NAME.system ::/SYSTEM
-    mcopy $RELEASE_DIR/target/KERNEL.md5 "::/$KERNEL_NAME.md5"
-    mcopy $RELEASE_DIR/target/SYSTEM.md5 ::/SYSTEM.md5
-
-    mcopy $RELEASE_DIR/3rdparty/bootloader/bootcode.bin ::
-    mcopy $RELEASE_DIR/3rdparty/bootloader/fixup.dat ::
-    mcopy $RELEASE_DIR/3rdparty/bootloader/start.elf ::
-    mcopy $RELEASE_DIR/3rdparty/bootloader/config.txt ::
-    mcopy $RELEASE_DIR/3rdparty/bootloader/distroconfig.txt ::
-
-    if [ -f $RELEASE_DIR/3rdparty/bootloader/dt-blob.bin ]; then
-      mcopy $RELEASE_DIR/3rdparty/bootloader/dt-blob.bin ::
-    fi
-
-    for dtb in $RELEASE_DIR/3rdparty/bootloader/*.dtb ; do
-      if [ -f $dtb ] ; then
-        mcopy "$dtb" ::/$(basename "$dtb")
-      fi
-    done
-
-    if [ -d $RELEASE_DIR/3rdparty/bootloader/overlays ]; then
-      mcopy -s $RELEASE_DIR/3rdparty/bootloader/overlays ::
-    fi
-
-elif [ "$BOOTLOADER" = "u-boot" -a \( -n "$UBOOT_SYSTEM" -o "$UBOOT_VERSION" = "vendor" \) ]; then
-  # create bootloader configuration
-    echo "image: creating bootloader configuration..."
-
-    if [ "$UBOOT_VERSION" != "vendor" ]; then
-      DTB="$($SCRIPTS/uboot_helper $PROJECT $DEVICE $UBOOT_SYSTEM dtb)"
-
-      if [ -f "$RELEASE_DIR/3rdparty/bootloader/$DTB" ]; then
-        mcopy $RELEASE_DIR/3rdparty/bootloader/$DTB ::
-      fi
-
-      mkdir -p "$LE_TMP"/extlinux
-
-      cat << EOF > "$LE_TMP"/extlinux/extlinux.conf
-LABEL $DISTRO
-  LINUX /$KERNEL_NAME
-  FDT /$DTB
-  APPEND boot=UUID=$UUID_SYSTEM disk=UUID=$UUID_STORAGE quiet $EXTRA_CMDLINE
-EOF
-
-      mcopy -s "$LE_TMP"/extlinux ::
-    fi
 
     if [ -f $PROJECT_DIR/$PROJECT/devices/$DEVICE/bootloader/mkimage ]; then
       . $PROJECT_DIR/$PROJECT/devices/$DEVICE/bootloader/mkimage
@@ -283,41 +161,6 @@ fi # bootloader
   dd if="$DISK" of="$LE_TMP/part1.fat" bs=512 skip="$SYSTEM_PART_START" count="$SYSTEM_PART_COUNT" conv=fsync >"$SAVE_ERROR" 2>&1 || show_error
   echo "image: checking filesystem on part1..."
   fsck -n $LE_TMP/part1.fat >"$SAVE_ERROR" 2>&1 || show_error
-
-# create virtual image
-  if [ "$PROJECT" = "Generic" ]; then
-    echo "image: creating open virtual appliance..."
-    # duplicate $DISK so anything we do to it directly doesn't effect original
-    dd if="$DISK" of="${DISK_BASENAME}.tmp" bs=1M >"$SAVE_ERROR" 2>&1 || show_error
-    # change syslinux default to 'run'
-    echo "image: modifying fs on part1 for open virtual appliance..."
-    sed -i "/DEFAULT/ s/installer/run/" "$LE_TMP"/syslinux.cfg
-    sed -i "/set default=/s/\"Installer\"/\"Run\"/" "$LE_TMP"/grub.cfg
-    # FIXME: an unalias should work here, but it does not; call mcopy directly
-    $TOOLCHAIN/bin/mcopy -i $LE_TMP/part1.fat -o "$LE_TMP"/syslinux.cfg ::
-    $TOOLCHAIN/bin/mcopy -i $LE_TMP/part1.fat -o "$LE_TMP"/grub.cfg ::/EFI/BOOT
-    sync
-    # merge modified part1 back to tmp disk image
-    echo "image: merging part1 back to open virtual appliance..."
-    dd if="$LE_TMP/part1.fat" of="${DISK_BASENAME}.tmp" bs=512 seek="$SYSTEM_PART_START" conv=fsync,notrunc >"$SAVE_ERROR" 2>&1 || show_error
-    # create vmdk from tmp $DISK
-    qemu-img convert -O vmdk -o subformat=streamOptimized "${DISK_BASENAME}.tmp" "${DISK_BASENAME}.vmdk"
-    # generate ovf from template
-    sed -e "s,@DISTRO@,$DISTRO,g" -e "s,@DISK@,${IMAGE_NAME},g" \
-        -e "s,@DISK_SIZE@,$(($DISK_SIZE*1024*1024)),g" \
-        $PROJECT_DIR/$PROJECT/config/ovf.template > ${DISK_BASENAME}.ovf
-    # combine ovf and vmdk into official ova
-    tar -C $TARGET_IMG -cf ${DISK_BASENAME}.ova ${IMAGE_NAME}.ovf ${IMAGE_NAME}.vmdk
-    # create sha256 checksum of ova image
-    ( cd $TARGET_IMG
-      sha256sum ${IMAGE_NAME}.ova > ${IMAGE_NAME}.ova.sha256
-    )
-    echo "image: cleaning up..."
-    # remove tmp $DISK, vmdk and ovf
-    rm ${DISK_BASENAME}.tmp ${DISK_BASENAME}.vmdk ${DISK_BASENAME}.ovf
-    # set owner
-    [ -n "$SUDO_USER" ] && chown $SUDO_USER: ${DISK_BASENAME}.ova
-  fi
 
 # gzip
   echo "image: compressing..."
