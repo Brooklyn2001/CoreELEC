@@ -1,0 +1,22 @@
+diff -Naurp tvheadend-9b9ee68/src/htsp_server.c tvheadend-9b9ee68-patch/src/htsp_server.c
+--- tvheadend-9b9ee68/src/htsp_server.c	2018-08-13 14:25:09.000000000 +0300
++++ tvheadend-9b9ee68-patch/src/htsp_server.c	2018-08-25 12:32:48.000000000 +0300
+@@ -65,7 +65,7 @@
+ 
+ static void *htsp_server, *htsp_server_2;
+ 
+-#define HTSP_PROTO_VERSION 33
++#define HTSP_PROTO_VERSION 32
+ 
+ #define HTSP_ASYNC_OFF  0x00
+ #define HTSP_ASYNC_ON   0x01
+@@ -1107,9 +1107,6 @@ htsp_build_dvrentry(htsp_connection_t *h
+     break;
+   }
+ 
+-  if (dvr_entry_is_upcoming(de))
+-    htsmsg_add_u32(out, "duplicate", dvr_entry_is_upcoming_nodup(de) ? 0 : 1);
+-
+   htsmsg_add_str(out, "state", s);
+   if(error)
+     htsmsg_add_str(out, "error", error);
