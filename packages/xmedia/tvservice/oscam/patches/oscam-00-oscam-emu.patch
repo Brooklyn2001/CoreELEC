@@ -1,6 +1,6 @@
-diff -Naurp oscam-941f2e8/CMakeLists.txt oscam-941f2e8-patch/CMakeLists.txt
---- oscam-941f2e8/CMakeLists.txt	2018-06-24 00:06:48.000000000 +0300
-+++ oscam-941f2e8-patch/CMakeLists.txt	2018-06-24 10:26:30.122073434 +0300
+diff -Naurp oscam/CMakeLists.txt oscam-patch/CMakeLists.txt
+--- oscam/CMakeLists.txt	2018-08-27 12:12:01.439975275 +0300
++++ oscam-patch/CMakeLists.txt	2018-08-27 12:14:15.370792139 +0300
 @@ -101,6 +101,7 @@ include_directories (
      ${CMAKE_CURRENT_SOURCE_DIR}/csctapi
      ${CMAKE_CURRENT_SOURCE_DIR}/cscrypt
@@ -48,7 +48,7 @@ diff -Naurp oscam-941f2e8/CMakeLists.txt oscam-941f2e8-patch/CMakeLists.txt
  if(HAVE_LIBRT AND HAVE_LIBUSB)
     if (LIBUSBDIR)
  	set (libusb_link "imp_libusb")
-@@ -647,6 +657,11 @@ add_definitions ("-D'CS_SVN_VERSION=\"${
+@@ -653,6 +663,11 @@ add_definitions ("-D'CS_SVN_VERSION=\"${
  execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpmachine COMMAND tr -d '\n' OUTPUT_VARIABLE CS_TARGET)
  add_definitions ("-D'CS_TARGET=\"${CS_TARGET}\"'")
  #----------------------- global compile and link options ------------------------------
@@ -60,7 +60,7 @@ diff -Naurp oscam-941f2e8/CMakeLists.txt oscam-941f2e8-patch/CMakeLists.txt
  # disable warning about unused but set variables in gcc 4.6+
  if (CMAKE_COMPILER_IS_GNUCC)
      execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
-@@ -731,6 +746,22 @@ endif( HAVE_LIBRT OR HAVE_LIBRT_STATIC)
+@@ -737,6 +752,22 @@ endif( HAVE_LIBRT OR HAVE_LIBRT_STATIC)
  
  #--------------------------------------------------------------------------------
  
@@ -83,7 +83,7 @@ diff -Naurp oscam-941f2e8/CMakeLists.txt oscam-941f2e8-patch/CMakeLists.txt
  #----------------------- installation -----------------------------
  
  file (GLOB config_files "${CMAKE_CURRENT_SOURCE_DIR}/Distribution/oscam.*")
-@@ -819,4 +850,8 @@ endif(STATIC_LIBUSB EQUAL 1)
+@@ -825,4 +856,8 @@ endif(STATIC_LIBUSB EQUAL 1)
   endif(STATICLIBUSB AND NOT LIBUSBDIR)
  endif (HAVE_LIBUSB)
  
@@ -92,9 +92,841 @@ diff -Naurp oscam-941f2e8/CMakeLists.txt oscam-941f2e8-patch/CMakeLists.txt
 +endif (WITH_EMU)
 +
  message (STATUS "")
-diff -Naurp oscam-941f2e8/config.h oscam-941f2e8-patch/config.h
---- oscam-941f2e8/config.h	2018-06-24 00:06:48.000000000 +0300
-+++ oscam-941f2e8-patch/config.h	2018-06-24 10:26:30.126073388 +0300
+diff -Naurp oscam/CMakeLists.txt.orig oscam-patch/CMakeLists.txt.orig
+--- oscam/CMakeLists.txt.orig	1970-01-01 03:00:00.000000000 +0300
++++ oscam-patch/CMakeLists.txt.orig	2018-08-27 12:12:01.000000000 +0300
+@@ -0,0 +1,828 @@
++project (OSCam C)
++
++#----------------------- minimum version of cmake to use ------------
++
++# if you want to switch to 2.6 min, please look at the escaped definitions
++# later in this file (the add_definitions in 2.6 don't need to be escaped),
++# and remove the CMP0005 policy.
++# the CMP0003 could also be removed for cmake 2.6
++cmake_minimum_required (VERSION 2.4)
++if(COMMAND cmake_policy)
++    cmake_policy(SET CMP0005 OLD)
++    cmake_policy(SET CMP0003 NEW)
++endif(COMMAND cmake_policy)
++
++#----------------------- detect system ------------------------------
++
++if (CMAKE_CROSSCOMPILING)
++    if (OSCAM_SYSTEM_NAME MATCHES "Tuxbox")
++        set (OSCamOperatingSystem "Tuxbox")
++    elseif (OSCAM_SYSTEM_NAME MATCHES "TripleDragon")
++        set (OSCamOperatingSystem "TripleDragon")
++    elseif (OSCAM_SYSTEM_NAME MATCHES "Coolstream")
++        set (OSCamOperatingSystem "NeutrinoHD")
++    elseif (OSCAM_SYSTEM_NAME MATCHES "CST2")
++        set (OSCamOperatingSystem "NHD2")
++    elseif (OSCAM_SYSTEM_NAME MATCHES "NSLU2")
++        set (OSCamOperatingSystem "SlugOS")
++    elseif (OSCAM_SYSTEM_NAME MATCHES "WRT350NV2")
++        set (OSCamOperatingSystem "OpenWRT")
++        set (CS_OS_HW "wrt350nv2")
++    elseif (OSCAM_SYSTEM_NAME MATCHES "Dockstar")
++        set (OSCamOperatingSystem "OpenWRT")
++        set (CS_OS_HW "dockstar")
++    elseif (OSCAM_SYSTEM_NAME MATCHES "Fonera2")
++        set (OSCamOperatingSystem "Fonera2")
++    elseif (OSCAM_SYSTEM_NAME MATCHES "DIR-825")
++        set (OSCamOperatingSystem "DIR-825")
++    elseif (OSCAM_SYSTEM_NAME MATCHES "AZBox")
++        set (OSCamOperatingSystem "AZBox")
++    elseif (OSCAM_SYSTEM_NAME MATCHES "SU980")
++        set (OSCamOperatingSystem "SU980")
++    elseif (OSCAM_SYSTEM_NAME MATCHES "MCA")
++        set (OSCamOperatingSystem "MCA")
++    elseif (OSCAM_SYSTEM_NAME MATCHES "agv2+w")
++        set (OSCamOperatingSystem "agv2+w")
++    elseif (OSCAM_SYSTEM_NAME MATCHES "WRT54G")
++        set (OSCamOperatingSystem "WRT54G")
++    elseif (OSCAM_SYSTEM_NAME MATCHES "Amino")
++        set (OSCamOperatingSystem "Amino")
++    elseif (OSCAM_SYSTEM_NAME MATCHES "QboxHD")
++        set (OSCamOperatingSystem "QboxHD")
++    elseif (OSCAM_SYSTEM_NAME MATCHES "Padre")
++        set (OSCamOperatingSystem "Padre")
++    elseif (OSCAM_SYSTEM_NAME MATCHES "FriendlyARM")
++        set (OSCamOperatingSystem "FriendlyARM")
++    else (OSCAM_SYSTEM_NAME MATCHES "Tuxbox")
++        message (STATUS "Unknown cross system name: <${CMAKE_SYSTEM_NAME}>")
++        set (OSCamOperatingSystem "Unknown")
++    endif (OSCAM_SYSTEM_NAME MATCHES "Tuxbox")
++else (CMAKE_CROSSCOMPILING)
++    if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
++        set (OSCamOperatingSystem "Linux")
++    elseif (${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
++        set (OSCamOperatingSystem "FreeBSD")
++    elseif (${CMAKE_SYSTEM_NAME} MATCHES "OpenBSD")
++        set (OSCamOperatingSystem "OpenBSD")
++    elseif (OSCamOperatingSystem MATCHES "Padre")
++        add_definitions ("-DPADRE -DSPARC")
++        set (DEFAULT_CS_CONFDIR "/etc/oscam")
++    elseif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
++        set (OSCamOperatingSystem "Mac OS X")
++	execute_process(COMMAND sw_vers -productVersion COMMAND cut -c 1-4 COMMAND tr -d '\n' OUTPUT_VARIABLE SWVER)
++	execute_process(COMMAND xcodebuild -version COMMAND grep Xcode COMMAND sed "s/Xcode\ //g" COMMAND tr -d '\n' OUTPUT_VARIABLE XCODEVER)
++	message (STATUS "mac sdk version is ${SWVER}")
++	message (STATUS "mac Xcode version is ${XCODEVER}")
++	add_definitions ("-w")
++	set (CMAKE_OSX_DEPLOYMENT_TARGET "${SWVER}")
++        if (SWVER GREATER 10.5)
++	set (CMAKE_OSX_ARCHITECTURES "x86_64")
++	endif (SWVER GREATER 10.5)
++	if (SWVER EQUAL 10.7 AND XCODEVER LESS 4.3)
++	message (STATUS "Compiling with xcode less then 4.3 on 10.7 If You have time update You're Xcode")
++	endif (SWVER EQUAL 10.7 AND XCODEVER LESS 4.3)
++	set (STATIC_LIBUSB True)
++    elseif (${CYGWIN})
++        set (OSCamOperatingSystem "Windows/Cygwin")
++        set (CMAKE_SYSTEM_PROCESSOR "i386")
++    else (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
++        message (STATUS "Unknown system name: <${CMAKE_SYSTEM_NAME}>")
++        set (OSCamOperatingSystem "Unknown")
++    endif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
++endif (CMAKE_CROSSCOMPILING)
++
++#----------------------- some paths ------------------------------
++
++set (OPTIONAL_LINK_DIR "" CACHE STRING "Some optional link directories")
++set (OPTIONAL_INCLUDE_DIR "" CACHE STRING "Some optional include directories")
++
++if (OSCamOperatingSystem MATCHES "Windows/Cygwin")
++include_directories (
++    ${CMAKE_CURRENT_SOURCE_DIR}/csctapi
++    ${CMAKE_CURRENT_SOURCE_DIR}/cscrypt
++    ${CMAKE_CURRENT_SOURCE_DIR}/minilzo
++    ${CMAKE_CURRENT_SOURCE_DIR}/extapi/cygwin
++    /usr/include/w32api
++    ${OPTIONAL_INCLUDE_DIR}
++    )
++else (OSCamOperatingSystem MATCHES "Windows/Cygwin")
++include_directories (
++    ${CMAKE_CURRENT_SOURCE_DIR}/csctapi
++    ${CMAKE_CURRENT_SOURCE_DIR}/cscrypt
++    ${CMAKE_CURRENT_SOURCE_DIR}/minilzo
++    ${OPTIONAL_INCLUDE_DIR}
++    )
++endif (OSCamOperatingSystem MATCHES "Windows/Cygwin")
++
++if(OSCamOperatingSystem MATCHES "Windows/Cygwin")
++link_directories (
++    /usr/lib
++    /usr/lib/w32api
++    /cygdrive/c/WINDOWS/system32/
++    ${OPTIONAL_LINK_DIR}
++    )
++else (OSCamOperatingSystem MATCHES "Windows/Cygwin")
++link_directories (
++    ${OPTIONAL_LINK_DIR}
++    )
++endif (OSCamOperatingSystem MATCHES "Windows/Cygwin")
++
++#----------------------- global options ------------------------------
++
++if (OSCamOperatingSystem MATCHES "Linux")
++    set (DEFAULT_CS_CONFDIR "/usr/local/etc")
++elseif (OSCamOperatingSystem MATCHES "Mac OS X")
++    if (NOT HAVE_PCSC EQUAL 0)
++    add_definitions ("-DWITH_PCSC=1")
++    endif (NOT HAVE_PCSC EQUAL 0)
++    set (DEFAULT_CS_CONFDIR "/usr/local/etc")
++elseif (OSCamOperatingSystem MATCHES "Tuxbox")
++    set (DEFAULT_CS_CONFDIR "/var/tuxbox/config")
++elseif (OSCamOperatingSystem MATCHES "TripleDragon")
++    add_definitions ("-DSTB04SCI=1")
++    set (DEFAULT_CS_CONFDIR "/var/tuxbox/config")
++elseif (OSCamOperatingSystem MATCHES "NeutrinoHD")
++    add_definitions ("-DWITH_COOLAPI=1")
++    set (USE_COOLAPI "USE_COOLAPI")
++    set (DEFAULT_CS_CONFDIR "/var/tuxbox/config")
++elseif (OSCamOperatingSystem MATCHES "NHD2")
++    add_definitions ("-DWITH_COOLAPI2=1")
++    set (USE_COOLAPI2 "USE_COOLAPI2")
++    set (DEFAULT_CS_CONFDIR "/var/tuxbox/config")
++elseif (OSCamOperatingSystem MATCHES "SlugOS")
++    set (DEFAULT_CS_CONFDIR "/var/etc")
++elseif (OSCamOperatingSystem MATCHES "OpenWRT")
++    if (CS_OS_HW MATCHES "wrt350nv2")
++        set (DEFAULT_CS_CONFDIR "/etc/oscam")
++    elseif (CS_OS_HW MATCHES "dockstar")
++        set (DEFAULT_CS_CONFDIR "/usr/oscam")
++    endif (CS_OS_HW MATCHES "wrt350nv2")
++elseif (OSCamOperatingSystem MATCHES "Fonera2")
++    set (DEFAULT_CS_CONFDIR "/var/etc")
++elseif (OSCamOperatingSystem MATCHES "DIR-825")
++    set (DEFAULT_CS_CONFDIR "/var/etc")
++elseif (OSCamOperatingSystem MATCHES "AZBox")
++    add_definitions ("-DWITH_AZBOX=1")
++    set (USE_AZBOX "USE_AZBOX")
++    set (DEFAULT_CS_CONFDIR "/PLUGINS/OpenXCAS/oscamCAS")
++elseif (OSCamOperatingSystem MATCHES "SU980")
++    set (USE_SU980 "USE_SU980")
++    add_definitions ("-DWITH_SU980=1")
++    set (DEFAULT_CS_CONFDIR "/var/tuxbox/config")
++elseif (OSCamOperatingSystem MATCHES "MCA")
++    add_definitions ("-DWITH_MCA=1")
++    set (USE_MCA "USE_MCA")
++    set (DEFAULT_CS_CONFDIR "/var/mca/d1")
++elseif (OSCamOperatingSystem MATCHES "agv2+w")
++    set (DEFAULT_CS_CONFDIR "/etc")
++elseif (OSCamOperatingSystem MATCHES "WRT54G")
++    set (DEFAULT_CS_CONFDIR "/jffs/etc/config/oscam")
++elseif (OSCamOperatingSystem MATCHES "Amino")
++    set (DEFAULT_CS_CONFDIR "/var/tuxbox/config")
++elseif (OSCamOperatingSystem MATCHES "QboxHD")
++    add_definitions ("-DQBOXHD=1")
++    set (DEFAULT_CS_CONFDIR "/var/tuxbox/config")
++elseif (OSCamOperatingSystem MATCHES "Windows/Cygwin")
++    add_definitions ("-static -DWITH_PCSC=1")
++    set (DEFAULT_CS_CONFDIR ".")
++elseif (OSCamOperatingSystem MATCHES "FreeBSD")
++    add_definitions ("-I/usr/local/include -L/usr/local/lib")
++    set (DEFAULT_CS_CONFDIR ".")
++elseif (OSCamOperatingSystem MATCHES "OpenBSD")
++    add_definitions ("-I/usr/local/include -L/usr/local/lib")
++    set (DEFAULT_CS_CONFDIR "/etc/oscam")
++elseif (OSCamOperatingSystem MATCHES "FriendlyARM")
++    set (DEFAULT_CS_CONFDIR ".")
++endif (OSCamOperatingSystem MATCHES "Linux")
++
++set (CS_CONFDIR ${DEFAULT_CS_CONFDIR} CACHE STRING "Default path for the config files")
++add_definitions ("-DCS_CONFDIR=\\\"${CS_CONFDIR}\\\"")
++
++
++#----------------------- subdirectories ------------------------------
++
++include (CheckIncludeFile)
++
++check_include_file ("pthread.h" HAVE_PTHREAD)
++if (HAVE_PTHREAD)
++    message(STATUS "  pthread found. Adding pthread support ")
++    add_definitions ("-DHAVE_PTHREAD_H")
++elseif (HAVE_PTHREAD)
++    message(STATUS "  no pthread found. No smartreader ")
++endif (HAVE_PTHREAD)
++
++check_include_file ("openssl/aes.h" HAVE_LIBCRYPTO)
++if (HAVE_LIBCRYPTO)
++    add_definitions ("-DWITH_LIBCRYPTO=1")
++    set (USE_LIBCRYPTO "USE_LIBCRYPTO")
++else (HAVE_LIBCRYPTO)
++	message (STATUS " LIBCRYTO NOT FOUND OR DISABLED NO SSL SUPPORT POSSIBLE")
++endif (HAVE_LIBCRYPTO)
++
++execute_process (COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/config.sh --enabled WITH_SSL OUTPUT_VARIABLE CONFIG_WITH_SSL OUTPUT_STRIP_TRAILING_WHITESPACE)
++if (CONFIG_WITH_SSL MATCHES "N" AND WITH_SSL EQUAL 1)
++	message ( STATUS " ssl is added by You compiling with ssl included")
++elseif (CONFIG_WITH_SSL MATCHES "Y" AND WITH_SSL EQUAL 1)
++	message (STATUS " ssl is added by You but it was already enabled by config file")
++elseif (CONFIG_WITH_SSL MATCHES "N" AND NOT WITH_SSL EQUAL 1)
++	message (STATUS " SSL IS NOT INCLUDED IN THIS COMPILATION")
++endif (CONFIG_WITH_SSL MATCHES "N" AND WITH_SSL EQUAL 1)
++
++if (CONFIG_WITH_SSL MATCHES "Y" AND NOT WITH_SSL EQUAL 0)
++	message(status "  SSL is added by config file ${CONFIG_WITH_SSL} compiling with ssl included")
++	add_definitions ("-DWITH_SSL")
++	set (WITH_SSL "1")
++elseif (CONFIG_WITH_SSL MATCHES "Y" AND WITH_SSL EQUAL 0)
++	message (status  " The config file has ssl enabled, but You disabled it by you cmake command COMPILING WHITOUT SSL")
++endif (CONFIG_WITH_SSL MATCHES "Y" AND NOT WITH_SSL EQUAL 0)
++
++find_package(OpenSSL)
++if (OPENSSL_FOUND AND HAVE_LIBCRYPTO)
++    include_directories(${OPENSSL_INCLUDE_DIR})
++    message(STATUS "  openssl found.")
++    if (WITH_SSL EQUAL 1)
++	set(USE_SSL "USE_SSL")
++    endif (WITH_SSL EQUAL 1)
++else (OPENSSL_FOUND AND HAVE_LIBCRYPTO)
++    message(STATUS "SSL REQUESTED BUT OPENSSL or LYBCRYPTO NOT FOUND !!")
++    if (WITH_SSL)
++        message(STATUS " ssl support requested but openssl or libcrypto NOT FOUND  COMPILING WHITOUT SSL !!! ")
++	set (WITH_SSL "0")
++    endif (WITH_SSL)
++endif (OPENSSL_FOUND AND HAVE_LIBCRYPTO)
++
++if (NOT OSCamOperatingSystem MATCHES "Mac OS X")
++   if (LIBRTDIR)
++        check_include_file ("${LIBRTDIR}/include/time.h" HAVE_LIBRT_STATIC)
++        if (HAVE_LIBRT_STATIC)
++            if (EXISTS ${LIBRTDIR}/lib/librt.a)
++                message(STATUS "  static librt found : ${LIBRTDIR}/lib/librt.a (needed by libusb).")
++                add_definitions ("-I${LIBRTDIR}/include/")
++                add_library(imp_librt STATIC IMPORTED)
++                set_property(TARGET imp_librt PROPERTY IMPORTED_LOCATION ${LIBRTDIR}/lib/librt.a)
++            else (EXISTS ${LIBRTDIR}/lib/librt.a)
++                message(STATUS " ${LIBRTDIR}/lib/librt.a not found (needed by libusb). No smartreader support)")
++                set (HAVE_LIBRT_STATIC False)
++            endif (EXISTS ${LIBRTDIR}/lib/librt.a)
++        else (HAVE_LIBRT_STATIC)
++            message(STATUS "  no librt found (needed by libusb). No smartreader support")
++        endif (HAVE_LIBRT_STATIC)
++    else (LIBRTDIR)
++        check_include_file ("time.h" HAVE_LIBRT)
++        if (HAVE_LIBRT)
++            message(STATUS "  librt found (needed by libusb).")
++        else (HAVE_LIBRT)
++            message(STATUS "  no librt found (needed by libusb. No smartreader support")
++        endif (HAVE_LIBRT)
++    endif (LIBRTDIR)
++    if (WITH_STAPI)
++		    if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/stapi/liboscam_stapi.a)
++		    	message(STATUS "  liboscam_stapi.a found")
++		    	add_definitions ("-DWITH_STAPI=1")
++		  	add_library(stapilib STATIC IMPORTED)
++		    	set_property(TARGET stapilib PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/stapi/liboscam_stapi.a)
++		    	set (HAVE_LIBSTAPI True)
++			set (USE_STAPI "USE_STAPI")
++		    else (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/stapi/liboscam_stapi.a)
++		    	message(FATAL "  liboscam_stapi.a support requested but not found! ")
++		    	set (HAVE_LIBSTAPI False)
++		    endif (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/stapi/liboscam_stapi.a)
++    endif (WITH_STAPI)
++    if (WITH_STAPI5)
++		    if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/stapi/liboscam_stapi5.a)
++		    	message(STATUS "  liboscam_stapi5.a found")
++		    	add_definitions ("-DWITH_STAPI5=1")
++		  	add_library(stapi5lib STATIC IMPORTED)
++		    	set_property(TARGET stapi5lib PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/stapi/liboscam_stapi5.a)
++		    	set (HAVE_LIBSTAPI5 True)
++			set (USE_STAPI5 "USE_STAPI5")
++		    else (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/stapi/liboscam_stapi5.a)
++		    	message(FATAL "  liboscam_stapi5.a support requested but not found! ")
++		    	set (HAVE_LIBSTAPI5 False)
++		    endif (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/stapi/liboscam_stapi5.a)
++    endif (WITH_STAPI5)
++else (NOT OSCamOperatingSystem MATCHES "Mac OS X")
++    set (HAVE_LIBRT True)
++endif (NOT OSCamOperatingSystem MATCHES "Mac OS X")
++
++
++if( HAVE_LIBRT OR HAVE_LIBRT_STATIC)
++    if (LIBUSBDIR)
++        check_include_file ("${LIBUSBDIR}/include/libusb-1.0/libusb.h" HAVE_LIBUSB)
++	if (HAVE_LIBUSB AND HAVE_PTHREAD)
++            if (EXISTS ${LIBUSBDIR}/lib/libusb-1.0.a)
++	    if (STATIC_LIBUSB EQUAL 1)
++                message(STATUS "  libusb 1.0 found (${LIBUSBDIR}/lib/libusb-1.0.a). Adding smartreader support ")
++                add_definitions ("-DWITH_LIBUSB=1")
++                add_definitions ("-I${LIBUSBDIR}/include/")
++		set (LIBUSB "USE_LIBUSB")
++                add_library(imp_libusb STATIC IMPORTED)
++                set_property(TARGET imp_libusb PROPERTY IMPORTED_LOCATION ${LIBUSBDIR}/lib/libusb-1.0.a)
++	    elseif (NOT STATIC_LIBUSB OR STATIC_LIBUSB EQUAL 0)
++		set (CMAKE_FIND_ROOT_PATH ${LIBUSBDIR})
++		find_library (LIBUSB_LIBRARY NAMES usb-1.0)
++		message(STATUS "libusb 1.0 found (${LIBUSB_LIBRARY}). Adding smartreader support ")
++                add_definitions ("-DWITH_LIBUSB=1")
++                add_definitions ("-I${LIBUSBDIR}/include/")
++		set (LIBUSB "USE_LIBUSB")
++                add_library(imp_libusb SHARED IMPORTED)
++                set_property(TARGET imp_libusb PROPERTY IMPORTED_LOCATION ${LIBUSB_LIBRARY} )
++	    endif (STATIC_LIBUSB EQUAL 1)
++            else (EXISTS ${LIBUSBDIR}/lib/libusb-1.0.a)
++                message(STATUS "  libusb 1.0 not found (${LIBUSBDIR}/lib/libusb). No smartreader support ")
++                set (HAVE_LIBUSB False)
++                set (HAVE_LIBRT False)
++                set (HAVE_LIBRT_STATIC False)
++            endif (EXISTS ${LIBUSBDIR}/lib/libusb-1.0.a)
++        else (HAVE_LIBUSB AND HAVE_PTHREAD)
++            message(STATUS "  no libusb 1.0 found. No smartreader support")
++                set (HAVE_LIBUSB False)
++                set (HAVE_LIBRT False)
++                set (HAVE_LIBRT_STATIC False)
++        endif (HAVE_LIBUSB AND HAVE_PTHREAD)
++    else (LIBUSBDIR)
++	if (NOT HAVE_LIBUSB EQUAL 0)
++        check_include_file ("libusb-1.0/libusb.h" HAVE_LIBUSB)
++        check_include_file ("libusb-1.0/libusb.h" PRESENT)
++	endif(NOT HAVE_LIBUSB EQUAL 0)
++	if (OSCamOperatingSystem MATCHES "Mac OS X")
++	  if (NOT HAVE_LIBUSB EQUAL 0 AND NOT PRESENT)
++	   find_file (USBINCL_LOC "libusb-1.0/libusb.h")
++	   if (EXISTS ${USBINCL_LOC})
++	    add_definitions ("-I/usr/local/include -L/usr/local/lib -I/usr/include -L/usr/lib")
++	    set (HAVE_LIBUSB True)
++	    set (PRESENT True)
++	    set (USE_LIBUSB "USE_LIBUSB")
++            if (NOT STATIC_LIBUSB OR STATIC_LIBUSB EQUAL 0)
++		set (STATICLIBUSB False)
++	    elseif (STATIC_LIBUSB EQUAL 1)
++		set (STATICLIBUSB True)
++ 	    endif (NOT STATIC_LIBUSB OR STATIC_LIBUSB EQUAL 0)
++	   endif (EXISTS ${USBINCL_LOC})
++	  endif (NOT HAVE_LIBUSB EQUAL 0 AND NOT PRESENT)
++	endif (OSCamOperatingSystem MATCHES "Mac OS X")
++	if (NOT STATIC_LIBUSB OR STATIC_LIBUSB EQUAL 0)
++		if(HAVE_LIBUSB AND HAVE_PTHREAD AND PRESENT)
++                   message(STATUS " libusb 1.0 found (libusb-1.0.so) Adding smartreader support ")
++                   add_definitions ("-DWITH_LIBUSB=1")
++		   set (USE_LIBUSB "USE_LIBUSB")
++		   set (STATICLIBUSB False)
++		endif(HAVE_LIBUSB AND HAVE_PTHREAD AND PRESENT)
++	elseif(STATIC_LIBUSB EQUAL 1)
++          if (HAVE_LIBUSB AND HAVE_PTHREAD AND PRESENT)             
++                message(STATUS "  static libusb 1.0 found (libusb-1.0.a). Adding smartreader support ")
++                add_definitions ("-DWITH_LIBUSB=1")
++		set (USE_LIBUSB "USE_LIBUSB")
++		set (STATICLIBUSB True)
++          else (HAVE_LIBUSB AND HAVE_PTHREAD AND PRESENT)
++            message(STATUS "  no libusb 1.0 found. No smartreader support")
++	    set (HAVE_LIBUSB False)
++          endif (HAVE_LIBUSB AND HAVE_PTHREAD AND PRESENT)
++	endif(NOT STATIC_LIBUSB OR STATIC_LIBUSB EQUAL 0)
++    endif (LIBUSBDIR)
++endif( HAVE_LIBRT OR HAVE_LIBRT_STATIC)
++
++check_include_file ("PCSC/wintypes.h" HAVE_PCSC)
++if (HAVE_PCSC)
++    FIND_PATH (PCSC_PATH PCSC/wintypes.h)
++    if(OPTIONAL_INCLUDE_DIR AND EXISTS ${OPTIONAL_INCLUDE_DIR}/PCSC/wintypes.h)
++	message(STATUS "  PCSC headers found (${OPTIONAL_INCLUDE_DIR}/PCSC). Adding PCSC support ")
++	add_definitions ("-DWITH_PCSC=1")
++	add_definitions ("-I${OPTIONAL_INCLUDE_DIR}/PCSC")
++	set (USE_PCSC "USE_PCSC")
++    elseif (EXISTS ${PCSC_PATH}/PCSC/wintypes.h AND NOT OPTIONAL_INCLUDE_DIR)
++    	message(STATUS "  PCSC headers found (${PCSC_PATH}/PCSC). Adding PCSC support ")
++    	add_definitions ("-DWITH_PCSC=1")
++    	add_definitions ("-I${PCSC_PATH}/PCSC")
++	set (USE_PCSC "USE_PCSC")
++    else (OPTIONAL_INCLUDE_DIR AND EXISTS ${OPTIONAL_INCLUDE_DIR}/PCSC/wintypes.h)
++	if (NOT OSCamOperatingSystem MATCHES "Mac OS X")
++    	set (HAVE_PCSC False)
++    	if(OPTIONAL_INCLUDE_DIR)
++    		message(STATUS "  PCSC headers not found (not in /usr/include/PCSC or /usr/local/include/PCSC or ${OPTIONAL_INCLUDE_DIR}/PCSC). No PCSC support ")
++    	else(OPTIONAL_INCLUDE_DIR)
++	    	message(STATUS "  PCSC headers not found (not in /usr/include/PCSC or /usr/local/include/PCSC). No PCSC support ")
++    	endif(OPTIONAL_INCLUDE_DIR)
++	endif (NOT OSCamOperatingSystem MATCHES "Mac OS X")
++    endif(OPTIONAL_INCLUDE_DIR AND EXISTS ${OPTIONAL_INCLUDE_DIR}/PCSC/wintypes.h)
++    if (OSCamOperatingSystem MATCHES "Mac OS X" AND NOT HAVE_PCSC EQUAL 0)
++	set (USE_PCSC "USE_PCSC")
++	set (HAVE_PCSC "1")
++    endif (OSCamOperatingSystem MATCHES "Mac OS X" AND NOT HAVE_PCSC EQUAL 0)
++else (HAVE_PCSC)
++if (OSCamOperatingSystem MATCHES "Windows/Cygwin")
++    add_definitions ("-Icygwin")
++    set (HAVE_PCSC "1")
++    set (USE_PCSC "USE_PCSC")
++endif (OSCamOperatingSystem MATCHES "Windows/Cygwin")
++endif (HAVE_PCSC)
++
++# Manage config.h based on command line parameters
++# Manipulate config file based on given parameters and read unset parameters
++
++execute_process (COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/config.sh --show-valid OUTPUT_VARIABLE config_vars_string OUTPUT_STRIP_TRAILING_WHITESPACE)
++string(REGEX MATCHALL "[A-Z0-9_]+" config_vars ${config_vars_string})
++
++MACRO(GENERATE_OSCAM_CONFIG fullpath)
++	foreach(option ${config_vars})
++		if(DEFINED ${option})
++			if(${option})
++				execute_process (COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/config.sh --enable ${option})
++			else(${option})
++				execute_process (COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/config.sh --disable ${option})
++			endif(${option})
++		endif(DEFINED ${option})
++	endforeach(option)
++ENDMACRO(GENERATE_OSCAM_CONFIG fullpath)
++
++GENERATE_OSCAM_CONFIG("${CMAKE_CURRENT_SOURCE_DIR}/config.h")
++
++# Build config.mak and related files
++# FIXME: Create USE_FLAGS and pass them to config.sh using --use-flags
++execute_process (COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/config.sh --objdir ${CMAKE_CURRENT_BINARY_DIR} --use-flags  "${USE_STAPI} ${USE_STAPI5} /
++${USE_COOLAPI} ${USE_SU980} ${USE_AZBOX} ${USE_MCA} ${USE_SSL} ${USE_LIBCRYPTO} ${USE_LIBUSB} ${USE_PCSC}" --make-config.mak)
++# Generate webif/pages.c
++execute_process (COMMAND make --no-print-directory --quiet -C ${CMAKE_CURRENT_SOURCE_DIR}/webif)
++
++#----------------------- subdirectories ------------------------------
++
++add_subdirectory (csctapi)
++add_subdirectory (minilzo)
++add_subdirectory (cscrypt)
++
++#----------------------- file groups ------------------------------
++execute_process (COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/config.sh --enabled MODULE_CAMD33 OUTPUT_VARIABLE CAMD33 OUTPUT_STRIP_TRAILING_WHITESPACE)
++if (CAMD33 MATCHES "N")
++set (CAMD_33 "module-camd33*")
++endif (CAMD33 MATCHES "N")
++if (OSCamOperatingSystem MATCHES "Mac OS X")
++file (GLOB csmodules_mac  "module-dvbapi*" "module-lcd*" "${CAMD_33}")
++file (GLOB csmodules_srcs "module-*.c" "webif/pages.c")
++list (REMOVE_ITEM csmodules_srcs ${csmodules_mac})
++file (GLOB csmodules_hdrs "module-*.h" "webif/pages.h")
++list (REMOVE_ITEM csmodules_hdrs ${csmodules_mac})
++file (GLOB csreaders_srcs "reader-*.c")
++file (GLOB csreaders_hdrs "reader-*.h")
++file (GLOB csoscam_srcs "oscam-*.c")
++file (GLOB csoscam_hdrs "oscam-*.h")
++file (GLOB exe_srcs "oscam.c")
++file (GLOB exe_hdrs "globals.h")
++file (GLOB all_srcs ${csmodules_srcs} ${csreaders_srcs} ${csoscam_srcs} ${exe_srcs})
++else (OSCamOperatingSystem MATCHES "Mac OS X")
++file (GLOB csmodules_srcs "module-*.c" "webif/pages.c")
++file (GLOB csmodules_hdrs "module-*.h" "webif/pages.h")
++file (GLOB csreaders_srcs "reader-*.c")
++file (GLOB csreaders_hdrs "reader-*.h")
++file (GLOB csoscam_srcs "oscam-*.c" "${CMAKE_CURRENT_BINARY_DIR}/config.c")
++file (GLOB csoscam_hdrs "oscam-*.h")
++file (GLOB exe_srcs "oscam.c")
++file (GLOB exe_hdrs "globals.h")
++file (GLOB all_srcs ${csmodules_srcs} ${csreaders_srcs} ${csoscam_srcs} ${exe_srcs})
++endif (OSCamOperatingSystem MATCHES "Mac OS X")
++#----------------------- modules ------------------------------
++
++set (csmodules "csmodules")
++add_library (${csmodules} STATIC ${csmodules_srcs} ${csmodules_hdrs})
++
++#----------------------- readers ------------------------------
++
++set (csreaders "csreaders")
++add_library (${csreaders} STATIC ${csreaders_srcs} ${csreaders_hdrs})
++
++#----------------------- other oscam files ------------------------------
++
++set (csoscam "csoscam")
++add_library (${csoscam} STATIC ${csoscam_srcs} ${csoscam_hdrs})
++
++#----------------------- the executable ------------------------------
++
++set (exe_name "oscam")
++add_executable (${exe_name} ${exe_srcs} ${exe_hdrs})
++target_link_libraries (${exe_name} ${csoscam} ${csmodules} ${csreaders} csctapi cscrypt minilzo)
++if(HAVE_LIBRT AND HAVE_LIBUSB)
++   if (LIBUSBDIR)
++	set (libusb_link "imp_libusb")
++   else(LIBUSBDIR)
++    if (STATICLIBUSB)
++	set (libusb_link "libusb-1.0.a")
++    else (STATICLIBUSB)
++	set (libusb_link "usb-1.0")
++    endif(STATICLIBUSB)
++   endif(LIBUSBDIR)
++    if (NOT OSCamOperatingSystem MATCHES "Mac OS X")
++	set (rt_link "rt")
++    endif (NOT OSCamOperatingSystem MATCHES "Mac OS X")
++    if (OSCamOperatingSystem MATCHES "Windows/Cygwin")
++	set (setupapi_link "setupapi")
++	set (ole32_link "ole32")
++	set (shell32_link "shell32")
++    endif (OSCamOperatingSystem MATCHES "Windows/Cygwin")
++endif(HAVE_LIBRT AND HAVE_LIBUSB)
++
++if (HAVE_LIBRT_STATIC AND HAVE_LIBUSB)
++   if (LIBUSBDIR)
++	set (libusb_link "imp_libusb")
++   else(LIBUSBDIR)
++    if (STATICLIBUSB)
++	set (libusb_link "libusb-1.0.a")
++    else (STATICLIBUSB)
++	set (libusb_link "usb-1.0")
++    endif(STATICLIBUSB)
++   endif(LIBUSBDIR)
++    if (NOT OSCamOperatingSystem MATCHES "Mac OS X")
++    	set (rt_link "imp_librt")
++    endif (NOT OSCamOperatingSystem MATCHES "Mac OS X")
++    if (OSCamOperatingSystem MATCHES "Windows/Cygwin")
++	set (setupapi_link "setupapi")
++	set (ole32_link "ole32")
++	set (shell32_link "shell32")
++    endif (OSCamOperatingSystem MATCHES "Windows/Cygwin")
++endif (HAVE_LIBRT_STATIC AND HAVE_LIBUSB)
++
++if (HAVE_PTHREAD)
++    set (pthread_link "pthread")
++endif (HAVE_PTHREAD)
++
++if (WITH_SSL)
++    target_link_libraries (${exe_name} ssl)
++endif (WITH_SSL)
++
++if (HAVE_LIBCRYPTO)
++    target_link_libraries (${exe_name} crypto)
++endif (HAVE_LIBCRYPTO)
++
++# some systems need libm for the nagra cak7 functions to work
++check_include_file("math.h" HAVE_LIBM)
++if(HAVE_LIBM)
++    target_link_libraries (${exe_name} m)
++endif(HAVE_LIBM)
++
++if (HAVE_PCSC)
++if (NOT OSCamOperatingSystem MATCHES "Mac OS X")
++if (NOT OSCamOperatingSystem MATCHES "Windows/Cygwin")
++    target_link_libraries (${exe_name} pcsclite)
++endif (NOT OSCamOperatingSystem MATCHES "Windows/Cygwin")
++endif (NOT OSCamOperatingSystem MATCHES "Mac OS X")
++endif (HAVE_PCSC)
++
++if (HAVE_LIBSTAPI)
++    target_link_libraries(${exe_name} stapilib)
++endif (HAVE_LIBSTAPI)
++
++if (HAVE_LIBSTAPI5)
++    target_link_libraries(${exe_name} stapi5lib)
++endif (HAVE_LIBSTAPI5)
++
++add_dependencies (${exe_name} ${csoscam} ${csreaders} ${csmodules})
++
++#----------------------- specific options ------------------------------
++
++if (NOT OSCamOperatingSystem MATCHES "(Mac OS X|Windows/Cygwin|FreeBSD|OpenBSD)")
++    target_link_libraries (${exe_name} rt)
++endif (NOT OSCamOperatingSystem MATCHES "(Mac OS X|Windows/Cygwin|FreeBSD|OpenBSD)")
++
++if (OSCamOperatingSystem MATCHES "Linux")
++elseif (OSCamOperatingSystem MATCHES "Mac OS X")
++    if (NOT HAVE_PCSC EQUAL 0)
++    FIND_LIBRARY (PCSC_LIBRARY PCSC)
++    message (STATUS "PCSC Mac OS X found : ${PCSC_LIBRARY}")
++    add_definitions ("-DWITH_PCSC=1")
++    target_link_libraries ( ${exe_name} ${PCSC_LIBRARY})
++    set (HAVE_PCSC True)
++    FIND_LIBRARY (IOKit_LIBRARY IOKit)
++    target_link_libraries ( ${exe_name} ${IOKit_LIBRARY})
++    FIND_LIBRARY (CoreFoundation_LIBRARY CoreFoundation)
++    target_link_libraries ( ${exe_name} ${CoreFoundation_LIBRARY})
++    else (NOT HAVE_PCSC EQUAL 0)
++    message (STATUS "PCSC Mac OS X not found no pcsc support")
++    endif (NOT HAVE_PCSC EQUAL 0)
++elseif (OSCamOperatingSystem MATCHES "Tuxbox")
++    set (dl_link "dl")
++elseif (OSCamOperatingSystem MATCHES "TripleDragon")
++    set (dl_link "dl")
++elseif (OSCamOperatingSystem MATCHES "SlugOS")
++elseif (OSCamOperatingSystem MATCHES "OpenWRT")
++elseif (OSCamOperatingSystem MATCHES "Fonera2")
++elseif (OSCamOperatingSystem MATCHES "DIR-825")
++elseif (OSCamOperatingSystem MATCHES "agv2+w")
++elseif (OSCamOperatingSystem MATCHES "WRT54G")
++elseif (OSCamOperatingSystem MATCHES "Amino")
++elseif (OSCamOperatingSystem MATCHES "QboxHD")
++elseif (OSCamOperatingSystem MATCHES "Windows/Cygwin")
++    message (STATUS "Windows system PCSC : winscard.dll")
++    target_link_libraries (${exe_name} winscard)
++    target_link_libraries (${exe_name} setupapi )
++    target_link_libraries (${exe_name} ole32)
++    target_link_libraries (${exe_name} shell32)
++elseif (OSCamOperatingSystem MATCHES "NeutrinoHD")
++    target_link_libraries (${exe_name} rt nxp)
++elseif (OSCamOperatingSystem MATCHES "NHD2")
++    target_link_libraries (${exe_name} lnxcssUsr lnxscsUsr lnxnotifyqUsr lnxUKAL lnxplatUsr rt)
++elseif (OSCamOperatingSystem MATCHES "AZBox")
++    add_library(xcas STATIC IMPORTED)
++    set_property(TARGET xcas PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/extapi/openxcas/libOpenXCASAPI.a)
++    set (xcas_link "xcas")
++elseif (OSCamOperatingSystem MATCHES "SU980")
++    target_link_libraries (${exe_name} rt entropic)
++endif (OSCamOperatingSystem MATCHES "Linux")
++
++target_link_libraries (${exe_name} ${libusb_link} ${rt_link} ${setupapi_link} ${ole32_link} ${shell32_link} ${pthread_link} ${dl_link} ${xcas_link})
++
++#----------------------- put svnversion in the build ------------------------------
++# at every target rebuild, we re-build the oscam.c compilation...
++
++# add the needed dependency
++add_dependencies (${exe_name} svnversion)
++add_dependencies (${csoscam} svnversion-log)
++
++# how to re-build the files which printout the version
++add_custom_target (
++    svnversion
++    ALL
++    touch ${CMAKE_CURRENT_SOURCE_DIR}/oscam.c
++)
++add_custom_target (
++    svnversion-log
++    ALL
++    touch ${CMAKE_CURRENT_SOURCE_DIR}/oscam-log.c
++)
++
++execute_process (COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/config.sh --oscam-revision COMMAND tr -d '\n' OUTPUT_VARIABLE CS_SVN_VERSION)
++add_definitions ("-D'CS_SVN_VERSION=\"${CS_SVN_VERSION}\"'")
++
++execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpmachine COMMAND tr -d '\n' OUTPUT_VARIABLE CS_TARGET)
++add_definitions ("-D'CS_TARGET=\"${CS_TARGET}\"'")
++#----------------------- global compile and link options ------------------------------
++# disable warning about unused but set variables in gcc 4.6+
++if (CMAKE_COMPILER_IS_GNUCC)
++    execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
++    string(REGEX MATCHALL "[0-9]+" GCC_VERSION_COMPONENTS ${GCC_VERSION})
++    list(GET GCC_VERSION_COMPONENTS 0 GCC_MAJOR)
++    list(GET GCC_VERSION_COMPONENTS 0 GCC_MINOR)
++    add_definitions ("-W -Wall ")
++    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -O2")
++	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -O2")
++    set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0 -ggdb")
++    set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -ggdb")
++endif (CMAKE_COMPILER_IS_GNUCC)
++# some optimisations
++if (OSCamOperatingSystem MATCHES "Mac OS X")
++  if (SWVER GREATER 10.6)
++   if (SWVER EQUAL 10.7 AND XCODEVER LESS 4.3)
++	add_definitions("-isysroot /Developer/SDKs/MacOSX${SWVER}.sdk")
++   else (SWVER EQUAL 10.7 AND XCODEVER LESS 4.3)
++	add_definitions("-isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX${SWVER}.sdk")
++   endif (SWVER EQUAL 10.7 AND XCODEVER LESS 4.3)
++  elseif(SWVER LESS 10.7)
++	add_definitions("-isysroot /Developer/SDKs/MacOSX${SWVER}.sdk")
++  endif (SWVER GREATER 10.6)
++endif (OSCamOperatingSystem MATCHES "Mac OS X")
++
++# we don't want the '-rdynamic' in the link command
++set (CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
++
++# we want to strip if not Debug build
++if (OSCamOperatingSystem MATCHES "Mac OS X")
++ if (SWVER MATCHES "10.8")
++  if (NOT CMAKE_BUILD_TYPE STREQUAL Debug)
++    set (CMAKE_EXE_LINKER_FLAGS "-isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX${SWVER}.sdk")
++  else (NOT CMAKE_BUILD_TYPE STREQUAL Debug)
++    message (STATUS "  building with debug")
++    set (CMAKE_EXE_LINKER_FLAGS "-ggdb -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX${SWVER}.sdk")
++  endif (NOT CMAKE_BUILD_TYPE STREQUAL Debug)
++ elseif (SWVER MATCHES "10.7")
++  if (SWVER EQUAL 10.7 AND XCODEVER LESS 4.3)
++   if (NOT CMAKE_BUILD_TYPE STREQUAL Debug)
++    set (CMAKE_EXE_LINKER_FLAGS "-isysroot /Developer/SDKs/MacOSX${SWVER}.sdk")
++   else (NOT CMAKE_BUILD_TYPE STREQUAL Debug)
++    message (STATUS "  building with debug")
++    set (CMAKE_EXE_LINKER_FLAGS "-ggdb -isysroot /Developer/SDKs/MacOSX${SWVER}.sdk")
++   endif (NOT CMAKE_BUILD_TYPE STREQUAL Debug)
++  else(SWVER EQUAL 10.7 AND XCODEVER LESS 4.3)
++   if (NOT CMAKE_BUILD_TYPE STREQUAL Debug)
++    set (CMAKE_EXE_LINKER_FLAGS "-isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX${SWVER}.sdk")
++   else (NOT CMAKE_BUILD_TYPE STREQUAL Debug)
++    message (STATUS "  building with debug")
++    set (CMAKE_EXE_LINKER_FLAGS "-ggdb -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX${SWVER}.sdk")
++   endif (NOT CMAKE_BUILD_TYPE STREQUAL Debug)
++  endif(SWVER EQUAL 10.7 AND XCODEVER LESS 4.3)
++ elseif (SWVER MATCHES "10.6")
++  if (NOT CMAKE_BUILD_TYPE STREQUAL Debug)
++    set (CMAKE_EXE_LINKER_FLAGS "-isysroot /Developer/SDKs/MacOSX${SWVER}.sdk")
++  else (NOT CMAKE_BUILD_TYPE STREQUAL Debug)
++    message (STATUS "  building with debug")
++    set (CMAKE_EXE_LINKER_FLAGS "-ggdb -isysroot /Developer/SDKs/MacOSX${SWVER}.sdk")
++  endif (NOT CMAKE_BUILD_TYPE STREQUAL Debug)
++ endif (SWVER MATCHES "10.8")
++else (OSCamOperatingSystem MATCHES "Mac OS X")
++  if (NOT CMAKE_BUILD_TYPE STREQUAL Debug)
++    set (CMAKE_EXE_LINKER_FLAGS "-s")
++  else (NOT CMAKE_BUILD_TYPE STREQUAL Debug)
++    message (STATUS "  building with debug")
++    set (CMAKE_EXE_LINKER_FLAGS "-ggdb")
++  endif (NOT CMAKE_BUILD_TYPE STREQUAL Debug)
++endif (OSCamOperatingSystem MATCHES "Mac OS X")
++
++if (OSCamOperatingSystem MATCHES "Windows/Cygwin")
++    set (CMAKE_EXE_LINKER_FLAGS "--enable-stdcall-fixup")
++endif (OSCamOperatingSystem MATCHES "Windows/Cygwin")
++
++#----------------------- subdirectory list smargo ------------------------------
++
++if( HAVE_LIBRT OR HAVE_LIBRT_STATIC)
++    if (HAVE_LIBUSB)
++        add_subdirectory (utils)
++    endif (HAVE_LIBUSB)
++endif( HAVE_LIBRT OR HAVE_LIBRT_STATIC)
++
++#--------------------------------------------------------------------------------
++
++#----------------------- installation -----------------------------
++
++file (GLOB config_files "${CMAKE_CURRENT_SOURCE_DIR}/Distribution/oscam.*")
++file (GLOB doc_files "${CMAKE_CURRENT_SOURCE_DIR}/Distribution/doc/txt/*.txt")
++file (GLOB man1_files "${CMAKE_CURRENT_SOURCE_DIR}/Distribution/doc/man/*.1")
++file (GLOB man5_files "${CMAKE_CURRENT_SOURCE_DIR}/Distribution/doc/man/*.5")
++file (GLOB example_files "${CMAKE_CURRENT_SOURCE_DIR}/Distribution/doc/example/oscam.ac"
++                         "${CMAKE_CURRENT_SOURCE_DIR}/Distribution/doc/example/oscam.cert"
++                         "${CMAKE_CURRENT_SOURCE_DIR}/Distribution/doc/example/oscam.conf"
++                         "${CMAKE_CURRENT_SOURCE_DIR}/Distribution/doc/example/oscam.guess"
++                         "${CMAKE_CURRENT_SOURCE_DIR}/Distribution/doc/example/oscam.ird"
++                         "${CMAKE_CURRENT_SOURCE_DIR}/Distribution/doc/example/oscam.server"
++                         "${CMAKE_CURRENT_SOURCE_DIR}/Distribution/doc/example/oscam.services"
++                         "${CMAKE_CURRENT_SOURCE_DIR}/Distribution/doc/example/oscam.srvid"
++                         "${CMAKE_CURRENT_SOURCE_DIR}/Distribution/doc/example/oscam.user")
++file (GLOB monitor_files "${CMAKE_CURRENT_SOURCE_DIR}/Distribution/monitor/mpcs*.sh"
++                         "${CMAKE_CURRENT_SOURCE_DIR}/Distribution/monitor/mpcs*.tar")
++
++install (PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/${exe_name}${CMAKE_EXECUTABLE_SUFFIX} DESTINATION bin COMPONENT bin)
++install (FILES ${config_files} DESTINATION etc COMPONENT config)
++install (FILES ${doc_files} DESTINATION share/doc/oscam COMPONENT doc)
++install (FILES ${man1_files} DESTINATION share/man/man1 COMPONENT doc)
++install (FILES ${man5_files} DESTINATION share/man/man5 COMPONENT doc)
++install (FILES ${example_files} DESTINATION share/doc/oscam/example COMPONENT doc)
++install (FILES ${monitor_files} DESTINATION share/doc/oscam/monitor COMPONENT doc)
++
++#----------------------- we can use CPack to build pacakges --------------------------
++
++# get version from source file
++execute_process (COMMAND grep CS_VERSION ${CMAKE_CURRENT_SOURCE_DIR}/globals.h
++    OUTPUT_VARIABLE CS_VERSION)
++string (REGEX REPLACE ".*\"\(.*\)\".*" "\\1" CS_VERSION ${CS_VERSION})
++string (REGEX REPLACE "\(.*\)\\..*\\..*" "\\1" CPACK_PACKAGE_VERSION_MAJOR ${CS_VERSION})
++string (REGEX REPLACE ".*\\.\(.*\)\\..*" "\\1" CPACK_PACKAGE_VERSION_MINOR ${CS_VERSION})
++string (REGEX REPLACE ".*\\..*\\.\(.*\)" "\\1" CPACK_PACKAGE_VERSION_PATCH ${CS_VERSION})
++set (CPACK_PACKAGE_VERSION
++     "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}")
++
++# compute my filename
++set (CPACK_PACKAGE_FILE_NAME
++     "${PROJECT_NAME}-${CPACK_PACKAGE_VERSION}-${CS_TARGET}")
++
++# wich archive we want to generate
++set (CPACK_GENERATOR "TGZ")
++
++# what to put in the archive
++set (CPACK_STRIP_FILES TRUE)
++set (CPACK_COMPONENTS_ALL bin)# config doc)
++
++# ok, we can now use CPack
++include (CPack)
++
++#----------------------- printout resume -----------------------------
++
++message (STATUS "")
++message (STATUS "  operating system: ${OSCamOperatingSystem}")
++message (STATUS "  target system: ${CS_TARGET}")
++message (STATUS "  revision: ${CS_SVN_VERSION}")
++if (HAVE_LIBCRYPTO)
++    message (STATUS "  use system libcrypto functions")
++else (HAVE_LIBCRYPTO)
++    message (STATUS "  use built-in crypt functions")
++endif (HAVE_LIBCRYPTO)
++if (HAVE_PCSC)
++    message (STATUS "  use system pcsc functions")
++endif (HAVE_PCSC)
++if (HAVE_PTHREAD)
++    message (STATUS "  use system pthread functions")
++endif (HAVE_PTHREAD)
++if (HAVE_LIBUSB)
++if(STATIC_LIBUSB EQUAL 1)
++   message (STATUS "  You selected to enable static libusb")
++endif(STATIC_LIBUSB EQUAL 1)
++ if(STATICLIBUSB AND NOT LIBUSBDIR)
++    message (STATUS "  use static libusb functions")
++ else(STATICLIBUSB AND NOT LIBUSBDIR)
++   if (LIBUSBDIR AND STATIC_LIBUSB EQUAL 0)
++      message(STATUS "  use system libusb from selected LIBUSBDIR functions")
++   elseif (LIBUSBDIR AND STATIC_LIBUSB EQUAL 1)
++      message(STATUS "  use static libusb from selected LIBUSBDIR functions")
++   elseif(LIBUSBDIR)
++      message(STATUS " use system libusb from selected LIBUSBDIR functions")
++   elseif(NOT LIBUSBDIR AND NOT STATIC_LIBUSB)
++       message (STATUS "  use system libusb functions")
++   endif(LIBUSBDIR AND STATIC_LIBUSB EQUAL 0)
++ endif(STATICLIBUSB AND NOT LIBUSBDIR)
++endif (HAVE_LIBUSB)
++
++message (STATUS "")
+diff -Naurp oscam/config.h oscam-patch/config.h
+--- oscam/config.h	2018-08-27 12:12:01.447975195 +0300
++++ oscam-patch/config.h	2018-08-27 12:14:15.370792139 +0300
 @@ -1,6 +1,7 @@
  #ifndef CONFIG_H_
  #define CONFIG_H_
@@ -103,18 +935,18 @@ diff -Naurp oscam-941f2e8/config.h oscam-941f2e8-patch/config.h
  #define WEBIF 1
  #define WEBIF_LIVELOG 1
  #define WEBIF_JQUERY 1
-diff -Naurp oscam-941f2e8/config.sh oscam-941f2e8-patch/config.sh
---- oscam-941f2e8/config.sh	2018-06-24 00:06:48.000000000 +0300
-+++ oscam-941f2e8-patch/config.sh	2018-06-24 10:26:30.126073388 +0300
+diff -Naurp oscam/config.sh oscam-patch/config.sh
+--- oscam/config.sh	2018-08-27 12:12:01.451975155 +0300
++++ oscam-patch/config.sh	2018-08-27 12:14:15.370792139 +0300
 @@ -1,6 +1,6 @@
  #!/bin/sh
  
--addons="WEBIF WEBIF_LIVELOG WEBIF_JQUERY TOUCH WITH_SSL HAVE_DVBAPI READ_SDT_CHARSETS IRDETO_GUESSING CS_ANTICASC WITH_DEBUG MODULE_MONITOR WITH_LB CS_CACHEEX CW_CYCLE_CHECK LCDSUPPORT LEDSUPPORT CLOCKFIX IPV6SUPPORT"
-+addons="WEBIF WEBIF_LIVELOG WEBIF_JQUERY TOUCH WITH_SSL HAVE_DVBAPI READ_SDT_CHARSETS IRDETO_GUESSING CS_ANTICASC WITH_DEBUG MODULE_MONITOR WITH_LB CS_CACHEEX CW_CYCLE_CHECK LCDSUPPORT LEDSUPPORT CLOCKFIX IPV6SUPPORT WITH_EMU"
+-addons="WEBIF WEBIF_LIVELOG WEBIF_JQUERY TOUCH WITH_SSL HAVE_DVBAPI WITH_NEUTRINO READ_SDT_CHARSETS IRDETO_GUESSING CS_ANTICASC WITH_DEBUG MODULE_MONITOR WITH_LB CS_CACHEEX CW_CYCLE_CHECK LCDSUPPORT LEDSUPPORT CLOCKFIX IPV6SUPPORT"
++addons="WEBIF WEBIF_LIVELOG WEBIF_JQUERY TOUCH WITH_SSL HAVE_DVBAPI WITH_NEUTRINO READ_SDT_CHARSETS IRDETO_GUESSING CS_ANTICASC WITH_DEBUG MODULE_MONITOR WITH_LB CS_CACHEEX CW_CYCLE_CHECK LCDSUPPORT LEDSUPPORT CLOCKFIX IPV6SUPPORT WITH_EMU"
  protocols="MODULE_CAMD33 MODULE_CAMD35 MODULE_CAMD35_TCP MODULE_NEWCAMD MODULE_CCCAM MODULE_CCCSHARE MODULE_GBOX MODULE_RADEGAST MODULE_SCAM MODULE_SERIAL MODULE_CONSTCW MODULE_PANDORA MODULE_GHTTP"
- readers="READER_NAGRA READER_IRDETO READER_CONAX READER_CRYPTOWORKS READER_SECA READER_VIACCESS READER_VIDEOGUARD READER_DRE READER_TONGFANG READER_BULCRYPT READER_GRIFFIN READER_DGCRYPT"
+ readers="READER_NAGRA READER_NAGRA_MERLIN READER_IRDETO READER_CONAX READER_CRYPTOWORKS READER_SECA READER_VIACCESS READER_VIDEOGUARD READER_DRE READER_TONGFANG READER_BULCRYPT READER_GRIFFIN READER_DGCRYPT"
  card_readers="CARDREADER_PHOENIX CARDREADER_INTERNAL CARDREADER_SC8IN1 CARDREADER_MP35 CARDREADER_SMARGO CARDREADER_DB2COM CARDREADER_STAPI CARDREADER_STAPI5 CARDREADER_STINGER CARDREADER_DRECAS"
-@@ -24,6 +24,7 @@ CONFIG_CW_CYCLE_CHECK=y
+@@ -25,6 +25,7 @@ CONFIG_CW_CYCLE_CHECK=y
  # CONFIG_LEDSUPPORT=n
  CONFIG_CLOCKFIX=y
  # CONFIG_IPV6SUPPORT=n
@@ -122,7 +954,7 @@ diff -Naurp oscam-941f2e8/config.sh oscam-941f2e8-patch/config.sh
  # CONFIG_MODULE_CAMD33=n
  CONFIG_MODULE_CAMD35=y
  CONFIG_MODULE_CAMD35_TCP=y
-@@ -289,12 +290,15 @@ get_opts() {
+@@ -291,12 +292,15 @@ get_opts() {
  
  update_deps() {
  	# Calculate dependencies
@@ -140,20 +972,20 @@ diff -Naurp oscam-941f2e8/config.sh oscam-941f2e8-patch/config.sh
  }
  
  list_config() {
-@@ -344,9 +348,9 @@ list_config() {
+@@ -346,9 +350,9 @@ list_config() {
  	not_have_flag USE_LIBCRYPTO && echo "CONFIG_LIB_AES=y" || echo "# CONFIG_LIB_AES=n"
  	enabled MODULE_CCCAM && echo "CONFIG_LIB_RC6=y" || echo "# CONFIG_LIB_RC6=n"
  	not_have_flag USE_LIBCRYPTO && enabled MODULE_CCCAM && echo "CONFIG_LIB_SHA1=y" || echo "# CONFIG_LIB_SHA1=n"
 -	enabled_any READER_DRE MODULE_SCAM READER_VIACCESS && echo "CONFIG_LIB_DES=y" || echo "# CONFIG_LIB_DES=n"
--	enabled_any MODULE_CCCAM READER_NAGRA READER_SECA && echo "CONFIG_LIB_IDEA=y" || echo "# CONFIG_LIB_IDEA=n"
--	not_have_flag USE_LIBCRYPTO && enabled_any READER_CONAX READER_CRYPTOWORKS READER_NAGRA && echo "CONFIG_LIB_BIGNUM=y" || echo "# CONFIG_LIB_BIGNUM=n"
+-	enabled_any MODULE_CCCAM READER_NAGRA READER_NAGRA_MERLIN READER_SECA && echo "CONFIG_LIB_IDEA=y" || echo "# CONFIG_LIB_IDEA=n"
+-	not_have_flag USE_LIBCRYPTO && enabled_any READER_CONAX READER_CRYPTOWORKS READER_NAGRA READER_NAGRA_MERLIN && echo "CONFIG_LIB_BIGNUM=y" || echo "# CONFIG_LIB_BIGNUM=n"
 +	enabled_any READER_DRE MODULE_SCAM READER_VIACCESS WITH_EMU && echo "CONFIG_LIB_DES=y" || echo "# CONFIG_LIB_DES=n"
-+	enabled_any MODULE_CCCAM READER_NAGRA READER_SECA WITH_EMU && echo "CONFIG_LIB_IDEA=y" || echo "# CONFIG_LIB_IDEA=n"
-+	not_have_flag USE_LIBCRYPTO && enabled_any READER_CONAX READER_CRYPTOWORKS READER_NAGRA WITH_EMU && echo "CONFIG_LIB_BIGNUM=y" || echo "# CONFIG_LIB_BIGNUM=n"
++	enabled_any MODULE_CCCAM READER_NAGRA READER_NAGRA_MERLIN READER_SECA WITH_EMU && echo "CONFIG_LIB_IDEA=y" || echo "# CONFIG_LIB_IDEA=n"
++	not_have_flag USE_LIBCRYPTO && enabled_any READER_CONAX READER_CRYPTOWORKS READER_NAGRA READER_NAGRA_MERLIN WITH_EMU && echo "CONFIG_LIB_BIGNUM=y" || echo "# CONFIG_LIB_BIGNUM=n"
  }
  
  make_config_c() {
-@@ -457,6 +461,7 @@ menu_addons() {
+@@ -460,6 +464,7 @@ menu_addons() {
  		LEDSUPPORT			"LED support"							$(check_test "LEDSUPPORT") \
  		CLOCKFIX			"Clockfix (disable on old systems!)"	$(check_test "CLOCKFIX") \
  		IPV6SUPPORT			"IPv6 support (experimental)"			$(check_test "IPV6SUPPORT") \
@@ -161,9 +993,9 @@ diff -Naurp oscam-941f2e8/config.sh oscam-941f2e8-patch/config.sh
  		2> ${tempfile}
  
  	opt=${?}
-diff -Naurp oscam-941f2e8/cscrypt/aes.c oscam-941f2e8-patch/cscrypt/aes.c
---- oscam-941f2e8/cscrypt/aes.c	2018-06-24 00:06:48.000000000 +0300
-+++ oscam-941f2e8-patch/cscrypt/aes.c	2018-06-24 10:26:30.126073388 +0300
+diff -Naurp oscam/cscrypt/aes.c oscam-patch/cscrypt/aes.c
+--- oscam/cscrypt/aes.c	2018-08-27 12:12:01.451975155 +0300
++++ oscam-patch/cscrypt/aes.c	2018-08-27 12:14:15.374792104 +0300
 @@ -1250,4 +1250,71 @@ void AES_decrypt(const unsigned char *in
  		rk[3];
  	PUTU32(out + 12, s3);
@@ -236,9 +1068,9 @@ diff -Naurp oscam-941f2e8/cscrypt/aes.c oscam-941f2e8-patch/cscrypt/aes.c
 +	}
 +}
  #endif
-diff -Naurp oscam-941f2e8/cscrypt/aes.h oscam-941f2e8-patch/cscrypt/aes.h
---- oscam-941f2e8/cscrypt/aes.h	2018-06-24 00:06:48.000000000 +0300
-+++ oscam-941f2e8-patch/cscrypt/aes.h	2018-06-24 10:26:30.126073388 +0300
+diff -Naurp oscam/cscrypt/aes.h oscam-patch/cscrypt/aes.h
+--- oscam/cscrypt/aes.h	2018-08-27 12:12:01.451975155 +0300
++++ oscam-patch/cscrypt/aes.h	2018-08-27 12:14:15.374792104 +0300
 @@ -42,6 +42,9 @@ void AES_encrypt(const unsigned char *in
  void AES_decrypt(const unsigned char *in, unsigned char *out,
  				 const AES_KEY *key);
@@ -249,9 +1081,9 @@ diff -Naurp oscam-941f2e8/cscrypt/aes.h oscam-941f2e8-patch/cscrypt/aes.h
  #endif /* !HEADER_AES_H */
  
  #endif
-diff -Naurp oscam-941f2e8/cscrypt/md5.c oscam-941f2e8-patch/cscrypt/md5.c
---- oscam-941f2e8/cscrypt/md5.c	2018-06-24 00:06:48.000000000 +0300
-+++ oscam-941f2e8-patch/cscrypt/md5.c	2018-06-24 10:26:30.126073388 +0300
+diff -Naurp oscam/cscrypt/md5.c oscam-patch/cscrypt/md5.c
+--- oscam/cscrypt/md5.c	2018-08-27 12:12:01.455975116 +0300
++++ oscam-patch/cscrypt/md5.c	2018-08-27 12:14:15.374792104 +0300
 @@ -25,13 +25,6 @@
  
  #if !defined(WITH_SSL) && !defined(WITH_LIBCRYPTO)
@@ -293,9 +1125,9 @@ diff -Naurp oscam-941f2e8/cscrypt/md5.c oscam-941f2e8-patch/cscrypt/md5.c
  {
  	unsigned count;
  	unsigned char *p;
-diff -Naurp oscam-941f2e8/cscrypt/md5.h oscam-941f2e8-patch/cscrypt/md5.h
---- oscam-941f2e8/cscrypt/md5.h	2018-06-24 00:06:48.000000000 +0300
-+++ oscam-941f2e8-patch/cscrypt/md5.h	2018-06-24 10:26:30.126073388 +0300
+diff -Naurp oscam/cscrypt/md5.h oscam-patch/cscrypt/md5.h
+--- oscam/cscrypt/md5.h	2018-08-27 12:12:01.455975116 +0300
++++ oscam-patch/cscrypt/md5.h	2018-08-27 12:14:15.374792104 +0300
 @@ -7,8 +7,16 @@
  #define MD5_DIGEST_LENGTH 16
  
@@ -315,9 +1147,9 @@ diff -Naurp oscam-941f2e8/cscrypt/md5.h oscam-941f2e8-patch/cscrypt/md5.h
 +#endif
 +char *__md5_crypt(const char *text_pass, const char *salt, char *crypted_passwd);
  #endif
-diff -Naurp oscam-941f2e8/csctapi/cardreaders.h oscam-941f2e8-patch/csctapi/cardreaders.h
---- oscam-941f2e8/csctapi/cardreaders.h	2018-06-24 00:06:48.000000000 +0300
-+++ oscam-941f2e8-patch/csctapi/cardreaders.h	2018-06-24 10:26:30.126073388 +0300
+diff -Naurp oscam/csctapi/cardreaders.h oscam-patch/csctapi/cardreaders.h
+--- oscam/csctapi/cardreaders.h	2018-08-27 12:12:01.455975116 +0300
++++ oscam-patch/csctapi/cardreaders.h	2018-08-27 12:14:15.374792104 +0300
 @@ -14,5 +14,6 @@ extern const struct s_cardreader cardrea
  extern const struct s_cardreader cardreader_stapi;
  extern const struct s_cardreader cardreader_stinger;
@@ -325,9 +1157,9 @@ diff -Naurp oscam-941f2e8/csctapi/cardreaders.h oscam-941f2e8-patch/csctapi/card
 +extern const struct s_cardreader cardreader_emu;
  
  #endif
-diff -Naurp oscam-941f2e8/ffdecsa/CMakeLists.txt oscam-941f2e8-patch/ffdecsa/CMakeLists.txt
---- oscam-941f2e8/ffdecsa/CMakeLists.txt	1970-01-01 03:00:00.000000000 +0300
-+++ oscam-941f2e8-patch/ffdecsa/CMakeLists.txt	2018-06-24 10:26:30.126073388 +0300
+diff -Naurp oscam/ffdecsa/CMakeLists.txt oscam-patch/ffdecsa/CMakeLists.txt
+--- oscam/ffdecsa/CMakeLists.txt	1970-01-01 03:00:00.000000000 +0300
++++ oscam-patch/ffdecsa/CMakeLists.txt	2018-08-27 12:14:15.374792104 +0300
 @@ -0,0 +1,8 @@
 +project (ffdecsa)
 +
@@ -337,9 +1169,9 @@ diff -Naurp oscam-941f2e8/ffdecsa/CMakeLists.txt oscam-941f2e8-patch/ffdecsa/CMa
 +set (lib_name "ffdecsa")
 +
 +add_library (${lib_name} STATIC ${ffdecsa_srcs} ${ffdecsa_hdrs})
-diff -Naurp oscam-941f2e8/ffdecsa/COPYING oscam-941f2e8-patch/ffdecsa/COPYING
---- oscam-941f2e8/ffdecsa/COPYING	1970-01-01 03:00:00.000000000 +0300
-+++ oscam-941f2e8-patch/ffdecsa/COPYING	2018-06-24 10:26:30.126073388 +0300
+diff -Naurp oscam/ffdecsa/COPYING oscam-patch/ffdecsa/COPYING
+--- oscam/ffdecsa/COPYING	1970-01-01 03:00:00.000000000 +0300
++++ oscam-patch/ffdecsa/COPYING	2018-08-27 12:14:15.374792104 +0300
 @@ -0,0 +1,339 @@
 +		    GNU GENERAL PUBLIC LICENSE
 +		       Version 2, June 1991
@@ -680,9 +1512,9 @@ diff -Naurp oscam-941f2e8/ffdecsa/COPYING oscam-941f2e8-patch/ffdecsa/COPYING
 +consider it more useful to permit linking proprietary applications with the
 +library.  If this is what you want to do, use the GNU Library General
 +Public License instead of this License.
-diff -Naurp oscam-941f2e8/ffdecsa/ffdecsa.c oscam-941f2e8-patch/ffdecsa/ffdecsa.c
---- oscam-941f2e8/ffdecsa/ffdecsa.c	1970-01-01 03:00:00.000000000 +0300
-+++ oscam-941f2e8-patch/ffdecsa/ffdecsa.c	2018-06-24 10:26:30.126073388 +0300
+diff -Naurp oscam/ffdecsa/ffdecsa.c oscam-patch/ffdecsa/ffdecsa.c
+--- oscam/ffdecsa/ffdecsa.c	1970-01-01 03:00:00.000000000 +0300
++++ oscam-patch/ffdecsa/ffdecsa.c	2018-08-27 12:14:15.374792104 +0300
 @@ -0,0 +1,926 @@
 +/* FFdecsa -- fast decsa algorithm
 + *
@@ -1610,9 +2442,9 @@ diff -Naurp oscam-941f2e8/ffdecsa/ffdecsa.c oscam-941f2e8-patch/ffdecsa/ffdecsa.
 +
 +  return advanced;
 +}
-diff -Naurp oscam-941f2e8/ffdecsa/ffdecsa.h oscam-941f2e8-patch/ffdecsa/ffdecsa.h
---- oscam-941f2e8/ffdecsa/ffdecsa.h	1970-01-01 03:00:00.000000000 +0300
-+++ oscam-941f2e8-patch/ffdecsa/ffdecsa.h	2018-06-24 10:26:30.126073388 +0300
+diff -Naurp oscam/ffdecsa/ffdecsa.h oscam-patch/ffdecsa/ffdecsa.h
+--- oscam/ffdecsa/ffdecsa.h	1970-01-01 03:00:00.000000000 +0300
++++ oscam-patch/ffdecsa/ffdecsa.h	2018-08-27 12:14:15.374792104 +0300
 @@ -0,0 +1,62 @@
 +/* FFdecsa -- fast decsa algorithm
 + *
@@ -1676,9 +2508,9 @@ diff -Naurp oscam-941f2e8/ffdecsa/ffdecsa.h oscam-941f2e8-patch/ffdecsa/ffdecsa.
 +int decrypt_packets(void *keys, unsigned char **cluster);
 +
 +#endif
-diff -Naurp oscam-941f2e8/ffdecsa/fftable.h oscam-941f2e8-patch/ffdecsa/fftable.h
---- oscam-941f2e8/ffdecsa/fftable.h	1970-01-01 03:00:00.000000000 +0300
-+++ oscam-941f2e8-patch/ffdecsa/fftable.h	2018-06-24 10:26:30.126073388 +0300
+diff -Naurp oscam/ffdecsa/fftable.h oscam-patch/ffdecsa/fftable.h
+--- oscam/ffdecsa/fftable.h	1970-01-01 03:00:00.000000000 +0300
++++ oscam-patch/ffdecsa/fftable.h	2018-08-27 12:14:15.374792104 +0300
 @@ -0,0 +1,56 @@
 +/* FFdecsa -- fast decsa algorithm
 + *
@@ -1736,15 +2568,15 @@ diff -Naurp oscam-941f2e8/ffdecsa/fftable.h oscam-941f2e8-patch/ffdecsa/fftable.
 +}
 +
 +#endif //FFTABLE_H 
-diff -Naurp oscam-941f2e8/ffdecsa/Makefile oscam-941f2e8-patch/ffdecsa/Makefile
---- oscam-941f2e8/ffdecsa/Makefile	1970-01-01 03:00:00.000000000 +0300
-+++ oscam-941f2e8-patch/ffdecsa/Makefile	2018-06-24 10:26:30.126073388 +0300
+diff -Naurp oscam/ffdecsa/Makefile oscam-patch/ffdecsa/Makefile
+--- oscam/ffdecsa/Makefile	1970-01-01 03:00:00.000000000 +0300
++++ oscam-patch/ffdecsa/Makefile	2018-08-27 12:14:15.374792104 +0300
 @@ -0,0 +1,2 @@
 +parent:
 +	@$(MAKE) --no-print-directory -C ..
-diff -Naurp oscam-941f2e8/ffdecsa/parallel_032_int.h oscam-941f2e8-patch/ffdecsa/parallel_032_int.h
---- oscam-941f2e8/ffdecsa/parallel_032_int.h	1970-01-01 03:00:00.000000000 +0300
-+++ oscam-941f2e8-patch/ffdecsa/parallel_032_int.h	2018-06-24 10:26:30.126073388 +0300
+diff -Naurp oscam/ffdecsa/parallel_032_int.h oscam-patch/ffdecsa/parallel_032_int.h
+--- oscam/ffdecsa/parallel_032_int.h	1970-01-01 03:00:00.000000000 +0300
++++ oscam-patch/ffdecsa/parallel_032_int.h	2018-08-27 12:14:15.374792104 +0300
 @@ -0,0 +1,55 @@
 +/* FFdecsa -- fast decsa algorithm
 + *
@@ -1801,9 +2633,9 @@ diff -Naurp oscam-941f2e8/ffdecsa/parallel_032_int.h oscam-941f2e8-patch/ffdecsa
 +#define B_FFN_ALL_80() 0x80808080
 +
 +#define M_EMPTY()
-diff -Naurp oscam-941f2e8/ffdecsa/parallel_064_long.h oscam-941f2e8-patch/ffdecsa/parallel_064_long.h
---- oscam-941f2e8/ffdecsa/parallel_064_long.h	1970-01-01 03:00:00.000000000 +0300
-+++ oscam-941f2e8-patch/ffdecsa/parallel_064_long.h	2018-06-24 10:26:30.126073388 +0300
+diff -Naurp oscam/ffdecsa/parallel_064_long.h oscam-patch/ffdecsa/parallel_064_long.h
+--- oscam/ffdecsa/parallel_064_long.h	1970-01-01 03:00:00.000000000 +0300
++++ oscam-patch/ffdecsa/parallel_064_long.h	2018-08-27 12:14:15.374792104 +0300
 @@ -0,0 +1,39 @@
 +/* FFdecsa -- fast decsa algorithm
 + *
@@ -1844,9 +2676,9 @@ diff -Naurp oscam-941f2e8/ffdecsa/parallel_064_long.h oscam-941f2e8-patch/ffdecs
 +#define M_EMPTY()
 +
 +#include "fftable.h"
-diff -Naurp oscam-941f2e8/ffdecsa/parallel_128_sse2.h oscam-941f2e8-patch/ffdecsa/parallel_128_sse2.h
---- oscam-941f2e8/ffdecsa/parallel_128_sse2.h	1970-01-01 03:00:00.000000000 +0300
-+++ oscam-941f2e8-patch/ffdecsa/parallel_128_sse2.h	2018-06-24 10:26:30.130073342 +0300
+diff -Naurp oscam/ffdecsa/parallel_128_sse2.h oscam-patch/ffdecsa/parallel_128_sse2.h
+--- oscam/ffdecsa/parallel_128_sse2.h	1970-01-01 03:00:00.000000000 +0300
++++ oscam-patch/ffdecsa/parallel_128_sse2.h	2018-08-27 12:14:15.374792104 +0300
 @@ -0,0 +1,82 @@
 +/* FFdecsa -- fast decsa algorithm
 + *
@@ -1930,9 +2762,9 @@ diff -Naurp oscam-941f2e8/ffdecsa/parallel_128_sse2.h oscam-941f2e8-patch/ffdecs
 +}
 +
 +#include "fftable.h"
-diff -Naurp oscam-941f2e8/ffdecsa/parallel_generic.h oscam-941f2e8-patch/ffdecsa/parallel_generic.h
---- oscam-941f2e8/ffdecsa/parallel_generic.h	1970-01-01 03:00:00.000000000 +0300
-+++ oscam-941f2e8-patch/ffdecsa/parallel_generic.h	2018-06-24 10:26:30.130073342 +0300
+diff -Naurp oscam/ffdecsa/parallel_generic.h oscam-patch/ffdecsa/parallel_generic.h
+--- oscam/ffdecsa/parallel_generic.h	1970-01-01 03:00:00.000000000 +0300
++++ oscam-patch/ffdecsa/parallel_generic.h	2018-08-27 12:14:15.374792104 +0300
 @@ -0,0 +1,102 @@
 +/* FFdecsa -- fast decsa algorithm
 + *
@@ -2036,9 +2868,9 @@ diff -Naurp oscam-941f2e8/ffdecsa/parallel_generic.h oscam-941f2e8-patch/ffdecsa
 +
 +#define END_MM             do{ }while(0);
 +#endif
-diff -Naurp oscam-941f2e8/ffdecsa/parallel_std_def.h oscam-941f2e8-patch/ffdecsa/parallel_std_def.h
---- oscam-941f2e8/ffdecsa/parallel_std_def.h	1970-01-01 03:00:00.000000000 +0300
-+++ oscam-941f2e8-patch/ffdecsa/parallel_std_def.h	2018-06-24 10:26:30.130073342 +0300
+diff -Naurp oscam/ffdecsa/parallel_std_def.h oscam-patch/ffdecsa/parallel_std_def.h
+--- oscam/ffdecsa/parallel_std_def.h	1970-01-01 03:00:00.000000000 +0300
++++ oscam-patch/ffdecsa/parallel_std_def.h	2018-08-27 12:14:15.374792104 +0300
 @@ -0,0 +1,29 @@
 +/* FFdecsa -- fast decsa algorithm
 + *
@@ -2069,9 +2901,9 @@ diff -Naurp oscam-941f2e8/ffdecsa/parallel_std_def.h oscam-941f2e8-patch/ffdecsa
 +#define B_FFXOR(a,b) ((a)^(b))
 +#define B_FFSH8L(a,n) ((a)<<(n))
 +#define B_FFSH8R(a,n) ((a)>>(n))
-diff -Naurp oscam-941f2e8/ffdecsa/stream.c oscam-941f2e8-patch/ffdecsa/stream.c
---- oscam-941f2e8/ffdecsa/stream.c	1970-01-01 03:00:00.000000000 +0300
-+++ oscam-941f2e8-patch/ffdecsa/stream.c	2018-06-24 10:26:30.130073342 +0300
+diff -Naurp oscam/ffdecsa/stream.c oscam-patch/ffdecsa/stream.c
+--- oscam/ffdecsa/stream.c	1970-01-01 03:00:00.000000000 +0300
++++ oscam-patch/ffdecsa/stream.c	2018-08-27 12:14:15.378792068 +0300
 @@ -0,0 +1,906 @@
 +/* FFdecsa -- fast decsa algorithm
 + *
@@ -2979,10 +3811,10 @@ diff -Naurp oscam-941f2e8/ffdecsa/stream.c oscam-941f2e8-patch/ffdecsa/stream.c
 +
 +}
 +
-diff -Naurp oscam-941f2e8/globals.h oscam-941f2e8-patch/globals.h
---- oscam-941f2e8/globals.h	2018-06-24 00:06:48.000000000 +0300
-+++ oscam-941f2e8-patch/globals.h	2018-06-24 10:26:30.130073342 +0300
-@@ -390,17 +390,17 @@ typedef unsigned char uchar;
+diff -Naurp oscam/globals.h oscam-patch/globals.h
+--- oscam/globals.h	2018-08-27 12:12:01.463975036 +0300
++++ oscam-patch/globals.h	2018-08-27 12:14:15.378792068 +0300
+@@ -389,17 +389,17 @@ typedef unsigned char uchar;
  #define CS_ECM_RINGBUFFER_MAX 0x10 // max size for ECM last responsetimes ringbuffer. Keep this set to power of 2 values!
  
  // Support for multiple CWs per channel and other encryption algos
@@ -3004,7 +3836,7 @@ diff -Naurp oscam-941f2e8/globals.h oscam-941f2e8-patch/globals.h
  #define MSGLOGSIZE 64   //size of string buffer for a ecm to return messages
  
  #define D_TRACE     0x0001  // Generate very detailed error/trace messages per routine
-@@ -432,6 +432,7 @@ typedef unsigned char uchar;
+@@ -431,6 +431,7 @@ typedef unsigned char uchar;
  #define R_SMART     0x7 // Smartreader+
  #define R_PCSC      0x8 // PCSC
  #define R_DRECAS    0x9 // Reader DRECAS
@@ -3012,7 +3844,7 @@ diff -Naurp oscam-941f2e8/globals.h oscam-941f2e8-patch/globals.h
  /////////////////// proxy readers after R_CS378X
  #define R_CAMD35    0x20  // Reader cascading camd 3.5x
  #define R_CAMD33    0x21  // Reader cascading camd 3.3x
-@@ -859,6 +860,13 @@ typedef struct s_entitlement
+@@ -858,6 +859,13 @@ typedef struct s_entitlement
  	uint32_t        class;              // the class needed for some systems
  	time_t          start;              // startdate
  	time_t          end;                // enddate
@@ -3026,7 +3858,7 @@ diff -Naurp oscam-941f2e8/globals.h oscam-941f2e8-patch/globals.h
  } S_ENTITLEMENT;
  
  struct s_client ;
-@@ -983,6 +991,7 @@ struct s_cardsystem
+@@ -982,6 +990,7 @@ struct s_cardsystem
  	void (*post_process)(struct s_reader *);
  	int32_t (*get_emm_type)(struct emm_packet_t *, struct s_reader *);
  	int32_t (*get_emm_filter)(struct s_reader *, struct s_csystem_emm_filter **, unsigned int *);
@@ -3034,7 +3866,7 @@ diff -Naurp oscam-941f2e8/globals.h oscam-941f2e8-patch/globals.h
  	int32_t (*get_tunemm_filter)(struct s_reader *, struct s_csystem_emm_filter **, unsigned int *);
  };
  
-@@ -1715,6 +1724,14 @@ struct s_reader
+@@ -1743,6 +1752,14 @@ struct s_reader
  #ifdef MODULE_GHTTP
  	uint8_t         ghttp_use_ssl;
  #endif
@@ -3049,7 +3881,7 @@ diff -Naurp oscam-941f2e8/globals.h oscam-941f2e8-patch/globals.h
  	uint8_t cnxlastecm; // == 0 - las ecm has not been paired ecm, > 0 last ecm has been paired ecm
  	LLIST           *emmstat; //emm stats
  	CS_MUTEX_LOCK   emmstat_lock;
-@@ -2165,6 +2182,7 @@ struct s_config
+@@ -2193,6 +2210,7 @@ struct s_config
  	int8_t      dvbapi_read_sdt;
  	int8_t      dvbapi_write_sdt_prov;
  	int8_t      dvbapi_extended_cw_api;
@@ -3057,11 +3889,10 @@ diff -Naurp oscam-941f2e8/globals.h oscam-941f2e8-patch/globals.h
  #endif
  
  #ifdef CS_ANTICASC
-@@ -2211,6 +2229,18 @@ struct s_config
- 	IN_ADDR_T   scam_srvip;
+@@ -2240,6 +2258,17 @@ struct s_config
  	struct s_ip *scam_allowed;
  #endif
-+
+ 
 +#ifdef WITH_EMU
 +	char        *emu_stream_source_host;
 +	int32_t     emu_stream_source_port;
@@ -3076,7 +3907,7 @@ diff -Naurp oscam-941f2e8/globals.h oscam-941f2e8-patch/globals.h
  	int32_t    max_cache_time;  //seconds ecms are stored in ecmcwcache
  	int32_t    max_hitcache_time;  //seconds hits are stored in cspec_hitcache (to detect dyn wait_time)
  
-@@ -2392,4 +2422,8 @@ static inline bool caid_is_bulcrypt(uint
+@@ -2421,4 +2450,8 @@ static inline bool caid_is_bulcrypt(uint
  static inline bool caid_is_dre(uint16_t caid) { return caid == 0x4AE0 || caid == 0x4AE1 || caid == 0x2710;}
  const char *get_cardsystem_desc_by_caid(uint16_t caid);
  
@@ -3085,9 +3916,9 @@ diff -Naurp oscam-941f2e8/globals.h oscam-941f2e8-patch/globals.h
 +#endif
 +
  #endif
-diff -Naurp oscam-941f2e8/Makefile oscam-941f2e8-patch/Makefile
---- oscam-941f2e8/Makefile	2018-06-24 00:06:48.000000000 +0300
-+++ oscam-941f2e8-patch/Makefile	2018-06-24 10:26:30.122073434 +0300
+diff -Naurp oscam/Makefile oscam-patch/Makefile
+--- oscam/Makefile	2018-08-27 12:12:01.447975195 +0300
++++ oscam-patch/Makefile	2018-08-27 12:14:15.370792139 +0300
 @@ -65,6 +65,13 @@ STRIP = $(CROSS_DIR)$(CROSS)strip
  
  LDFLAGS = -Wl,--gc-sections
@@ -3124,7 +3955,7 @@ diff -Naurp oscam-941f2e8/Makefile oscam-941f2e8-patch/Makefile
  SRC-$(CONFIG_CS_CACHEEX) += module-csp.c
  SRC-$(CONFIG_CW_CYCLE_CHECK) += module-cw-cycle-check.c
  SRC-$(CONFIG_WITH_AZBOX) += module-dvbapi-azbox.c
-@@ -366,7 +388,7 @@ SRC := $(subst config.c,$(OBJDIR)/config
+@@ -371,7 +393,7 @@ SRC := $(subst config.c,$(OBJDIR)/config
  # starts the compilation.
  all:
  	@./config.sh --use-flags "$(USE_FLAGS)" --objdir "$(OBJDIR)" --make-config.mak
@@ -3133,9 +3964,9 @@ diff -Naurp oscam-941f2e8/Makefile oscam-941f2e8-patch/Makefile
  	@-printf "\
  +-------------------------------------------------------------------------------\n\
  | OSCam ver: $(VER) rev: $(SVN_REV) target: $(TARGET)\n\
-diff -Naurp oscam-941f2e8/module-dvbapi.c oscam-941f2e8-patch/module-dvbapi.c
---- oscam-941f2e8/module-dvbapi.c	2018-06-24 00:06:48.000000000 +0300
-+++ oscam-941f2e8-patch/module-dvbapi.c	2018-06-24 10:26:30.130073342 +0300
+diff -Naurp oscam/module-dvbapi.c oscam-patch/module-dvbapi.c
+--- oscam/module-dvbapi.c	2018-08-27 12:12:01.475974918 +0300
++++ oscam-patch/module-dvbapi.c	2018-08-27 12:14:15.378792068 +0300
 @@ -1471,7 +1471,15 @@ void dvbapi_start_emm_filter(int32_t dem
  			}
  			if(match)
@@ -3328,9 +4159,9 @@ diff -Naurp oscam-941f2e8/module-dvbapi.c oscam-941f2e8-patch/module-dvbapi.c
  		switch(selected_api)
  		{
  #if defined(WITH_STAPI) || defined(WITH_STAPI5)
-diff -Naurp oscam-941f2e8/module-dvbapi.h oscam-941f2e8-patch/module-dvbapi.h
---- oscam-941f2e8/module-dvbapi.h	2018-06-24 00:06:48.000000000 +0300
-+++ oscam-941f2e8-patch/module-dvbapi.h	2018-06-24 10:26:30.134073296 +0300
+diff -Naurp oscam/module-dvbapi.h oscam-patch/module-dvbapi.h
+--- oscam/module-dvbapi.h	2018-08-27 12:12:01.475974918 +0300
++++ oscam-patch/module-dvbapi.h	2018-08-27 12:14:15.378792068 +0300
 @@ -136,6 +136,7 @@ struct s_ecmpids
  	int8_t useMultipleIndices;
  	uint32_t streams;
@@ -3349,9 +4180,9 @@ diff -Naurp oscam-941f2e8/module-dvbapi.h oscam-941f2e8-patch/module-dvbapi.h
  } FILTERTYPE;
  
  struct s_emmpids
-diff -Naurp oscam-941f2e8/module-emulator.c oscam-941f2e8-patch/module-emulator.c
---- oscam-941f2e8/module-emulator.c	1970-01-01 03:00:00.000000000 +0300
-+++ oscam-941f2e8-patch/module-emulator.c	2018-06-24 10:26:30.138073251 +0300
+diff -Naurp oscam/module-emulator.c oscam-patch/module-emulator.c
+--- oscam/module-emulator.c	1970-01-01 03:00:00.000000000 +0300
++++ oscam-patch/module-emulator.c	2018-08-27 12:14:15.386791998 +0300
 @@ -0,0 +1,904 @@
 +#define MODULE_LOG_PREFIX "emu"
 +
@@ -4257,10 +5088,10 @@ diff -Naurp oscam-941f2e8/module-emulator.c oscam-941f2e8-patch/module-emulator.
 +
 +	cs_log("OSCam-Emu version %d", GetOSemuVersion());
 +}
-diff -Naurp oscam-941f2e8/module-emulator-osemu.c oscam-941f2e8-patch/module-emulator-osemu.c
---- oscam-941f2e8/module-emulator-osemu.c	1970-01-01 03:00:00.000000000 +0300
-+++ oscam-941f2e8-patch/module-emulator-osemu.c	2018-06-24 10:26:30.138073251 +0300
-@@ -0,0 +1,6769 @@
+diff -Naurp oscam/module-emulator-osemu.c oscam-patch/module-emulator-osemu.c
+--- oscam/module-emulator-osemu.c	1970-01-01 03:00:00.000000000 +0300
++++ oscam-patch/module-emulator-osemu.c	2018-08-27 12:14:15.386791998 +0300
+@@ -0,0 +1,6775 @@
 +#define MODULE_LOG_PREFIX "emu"
 +
 +#include "globals.h"
@@ -4295,7 +5126,7 @@ diff -Naurp oscam-941f2e8/module-emulator-osemu.c oscam-941f2e8-patch/module-emu
 +// Version info
 +uint32_t GetOSemuVersion(void)
 +{
-+	return atoi("$Version: 770 $"+10);
++	return atoi("$Version: 771 $"+10);
 +}
 +
 +/*
@@ -8652,7 +9483,7 @@ diff -Naurp oscam-941f2e8/module-emulator-osemu.c oscam-941f2e8-patch/module-emu
 +	int8_t ret = 1;
 +	uint16_t ecmLen = GetEcmLen(ecm);
 +	uint32_t ecmCrc32;
-+	uint8_t nanoCmd, nanoChecksum, keyType, fixedKey, oddKey, bid, csaUsed, modeCW, offsetBody;
++	uint8_t nanoCmd, nanoChecksum, keyType, fixedKey, oddKey, bid, csaUsed, modeCW = 0, offsetBody;
 +	uint16_t nanoLen;
 +	uint32_t channelId, ecmSrvid, keyIndex;
 +	uint32_t i, j, k;
@@ -8666,7 +9497,7 @@ diff -Naurp oscam-941f2e8/module-emulator-osemu.c oscam-941f2e8-patch/module-emu
 +	uint8_t seedEcmCw[0x10];
 +	uint8_t hashModeCw = 0, needsUnmasking, xorMode;
 +	uint8_t unmaskedEcm[ecmLen];
-+	char tmpBuffer1[512];
++	//char tmpBuffer1[512];
 +#ifdef WITH_EMU
 +	uint8_t *dwp;
 +	emu_stream_cw_item *cw_item;
@@ -8683,14 +9514,16 @@ diff -Naurp oscam-941f2e8/module-emulator-osemu.c oscam-941f2e8-patch/module-emu
 +	
 +	needsUnmasking = (ecm[3] & 0xF0) == 0x50;
 +	
-+	cs_log("ecm1:%s", cs_hexdump(0, ecm, ecmLen, tmpBuffer1, sizeof(tmpBuffer1)));
++	//cs_log_dbg(D_ATR, "ecm1: %s", cs_hexdump(0, ecm, ecmLen, tmpBuffer1, sizeof(tmpBuffer1))); // Already there with debug level 2
 +	
 +	if (needsUnmasking)
 +	{
 +		hashModeCw = PowervuUnmaskEcm(ecm, seedEcmCw, &modeCW);
 +	}
 +	
-+	//cs_log("pv needsUnmasking=%d,ecm2:%s", needsUnmasking, cs_hexdump(0, ecm, ecmLen, tmpBuffer1, sizeof(tmpBuffer1)));
++	//cs_log_dbg(D_ATR, "needsUnmasking=%d", needsUnmasking);
++	//cs_log_dbg(D_ATR, "ecm2: %s", cs_hexdump(0, ecm, ecmLen, tmpBuffer1, sizeof(tmpBuffer1)));
++
 +	memcpy(unmaskedEcm, ecm, ecmLen);
 +
 +	ecmCrc32 = b2i(4, ecm+ecmLen-4);
@@ -8786,7 +9619,8 @@ diff -Naurp oscam-941f2e8/module-emulator-osemu.c oscam-941f2e8-patch/module-emu
 +			keyRef1 = 0;
 +			keyRef2 = 0;
 +			
-+			cs_log("csaUsed=%d,xorMode=%d,ecmSrvid=%d,hashModeCw=%d,modeCW=%d", csaUsed,xorMode,ecmSrvid,hashModeCw,modeCW);
++			cs_log_dbg(D_ATR, "csaUsed=%d, xorMode=%d, ecmSrvid=%d, hashModeCw=%d, modeCW=%d",
++						csaUsed, xorMode, ecmSrvid, hashModeCw, modeCW);
 +			
 +			do
 +			{
@@ -8878,7 +9712,10 @@ diff -Naurp oscam-941f2e8/module-emulator-osemu.c oscam-941f2e8-patch/module-emu
 +						}
 +					}
 +				}
-+				//cs_log("pv csaUsed=%d,cw:%s cdata=%x,cw_ex=%x", csaUsed, cs_hexdump(3, cw[0], 8, tmpBuffer1, sizeof(tmpBuffer1)),(unsigned int)cdata,(unsigned int)cw_ex);
++
++				//cs_log_dbg(D_ATR, "csaUsed=%d, cw: %s cdata=%x, cw_ex=%x",
++				//			csaUsed, cs_hexdump(3, cw[0], 8, tmpBuffer1, sizeof(tmpBuffer1)),
++				//			(unsigned int)cdata, (unsigned int)cw_ex);
 +				
 +#ifdef WITH_EMU
 +				if(update_global_key)
@@ -11030,9 +11867,9 @@ diff -Naurp oscam-941f2e8/module-emulator-osemu.c oscam-941f2e8-patch/module-emu
 +
 +	return result;
 +}
-diff -Naurp oscam-941f2e8/module-emulator-osemu.h oscam-941f2e8-patch/module-emulator-osemu.h
---- oscam-941f2e8/module-emulator-osemu.h	1970-01-01 03:00:00.000000000 +0300
-+++ oscam-941f2e8-patch/module-emulator-osemu.h	2018-06-24 10:26:30.138073251 +0300
+diff -Naurp oscam/module-emulator-osemu.h oscam-patch/module-emulator-osemu.h
+--- oscam/module-emulator-osemu.h	1970-01-01 03:00:00.000000000 +0300
++++ oscam-patch/module-emulator-osemu.h	2018-08-27 12:14:15.386791998 +0300
 @@ -0,0 +1,127 @@
 +#include "globals.h"
 +#include "module-emulator-stream.h"
@@ -11161,9 +11998,9 @@ diff -Naurp oscam-941f2e8/module-emulator-osemu.h oscam-941f2e8-patch/module-emu
 +#endif
 +
 +#endif
-diff -Naurp oscam-941f2e8/module-emulator-stream.c oscam-941f2e8-patch/module-emulator-stream.c
---- oscam-941f2e8/module-emulator-stream.c	1970-01-01 03:00:00.000000000 +0300
-+++ oscam-941f2e8-patch/module-emulator-stream.c	2018-06-24 10:26:30.138073251 +0300
+diff -Naurp oscam/module-emulator-stream.c oscam-patch/module-emulator-stream.c
+--- oscam/module-emulator-stream.c	1970-01-01 03:00:00.000000000 +0300
++++ oscam-patch/module-emulator-stream.c	2018-08-27 12:14:15.386791998 +0300
 @@ -0,0 +1,1105 @@
 +#define MODULE_LOG_PREFIX "emu"
 +
@@ -12270,9 +13107,9 @@ diff -Naurp oscam-941f2e8/module-emulator-stream.c oscam-941f2e8-patch/module-em
 +	shutdown(glistenfd, 2);
 +	close(glistenfd);
 +}
-diff -Naurp oscam-941f2e8/module-emulator-stream.h oscam-941f2e8-patch/module-emulator-stream.h
---- oscam-941f2e8/module-emulator-stream.h	1970-01-01 03:00:00.000000000 +0300
-+++ oscam-941f2e8-patch/module-emulator-stream.h	2018-06-24 10:26:30.138073251 +0300
+diff -Naurp oscam/module-emulator-stream.h oscam-patch/module-emulator-stream.h
+--- oscam/module-emulator-stream.h	1970-01-01 03:00:00.000000000 +0300
++++ oscam-patch/module-emulator-stream.h	2018-08-27 12:14:15.386791998 +0300
 @@ -0,0 +1,75 @@
 +#ifndef EMU_STREAM_SERVER_H_
 +#define EMU_STREAM_SERVER_H_
@@ -12349,9 +13186,9 @@ diff -Naurp oscam-941f2e8/module-emulator-stream.h oscam-941f2e8-patch/module-em
 +#endif
 +
 +#endif
-diff -Naurp oscam-941f2e8/module-newcamd.c oscam-941f2e8-patch/module-newcamd.c
---- oscam-941f2e8/module-newcamd.c	2018-06-24 00:06:48.000000000 +0300
-+++ oscam-941f2e8-patch/module-newcamd.c	2018-06-24 10:26:30.138073251 +0300
+diff -Naurp oscam/module-newcamd.c oscam-patch/module-newcamd.c
+--- oscam/module-newcamd.c	2018-08-27 12:12:01.479974878 +0300
++++ oscam-patch/module-newcamd.c	2018-08-27 12:14:15.386791998 +0300
 @@ -919,6 +919,13 @@ static int8_t newcamd_auth_client(IN_ADD
  			// set userfilter for au enabled clients
  			if(aureader)
@@ -12422,9 +13259,9 @@ diff -Naurp oscam-941f2e8/module-newcamd.c oscam-941f2e8-patch/module-newcamd.c
  					if(!found)
  					{
  						mbuf[22 + 11 * j] = 0x00;
-diff -Naurp oscam-941f2e8/module-newcamd-des.c oscam-941f2e8-patch/module-newcamd-des.c
---- oscam-941f2e8/module-newcamd-des.c	2018-06-24 00:06:48.000000000 +0300
-+++ oscam-941f2e8-patch/module-newcamd-des.c	2018-06-24 10:26:30.138073251 +0300
+diff -Naurp oscam/module-newcamd-des.c oscam-patch/module-newcamd-des.c
+--- oscam/module-newcamd-des.c	2018-08-27 12:12:01.479974878 +0300
++++ oscam-patch/module-newcamd-des.c	2018-08-27 12:14:15.386791998 +0300
 @@ -5,10 +5,7 @@
  #define DES_IP              1
  #define DES_IP_1            2
@@ -12445,9 +13282,9 @@ diff -Naurp oscam-941f2e8/module-newcamd-des.c oscam-941f2e8-patch/module-newcam
  {
  	unsigned char i;
  	unsigned char left[8];
-diff -Naurp oscam-941f2e8/module-newcamd-des.h oscam-941f2e8-patch/module-newcamd-des.h
---- oscam-941f2e8/module-newcamd-des.h	2018-06-24 00:06:48.000000000 +0300
-+++ oscam-941f2e8-patch/module-newcamd-des.h	2018-06-24 10:26:30.138073251 +0300
+diff -Naurp oscam/module-newcamd-des.h oscam-patch/module-newcamd-des.h
+--- oscam/module-newcamd-des.h	2018-08-27 12:12:01.479974878 +0300
++++ oscam-patch/module-newcamd-des.h	2018-08-27 12:14:15.386791998 +0300
 @@ -1,8 +1,15 @@
  #ifndef MODULE_NEWCAMD_DES_H_
  #define MODULE_NEWCAMD_DES_H_
@@ -12464,9 +13301,9 @@ diff -Naurp oscam-941f2e8/module-newcamd-des.h oscam-941f2e8-patch/module-newcam
 +	void nc_des(unsigned char key[], unsigned char mode, unsigned char data[]);
 +
  #endif
-diff -Naurp oscam-941f2e8/module-stat.c oscam-941f2e8-patch/module-stat.c
---- oscam-941f2e8/module-stat.c	2018-06-24 00:06:48.000000000 +0300
-+++ oscam-941f2e8-patch/module-stat.c	2018-06-24 10:26:30.138073251 +0300
+diff -Naurp oscam/module-stat.c oscam-patch/module-stat.c
+--- oscam/module-stat.c	2018-08-27 12:12:01.479974878 +0300
++++ oscam-patch/module-stat.c	2018-08-27 12:14:15.386791998 +0300
 @@ -903,7 +903,7 @@ void check_lb_auto_betatunnel_mode(ECM_R
  
  uint16_t get_rdr_caid(struct s_reader *rdr)
@@ -12485,9 +13322,9 @@ diff -Naurp oscam-941f2e8/module-stat.c oscam-941f2e8-patch/module-stat.c
  			{
  				prv = ea;
  				continue; // proxy can convert or reject
-diff -Naurp oscam-941f2e8/module-webif.c oscam-941f2e8-patch/module-webif.c
---- oscam-941f2e8/module-webif.c	2018-06-24 00:06:48.000000000 +0300
-+++ oscam-941f2e8-patch/module-webif.c	2018-06-24 10:26:30.142073205 +0300
+diff -Naurp oscam/module-webif.c oscam-patch/module-webif.c
+--- oscam/module-webif.c	2018-08-27 12:12:01.483974838 +0300
++++ oscam-patch/module-webif.c	2018-08-27 12:14:15.390791963 +0300
 @@ -101,6 +101,7 @@ static bool use_srvid2 = false;
  #define MNU_CFG_LCD			14
  #define MNU_CFG_MONITOR		15
@@ -12693,10 +13530,10 @@ diff -Naurp oscam-941f2e8/module-webif.c oscam-941f2e8-patch/module-webif.c
  		{
  			cs_log("error: too much data received from %s", cs_inet_ntoa(in));
  			NULLFREE(*result);
-diff -Naurp oscam-941f2e8/module-webif-tpl.c oscam-941f2e8-patch/module-webif-tpl.c
---- oscam-941f2e8/module-webif-tpl.c	2018-06-24 00:06:48.000000000 +0300
-+++ oscam-941f2e8-patch/module-webif-tpl.c	2018-06-24 10:26:30.142073205 +0300
-@@ -457,6 +457,7 @@ char *tpl_getUnparsedTpl(const char *nam
+diff -Naurp oscam/module-webif-tpl.c oscam-patch/module-webif-tpl.c
+--- oscam/module-webif-tpl.c	2018-08-27 12:12:01.479974878 +0300
++++ oscam-patch/module-webif-tpl.c	2018-08-27 12:14:15.390791963 +0300
+@@ -459,6 +459,7 @@ char *tpl_getUnparsedTpl(const char *nam
  											check_conf(WITH_SSL, ptr2);
  											check_conf(WITH_STAPI, ptr2);
  											check_conf(WITH_STAPI5, ptr2);
@@ -12704,9 +13541,9 @@ diff -Naurp oscam-941f2e8/module-webif-tpl.c oscam-941f2e8-patch/module-webif-tp
  										} // for
  										if(ok == 0)
  										{
-diff -Naurp oscam-941f2e8/oscam-aes.c oscam-941f2e8-patch/oscam-aes.c
---- oscam-941f2e8/oscam-aes.c	2018-06-24 00:06:48.000000000 +0300
-+++ oscam-941f2e8-patch/oscam-aes.c	2018-06-24 10:26:30.142073205 +0300
+diff -Naurp oscam/oscam-aes.c oscam-patch/oscam-aes.c
+--- oscam/oscam-aes.c	2018-08-27 12:12:01.483974838 +0300
++++ oscam-patch/oscam-aes.c	2018-08-27 12:14:15.390791963 +0300
 @@ -37,6 +37,16 @@ void aes_encrypt_idx(struct aes_keys *ae
  	}
  }
@@ -12724,9 +13561,9 @@ diff -Naurp oscam-941f2e8/oscam-aes.c oscam-941f2e8-patch/oscam-aes.c
  /* Creates an AES_ENTRY and adds it to the given linked list. */
  void add_aes_entry(AES_ENTRY **list, uint16_t caid, uint32_t ident, int32_t keyid, uchar *aesKey)
  {
-diff -Naurp oscam-941f2e8/oscam-aes.h oscam-941f2e8-patch/oscam-aes.h
---- oscam-941f2e8/oscam-aes.h	2018-06-24 00:06:48.000000000 +0300
-+++ oscam-941f2e8-patch/oscam-aes.h	2018-06-24 10:26:30.142073205 +0300
+diff -Naurp oscam/oscam-aes.h oscam-patch/oscam-aes.h
+--- oscam/oscam-aes.h	2018-08-27 12:12:01.483974838 +0300
++++ oscam-patch/oscam-aes.h	2018-08-27 12:14:15.390791963 +0300
 @@ -5,6 +5,8 @@ void aes_set_key(struct aes_keys *aes, c
  bool aes_set_key_alloc(struct aes_keys **aes, char *key);
  void aes_decrypt(struct aes_keys *aes, uchar *buf, int32_t n);
@@ -12736,9 +13573,9 @@ diff -Naurp oscam-941f2e8/oscam-aes.h oscam-941f2e8-patch/oscam-aes.h
  
  void add_aes_entry(AES_ENTRY **list, uint16_t caid, uint32_t ident, int32_t keyid, uchar *aesKey);
  void parse_aes_entry(AES_ENTRY **list, char *label, char *value);
-diff -Naurp oscam-941f2e8/oscam.c oscam-941f2e8-patch/oscam.c
---- oscam-941f2e8/oscam.c	2018-06-24 00:06:48.000000000 +0300
-+++ oscam-941f2e8-patch/oscam.c	2018-06-24 10:26:30.146073159 +0300
+diff -Naurp oscam/oscam.c oscam-patch/oscam.c
+--- oscam/oscam.c	2018-08-27 12:12:01.491974759 +0300
++++ oscam-patch/oscam.c	2018-08-27 12:14:15.394791927 +0300
 @@ -41,6 +41,11 @@
  #include "reader-common.h"
  #include "module-gbox.h"
@@ -12759,17 +13596,17 @@ diff -Naurp oscam-941f2e8/oscam.c oscam-941f2e8-patch/oscam.c
  	switch (cs_getclocktype()) {
  		case CLOCK_TYPE_UNKNOWN  : write_conf(CLOCKFIX, "Clockfix with UNKNOWN clock"); break;
  		case CLOCK_TYPE_REALTIME : write_conf(CLOCKFIX, "Clockfix with realtime clock"); break;
-@@ -1639,6 +1645,9 @@ const struct s_cardreader *cardreaders[]
+@@ -1644,6 +1650,9 @@ const struct s_cardreader *cardreaders[]
  #ifdef CARDREADER_STINGER
  	&cardreader_stinger,
  #endif
 +#ifdef WITH_EMU
 +	&cardreader_emu,
 +#endif
+ 
  	NULL
  };
- 
-@@ -1810,6 +1819,9 @@ int32_t main(int32_t argc, char *argv[])
+@@ -1816,6 +1825,9 @@ int32_t main(int32_t argc, char *argv[])
  
  	init_sidtab();
  	init_readerdb();
@@ -12779,7 +13616,7 @@ diff -Naurp oscam-941f2e8/oscam.c oscam-941f2e8-patch/oscam.c
  	cfg.account = init_userdb();
  	init_signal();
  	init_provid();
-@@ -1897,6 +1909,9 @@ int32_t main(int32_t argc, char *argv[])
+@@ -1903,6 +1915,9 @@ int32_t main(int32_t argc, char *argv[])
   if(!cfg.gsms_dis)
  	{ stop_sms_sender(); }
  #endif
@@ -12789,9 +13626,9 @@ diff -Naurp oscam-941f2e8/oscam.c oscam-941f2e8-patch/oscam.c
  	webif_close();
  	azbox_close();
  	coolapi_close_all();
-diff -Naurp oscam-941f2e8/oscam-chk.c oscam-941f2e8-patch/oscam-chk.c
---- oscam-941f2e8/oscam-chk.c	2018-06-24 00:06:48.000000000 +0300
-+++ oscam-941f2e8-patch/oscam-chk.c	2018-06-24 10:26:30.142073205 +0300
+diff -Naurp oscam/oscam-chk.c oscam-patch/oscam-chk.c
+--- oscam/oscam-chk.c	2018-08-27 12:12:01.483974838 +0300
++++ oscam-patch/oscam-chk.c	2018-08-27 12:14:15.390791963 +0300
 @@ -758,7 +758,7 @@ int32_t matching_reader(ECM_REQUEST *er,
  		return 0;
  	}
@@ -12828,9 +13665,9 @@ diff -Naurp oscam-941f2e8/oscam-chk.c oscam-941f2e8-patch/oscam-chk.c
  	{
  		return 1; //reader caid is not real caid
  	}
-diff -Naurp oscam-941f2e8/oscam-config-global.c oscam-941f2e8-patch/oscam-config-global.c
---- oscam-941f2e8/oscam-config-global.c	2018-06-24 00:06:48.000000000 +0300
-+++ oscam-941f2e8-patch/oscam-config-global.c	2018-06-24 10:26:30.142073205 +0300
+diff -Naurp oscam/oscam-config-global.c oscam-patch/oscam-config-global.c
+--- oscam/oscam-config-global.c	2018-08-27 12:12:01.487974800 +0300
++++ oscam-patch/oscam-config-global.c	2018-08-27 12:14:15.390791963 +0300
 @@ -854,6 +854,30 @@ static const struct config_list scam_opt
  #else
  static const struct config_list scam_opts[] = { DEF_LAST_OPT };
@@ -12878,9 +13715,9 @@ diff -Naurp oscam-941f2e8/oscam-config-global.c oscam-941f2e8-patch/oscam-config
  	{ "dvbapi",	dvbapi_opts },
  	{ "monitor",	monitor_opts },
  	{ "webif",	webif_opts },
-diff -Naurp oscam-941f2e8/oscam-config.h oscam-941f2e8-patch/oscam-config.h
---- oscam-941f2e8/oscam-config.h	2018-06-24 00:06:48.000000000 +0300
-+++ oscam-941f2e8-patch/oscam-config.h	2018-06-24 10:26:30.146073159 +0300
+diff -Naurp oscam/oscam-config.h oscam-patch/oscam-config.h
+--- oscam/oscam-config.h	2018-08-27 12:12:01.487974800 +0300
++++ oscam-patch/oscam-config.h	2018-08-27 12:14:15.394791927 +0300
 @@ -22,6 +22,7 @@ void    free_reader(struct s_reader *rdr
  int32_t free_readerdb(void);
  int32_t write_server(void);
@@ -12899,9 +13736,9 @@ diff -Naurp oscam-941f2e8/oscam-config.h oscam-941f2e8-patch/oscam-config.h
  };
  
  void ftab_fn(const char *token, char *value, void *setting, long ftab_type, FILE *f);
-diff -Naurp oscam-941f2e8/oscam-config-reader.c oscam-941f2e8-patch/oscam-config-reader.c
---- oscam-941f2e8/oscam-config-reader.c	2018-06-24 00:06:48.000000000 +0300
-+++ oscam-941f2e8-patch/oscam-config-reader.c	2018-06-24 10:26:30.142073205 +0300
+diff -Naurp oscam/oscam-config-reader.c oscam-patch/oscam-config-reader.c
+--- oscam/oscam-config-reader.c	2018-08-27 12:12:01.487974800 +0300
++++ oscam-patch/oscam-config-reader.c	2018-08-27 12:14:15.390791963 +0300
 @@ -109,6 +109,7 @@ static void protocol_fn(const char *toke
  			{ "newcamd525", R_NEWCAMD },
  			{ "newcamd524", R_NEWCAMD },
@@ -12944,9 +13781,9 @@ diff -Naurp oscam-941f2e8/oscam-config-reader.c oscam-941f2e8-patch/oscam-config
  	DEF_OPT_INT8("deprecated"           , OFS(deprecated),              0),
  	DEF_OPT_INT8("audisabled"           , OFS(audisabled),              0),
  	DEF_OPT_FUNC("auprovid"             , 0,                            auprovid_fn),
-diff -Naurp oscam-941f2e8/oscam-ecm.c oscam-941f2e8-patch/oscam-ecm.c
---- oscam-941f2e8/oscam-ecm.c	2018-06-24 00:06:48.000000000 +0300
-+++ oscam-941f2e8-patch/oscam-ecm.c	2018-06-24 10:26:30.146073159 +0300
+diff -Naurp oscam/oscam-ecm.c oscam-patch/oscam-ecm.c
+--- oscam/oscam-ecm.c	2018-08-27 12:12:01.487974800 +0300
++++ oscam-patch/oscam-ecm.c	2018-08-27 12:14:15.394791927 +0300
 @@ -1585,7 +1585,7 @@ int32_t write_ecm_answer(struct s_reader
  
  	if(reader && cw && rc < E_NOTFOUND)
@@ -12956,9 +13793,9 @@ diff -Naurp oscam-941f2e8/oscam-ecm.c oscam-941f2e8-patch/oscam-ecm.c
  		{
  			uint8_t selectedForIgnChecksum = chk_if_ignore_checksum(er, cfg.disablecrccws, &cfg.disablecrccws_only_for)
  					+ chk_if_ignore_checksum(er, reader->disablecrccws, &reader->disablecrccws_only_for);
-diff -Naurp oscam-941f2e8/oscam-emm.c oscam-941f2e8-patch/oscam-emm.c
---- oscam-941f2e8/oscam-emm.c	2018-06-24 00:06:48.000000000 +0300
-+++ oscam-941f2e8-patch/oscam-emm.c	2018-06-24 10:26:30.146073159 +0300
+diff -Naurp oscam/oscam-emm.c oscam-patch/oscam-emm.c
+--- oscam/oscam-emm.c	2018-08-27 12:12:01.487974800 +0300
++++ oscam-patch/oscam-emm.c	2018-08-27 12:14:15.394791927 +0300
 @@ -50,7 +50,14 @@ static int8_t do_simple_emm_filter(struc
  	unsigned int j, filter_count = 0;
  
@@ -13000,9 +13837,9 @@ diff -Naurp oscam-941f2e8/oscam-emm.c oscam-941f2e8-patch/oscam-emm.c
  	if(prid == provid)
  	{
  		rdr_log_dbg(reader, D_EMM, "reader auprovid = %06X matching with emm provid = %06X -> SEND!", prid, provid);
-diff -Naurp oscam-941f2e8/oscam-string.c oscam-941f2e8-patch/oscam-string.c
---- oscam-941f2e8/oscam-string.c	2018-06-24 00:06:48.000000000 +0300
-+++ oscam-941f2e8-patch/oscam-string.c	2018-06-24 10:26:30.146073159 +0300
+diff -Naurp oscam/oscam-string.c oscam-patch/oscam-string.c
+--- oscam/oscam-string.c	2018-08-27 12:12:01.491974759 +0300
++++ oscam-patch/oscam-string.c	2018-08-27 12:14:15.394791927 +0300
 @@ -497,6 +497,62 @@ uint32_t crc32(uint32_t crc, const uint8
  	return crc ^ 0xffffffffL;
  }
@@ -13066,9 +13903,9 @@ diff -Naurp oscam-941f2e8/oscam-string.c oscam-941f2e8-patch/oscam-string.c
  static uint16_t ccitt_crc_table [256] =
  {
  	0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0x50a5,
-diff -Naurp oscam-941f2e8/oscam-string.h oscam-941f2e8-patch/oscam-string.h
---- oscam-941f2e8/oscam-string.h	2018-06-24 00:06:48.000000000 +0300
-+++ oscam-941f2e8-patch/oscam-string.h	2018-06-24 10:26:30.146073159 +0300
+diff -Naurp oscam/oscam-string.h oscam-patch/oscam-string.h
+--- oscam/oscam-string.h	2018-08-27 12:12:01.491974759 +0300
++++ oscam-patch/oscam-string.h	2018-08-27 12:14:15.394791927 +0300
 @@ -37,6 +37,7 @@ void get_random_bytes_init(void);
  void get_random_bytes(uint8_t *dst, uint32_t dst_len);
  
@@ -13077,18 +13914,10 @@ diff -Naurp oscam-941f2e8/oscam-string.h oscam-941f2e8-patch/oscam-string.h
  uint16_t ccitt_crc(uint8_t *data, size_t length, uint16_t seed, uint16_t final);
  uint32_t jhash(const char *key, size_t len);
  
-diff -Naurp oscam-941f2e8/reader-common.c oscam-941f2e8-patch/reader-common.c
---- oscam-941f2e8/reader-common.c	2018-06-24 00:06:48.000000000 +0300
-+++ oscam-941f2e8-patch/reader-common.c	2018-06-24 10:26:30.146073159 +0300
-@@ -15,6 +15,7 @@
- #include "reader-common.h"
- //#include "csctapi/atr.h"
- #include "csctapi/icc_async.h"
-+#include "readers.h"
- 
- extern const struct s_cardsystem *cardsystems[];
- extern char *RDR_CD_TXT[];
-@@ -142,6 +143,19 @@ void cardreader_poll_status(struct s_rea
+diff -Naurp oscam/reader-common.c oscam-patch/reader-common.c
+--- oscam/reader-common.c	2018-08-27 12:12:01.491974759 +0300
++++ oscam-patch/reader-common.c	2018-08-27 12:14:15.394791927 +0300
+@@ -143,6 +143,19 @@ void cardreader_poll_status(struct s_rea
  static int32_t reader_get_cardsystem(struct s_reader *reader, ATR *atr)
  {
  	int32_t i;
@@ -13108,19 +13937,19 @@ diff -Naurp oscam-941f2e8/reader-common.c oscam-941f2e8-patch/reader-common.c
  	for(i = 0; cardsystems[i]; i++)
  	{
  		NULLFREE(reader->csystem_data);
-diff -Naurp oscam-941f2e8/readers.h oscam-941f2e8-patch/readers.h
---- oscam-941f2e8/readers.h	2018-06-24 00:06:48.000000000 +0300
-+++ oscam-941f2e8-patch/readers.h	2018-06-24 10:26:30.146073159 +0300
-@@ -16,5 +16,6 @@ extern const struct s_cardsystem reader_
+diff -Naurp oscam/readers.h oscam-patch/readers.h
+--- oscam/readers.h	2018-08-27 12:12:01.499974681 +0300
++++ oscam-patch/readers.h	2018-08-27 12:14:15.394791927 +0300
+@@ -17,5 +17,6 @@ extern const struct s_cardsystem reader_
  extern const struct s_cardsystem reader_bulcrypt;
  extern const struct s_cardsystem reader_griffin;
  extern const struct s_cardsystem reader_dgcrypt;
 +extern const struct s_cardsystem reader_emu;
  
  #endif
-diff -Naurp oscam-941f2e8/webif/config/dvbapi.html oscam-941f2e8-patch/webif/config/dvbapi.html
---- oscam-941f2e8/webif/config/dvbapi.html	2018-06-24 00:06:48.000000000 +0300
-+++ oscam-941f2e8-patch/webif/config/dvbapi.html	2018-06-24 10:26:30.146073159 +0300
+diff -Naurp oscam/webif/config/dvbapi.html oscam-patch/webif/config/dvbapi.html
+--- oscam/webif/config/dvbapi.html	2018-08-27 12:12:01.503974642 +0300
++++ oscam-patch/webif/config/dvbapi.html	2018-08-27 12:14:15.394791927 +0300
 @@ -53,7 +53,7 @@
  			</TD>
  		</TR>
@@ -13153,9 +13982,9 @@ diff -Naurp oscam-941f2e8/webif/config/dvbapi.html oscam-941f2e8-patch/webif/con
 +			</TD>
 +		</TR>
 \ No newline at end of file
-diff -Naurp oscam-941f2e8/webif/config/menu.html oscam-941f2e8-patch/webif/config/menu.html
---- oscam-941f2e8/webif/config/menu.html	2018-06-24 00:06:48.000000000 +0300
-+++ oscam-941f2e8-patch/webif/config/menu.html	2018-06-24 10:26:30.146073159 +0300
+diff -Naurp oscam/webif/config/menu.html oscam-patch/webif/config/menu.html
+--- oscam/webif/config/menu.html	2018-08-27 12:12:01.503974642 +0300
++++ oscam-patch/webif/config/menu.html	2018-08-27 12:14:15.394791927 +0300
 @@ -16,6 +16,7 @@
  ##TPLCONFIGMENUDVBAPI##		<!-- CMENUACTIVE13 -->
  ##TPLCONFIGMENULCD##		<!-- CMENUACTIVE14 -->
@@ -13164,14 +13993,14 @@ diff -Naurp oscam-941f2e8/webif/config/menu.html oscam-941f2e8-patch/webif/confi
  			<LI CLASS="##CMENUACTIVE16##"><A HREF="config.html?part=webif">WebIf</A></LI>
  	</UL>
  </DIV>
-diff -Naurp oscam-941f2e8/webif/config/menu_streamrelay.html oscam-941f2e8-patch/webif/config/menu_streamrelay.html
---- oscam-941f2e8/webif/config/menu_streamrelay.html	1970-01-01 03:00:00.000000000 +0300
-+++ oscam-941f2e8-patch/webif/config/menu_streamrelay.html	2018-06-24 10:26:30.146073159 +0300
+diff -Naurp oscam/webif/config/menu_streamrelay.html oscam-patch/webif/config/menu_streamrelay.html
+--- oscam/webif/config/menu_streamrelay.html	1970-01-01 03:00:00.000000000 +0300
++++ oscam-patch/webif/config/menu_streamrelay.html	2018-08-27 12:14:15.394791927 +0300
 @@ -0,0 +1 @@
 +			<LI CLASS="##CMENUACTIVE17##"><A HREF="config.html?part=streamrelay">Stream Relay</A></LI>
-diff -Naurp oscam-941f2e8/webif/config/streamrelay.html oscam-941f2e8-patch/webif/config/streamrelay.html
---- oscam-941f2e8/webif/config/streamrelay.html	1970-01-01 03:00:00.000000000 +0300
-+++ oscam-941f2e8-patch/webif/config/streamrelay.html	2018-06-24 10:26:30.146073159 +0300
+diff -Naurp oscam/webif/config/streamrelay.html oscam-patch/webif/config/streamrelay.html
+--- oscam/webif/config/streamrelay.html	1970-01-01 03:00:00.000000000 +0300
++++ oscam-patch/webif/config/streamrelay.html	2018-08-27 12:14:15.394791927 +0300
 @@ -0,0 +1,25 @@
 +		<input name="part" type="hidden" value="streamrelay">
 +		<TABLE CLASS="config">
@@ -13199,9 +14028,9 @@ diff -Naurp oscam-941f2e8/webif/config/streamrelay.html oscam-941f2e8-patch/webi
 +				</TD>
 +			</TR>
 \ No newline at end of file
-diff -Naurp oscam-941f2e8/webif/files/menu.html oscam-941f2e8-patch/webif/files/menu.html
---- oscam-941f2e8/webif/files/menu.html	2018-06-24 00:06:48.000000000 +0300
-+++ oscam-941f2e8-patch/webif/files/menu.html	2018-06-24 10:26:30.146073159 +0300
+diff -Naurp oscam/webif/files/menu.html oscam-patch/webif/files/menu.html
+--- oscam/webif/files/menu.html	2018-08-27 12:12:01.503974642 +0300
++++ oscam-patch/webif/files/menu.html	2018-08-27 12:14:15.394791927 +0300
 @@ -10,7 +10,7 @@
  		<LI CLASS="##CMENUACTIVE7##"><A HREF="files.html?file=logfile">logfile</A></LI>
  		<LI CLASS="##CMENUACTIVE8##"><A HREF="files.html?file=userfile">userfile</A></LI>
@@ -13219,14 +14048,14 @@ diff -Naurp oscam-941f2e8/webif/files/menu.html oscam-941f2e8-patch/webif/files/
  			</UL>
  		</LI>
  	</UL>
-diff -Naurp oscam-941f2e8/webif/files/menu_softcamkey.html oscam-941f2e8-patch/webif/files/menu_softcamkey.html
---- oscam-941f2e8/webif/files/menu_softcamkey.html	1970-01-01 03:00:00.000000000 +0300
-+++ oscam-941f2e8-patch/webif/files/menu_softcamkey.html	2018-06-24 10:26:30.146073159 +0300
+diff -Naurp oscam/webif/files/menu_softcamkey.html oscam-patch/webif/files/menu_softcamkey.html
+--- oscam/webif/files/menu_softcamkey.html	1970-01-01 03:00:00.000000000 +0300
++++ oscam-patch/webif/files/menu_softcamkey.html	2018-08-27 12:14:15.394791927 +0300
 @@ -0,0 +1 @@
 +			<LI CLASS="##CMENUACTIVE30##"><A HREF="files.html?file=SoftCam.Key">SoftCam.Key</A></LI>
-diff -Naurp oscam-941f2e8/webif/pages_index.txt oscam-941f2e8-patch/webif/pages_index.txt
---- oscam-941f2e8/webif/pages_index.txt	2018-06-24 00:06:48.000000000 +0300
-+++ oscam-941f2e8-patch/webif/pages_index.txt	2018-06-24 10:26:30.146073159 +0300
+diff -Naurp oscam/webif/pages_index.txt oscam-patch/webif/pages_index.txt
+--- oscam/webif/pages_index.txt	2018-08-27 12:12:01.507974602 +0300
++++ oscam-patch/webif/pages_index.txt	2018-08-27 12:14:15.398791892 +0300
 @@ -80,11 +80,13 @@ CONFIGMENUMONITOR             config/men
  CONFIGMENUNEWCAMD             config/menu_newcamd.html                                    MODULE_NEWCAMD
  CONFIGMENURADEGAST            config/menu_radegast.html                                   MODULE_RADEGAST
@@ -13257,9 +14086,9 @@ diff -Naurp oscam-941f2e8/webif/pages_index.txt oscam-941f2e8-patch/webif/pages_
  READERCONFIGCS378XBIT         readerconfig/readerconfig_cs378xbit.html                    MODULE_CAMD35_TCP
  READERCONFIGGBOXBIT           readerconfig/readerconfig_gboxbit.html                      MODULE_GBOX
  READERCONFIGGHTTPBIT          readerconfig/readerconfig_ghttpbit.html                     MODULE_GHTTP
-diff -Naurp oscam-941f2e8/webif/readerconfig/readerconfig_emubit.html oscam-941f2e8-patch/webif/readerconfig/readerconfig_emubit.html
---- oscam-941f2e8/webif/readerconfig/readerconfig_emubit.html	1970-01-01 03:00:00.000000000 +0300
-+++ oscam-941f2e8-patch/webif/readerconfig/readerconfig_emubit.html	2018-06-24 10:26:30.146073159 +0300
+diff -Naurp oscam/webif/readerconfig/readerconfig_emubit.html oscam-patch/webif/readerconfig/readerconfig_emubit.html
+--- oscam/webif/readerconfig/readerconfig_emubit.html	1970-01-01 03:00:00.000000000 +0300
++++ oscam-patch/webif/readerconfig/readerconfig_emubit.html	2018-08-27 12:14:15.398791892 +0300
 @@ -0,0 +1,6 @@
 +			<TR><TD><A>AU providers:</A></TD><TD><textarea name="emu_auproviders" rows="3" class="bt">##EMUAUPROVIDERS##</textarea></TD></TR>
 +			<TR><TD><A>[BISS] Enable date-coded keys:</A></TD><TD><input name="emu_datecodedenabled" type="hidden" value="0"><input name="emu_datecodedenabled" type="checkbox" value="1" ##EMUDATECODEDENABLED##><label></label></TD></TR>
