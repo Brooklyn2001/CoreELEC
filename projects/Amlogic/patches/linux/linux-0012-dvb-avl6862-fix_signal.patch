@@ -147,8 +147,8 @@ diff -Naurp linux/drivers/amlogic/dvb-avl/avl6862.c linux-patch/drivers/amlogic/
 +	ret = avl6862_RD_REG16(priv, 0x0a4 + rs_rf_agc_saddr_offset, &tmp);
 +	dbg_avl("original rs_rf_agc: %d", (u16)tmp);	
 +	Level = (u16)tmp / 100;
-+	if (Level >= 370)
-+		Level = 369;
++	if (Level > 370)
++		Level = 370;
 +	Percent = 100 - (370 - Level);
  
 +	*strength = (Percent * 65535) / 100;	
