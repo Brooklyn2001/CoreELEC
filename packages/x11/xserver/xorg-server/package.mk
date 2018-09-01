@@ -1,25 +1,10 @@
-################################################################################
-#      This file is part of LibreELEC - https://libreelec.tv
-#      Copyright (C) 2018-present Team LibreELEC
-#      Copyright (C) 2009-2016 Stephan Raue (stephan@openelec.tv)
-#
-#  LibreELEC is free software: you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation, either version 2 of the License, or
-#  (at your option) any later version.
-#
-#  LibreELEC is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License
-#  along with LibreELEC.  If not, see <http://www.gnu.org/licenses/>.
-################################################################################
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (C) 2009-2016 Stephan Raue (stephan@openelec.tv)
+# Copyright (C) 2018-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="xorg-server"
-PKG_VERSION="1.20.0"
-PKG_SHA256="9d967d185f05709274ee0c4f861a4672463986e550ca05725ce27974f550d3e6"
+PKG_VERSION="1.20.1"
+PKG_SHA256="59c99fe86fe75b8164c6567bfc6e982aecc2e4a51e6fbac1b842d5d00549e918"
 PKG_ARCH="any"
 PKG_LICENSE="OSS"
 PKG_SITE="http://www.X.org"

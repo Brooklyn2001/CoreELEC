@@ -1,7 +1,6 @@
-################################################################################
-#      This file is part of Alex@ELEC - http://www.alexelec.in.ua
-#      Copyright (C) 2011-present Alexandr Zuyev (alex@alexelec.in.ua)
-################################################################################
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (C) 2009-2016 Stephan Raue (stephan@openelec.tv)
+# Copyright (C) 2011-present Alex@ELEC (http://alexelec.in.ua)
 
 PKG_NAME="bkeymaps"
 PKG_VERSION="1.13"
@@ -24,6 +23,5 @@ makeinstall_target() {
     cp -PR bkeymaps/* $INSTALL/usr/lib/keymaps
 
   #russian UTF-8 keymap for a 102 key keyboard
-  rm -rf $INSTALL/usr/lib/keymaps/ru/*
   cp $PKG_DIR/config/Russian-Ctrl_Shift.bmap $INSTALL/usr/lib/keymaps/ru
 }

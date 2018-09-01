@@ -22,7 +22,7 @@ case "$LINUX" in
     PKG_VERSION="95ba9d626c0fce672caa296f5911ab9190881642"
     PKG_SHA256="df34b086993fd3552efae92d84d28990a61a1ca79a8703a4b64241ab80e3b6db"
     PKG_URL="https://github.com/LibreELEC/linux-amlogic/archive/$PKG_VERSION.tar.gz"
-    PKG_SOURCE_DIR="linux-amlogic-$PKG_VERSION"
+    PKG_SOURCE_NAME="linux-$LINUX-$PKG_VERSION.tar.gz"
     PKG_DEPENDS_TARGET="$PKG_DEPENDS_TARGET aml-dtbtools:host u-boot-tools-aml:host"
     PKG_BUILD_PERF="no"
     ;;
@@ -30,26 +30,9 @@ case "$LINUX" in
     PKG_VERSION="7a4f8a105fba00dc76d4fe8e7d810318aa8879e6"
     PKG_SHA256="50bb4e5134757a142a7db25d4af0d12cf4a60756a641162177e36752c80b4964"
     PKG_URL="https://github.com/CoreELEC/linux-amlogic/archive/$PKG_VERSION.tar.gz"
-    PKG_SOURCE_DIR="linux-amlogic-$PKG_VERSION"
+    PKG_SOURCE_NAME="linux-$LINUX-$PKG_VERSION.tar.gz"
     PKG_DEPENDS_TARGET="$PKG_DEPENDS_TARGET aml-dtbtools:host"
     PKG_BUILD_PERF="no"
-    ;;
-  rockchip-4.4)
-    PKG_VERSION="eae92ae2b930999857df47c3057327c1c490454b"
-    PKG_SHA256="da453ca6ecefc3719a1165bc7b08fe00fc2b50ab64f6289ef6f3670a9fc1ceca"
-    PKG_URL="https://github.com/rockchip-linux/kernel/archive/$PKG_VERSION.tar.gz"
-    PKG_SOURCE_DIR="kernel-$PKG_VERSION"
-    ;;
-  raspberrypi)
-    PKG_VERSION="db81c14ce9fbd705c2d3936edecbc6036ace6c05" # 4.14.54
-    PKG_SHA256="ae553b2deb6854646e56369cab57d3018bca2056b2ca2752c5e051093968635e"
-    PKG_URL="https://github.com/raspberrypi/linux/archive/$PKG_VERSION.tar.gz"
-    ;;
-  *)
-    PKG_VERSION="4.17.6"
-    PKG_SHA256="259dd689d19888936005d8dd75946902842b7e5734dc343061f951c9d2996395"
-    PKG_URL="https://www.kernel.org/pub/linux/kernel/v4.x/$PKG_NAME-$PKG_VERSION.tar.xz"
-    PKG_PATCH_DIRS="default"
     ;;
 esac
 
@@ -64,10 +47,6 @@ fi
 if [ "$PKG_BUILD_PERF" != "no" ] && grep -q ^CONFIG_PERF_EVENTS= $PKG_KERNEL_CFG_FILE ; then
   PKG_BUILD_PERF="yes"
   PKG_DEPENDS_TARGET="$PKG_DEPENDS_TARGET binutils elfutils libunwind zlib openssl"
-fi
-
-if [ "$TARGET_ARCH" = "x86_64" ]; then
-  PKG_DEPENDS_TARGET="$PKG_DEPENDS_TARGET intel-ucode:host kernel-firmware"
 fi
 
 if [ "$BUILD_ANDROID_BOOTIMG" = "yes" ]; then
@@ -145,17 +124,6 @@ makeinstall_host() {
 }
 
 pre_make_target() {
-  if [ "$TARGET_ARCH" = "x86_64" ]; then
-    # copy some extra firmware to linux tree
-    mkdir -p $PKG_BUILD/external-firmware
-      cp -a $(get_build_dir kernel-firmware)/{amdgpu,amd-ucode,i915,radeon,e100,rtl_nic} $PKG_BUILD/external-firmware
-
-    cp -a $(get_build_dir intel-ucode)/intel-ucode $PKG_BUILD/external-firmware
-
-    FW_LIST="$(find $PKG_BUILD/external-firmware \( -type f -o -type l \) \( -iname '*.bin' -o -iname '*.fw' -o -path '*/intel-ucode/*' \) | sed 's|.*external-firmware/||' | sort | xargs)"
-    sed -i "s|CONFIG_EXTRA_FIRMWARE=.*|CONFIG_EXTRA_FIRMWARE=\"${FW_LIST}\"|" $PKG_BUILD/.config
-  fi
-
   kernel_make oldconfig
 
   # regdb (backward compatability with pre-4.15 kernels)
@@ -175,9 +143,6 @@ make_target() {
 
       # arch specific perf build args
       case "$TARGET_ARCH" in
-        x86_64)
-          PERF_BUILD_ARGS="ARCH=x86"
-          ;;
         aarch64)
           PERF_BUILD_ARGS="ARCH=arm64"
           ;;
@@ -221,7 +186,10 @@ make_target() {
     done
   fi
 
-  kernel_make $KERNEL_TARGET $KERNEL_MAKE_EXTRACMD
+  # the modules target is required to get a proper Module.symvers
+  # file with symbols from built-in and external modules.
+  # Without that it'll contain only the symbols from the kernel
+  kernel_make $KERNEL_TARGET $KERNEL_MAKE_EXTRACMD modules
 
   if [ "$BUILD_ANDROID_BOOTIMG" = "yes" ]; then
     DTB_BLOBS=($(ls arch/$TARGET_KERNEL_ARCH/boot/dts/amlogic/*.dtb 2>/dev/null || true))

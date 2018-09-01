@@ -1,11 +1,11 @@
-################################################################################
-#      This file is part of Alex@ELEC - http://www.alexelec.in.ua
-#      Copyright (C) 2011-present Alexandr Zuyev (alex@alexelec.in.ua)
-################################################################################
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (C) 2009-2016 Stephan Raue (stephan@openelec.tv)
+# Copyright (C) 2018-present Team LibreELEC (https://libreelec.tv)
+# Copyright (C) 2011-present Alex@ELEC (http://alexelec.in.ua)
 
 PKG_NAME="glibc"
-PKG_VERSION="2.27"
-PKG_SHA256="5172de54318ec0b7f2735e5a91d908afe1c9ca291fec16b5374d9faadfc1fc72"
+PKG_VERSION="2.28"
+PKG_SHA256="b1900051afad76f7a4f73e71413df4826dce085ef8ddb785a945b66d7d513082"
 PKG_ARCH="any"
 PKG_LICENSE="GPL"
 PKG_SITE="http://www.gnu.org/software/libc/"

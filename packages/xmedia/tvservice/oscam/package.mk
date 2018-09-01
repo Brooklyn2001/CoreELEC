@@ -1,20 +1,25 @@
-################################################################################
-#      This file is part of Alex@ELEC - http://www.alexelec.ru
-#      Copyright (C) 2011-present Alexandr Zuyev (alex@alexelec.ru)
-################################################################################
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (C) 2016-present Team LibreELEC (https://libreelec.tv)
+# Copyright (C) 2011-present Alex@ELEC (http://alexelec.in.ua)
 
 PKG_NAME="oscam"
-PKG_VERSION="3304a1d"
-PKG_VERSION_NUMBER="11426"
-PKG_SHA256="43df5d368454ef9117cdf15e51f9643938ecbf24e88f01779bcb1a0c04e4ba80"
+PKG_VERSION_NUMBER="11431"
+PKG_VERSION="5749643"
 PKG_ARCH="any"
 PKG_LICENSE="GPL"
 PKG_SITE="http://www.streamboard.tv/oscam/wiki"
-PKG_URL="http://repo.or.cz/oscam.git/snapshot/$PKG_VERSION.tar.gz"
-PKG_DEPENDS_TARGET="toolchain pcsc-lite"
+PKG_URL=""
+PKG_DEPENDS_TARGET="toolchain pcsc-lite openssl"
 PKG_SECTION="xmedia/tvservice"
 PKG_SHORTDESC="oscam: OSCam is Open Source Conditional Access Modul."
 PKG_LONGDESC="OSCam is Open Source Conditional Access Modul."
+
+unpack() {
+  git clone http://repo.or.cz/oscam.git $PKG_BUILD
+  cd $PKG_BUILD
+  git reset --hard $PKG_VERSION
+  cd $ROOT
+}
 
 pre_configure_target() {
   export OSCAM_VERSION_NUMBER="$PKG_VERSION_NUMBER"
@@ -23,8 +28,8 @@ pre_configure_target() {
 
 PKG_CMAKE_OPTS_TARGET="-DLIBUSBDIR=$SYSROOT_PREFIX/usr \
                        -DCMAKE_INSTALL_PREFIX=/usr \
-                       -DWITH_SSL=0 \
-                       -DHAVE_LIBCRYPTO=0 \
+                       -DWITH_SSL=1 \
+                       -DHAVE_LIBCRYPTO=1 \
                        -DHAVE_DVBAPI=1 \
                        -DWITH_STAPI=0 \
                        -DWEBIF=1 \
@@ -32,7 +37,8 @@ PKG_CMAKE_OPTS_TARGET="-DLIBUSBDIR=$SYSROOT_PREFIX/usr \
                        -DWITH_DEBUG=0 \
                        -DOPTIONAL_INCLUDE_DIR=$SYSROOT_PREFIX/usr/include \
                        -DSTATIC_LIBUSB=1 \
-                       -DCLOCKFIX=0"
+                       -DCLOCKFIX=0 \
+                       -DCARDREADER_DB2COM=OFF"
 
 makeinstall_target() {
   mkdir -p  $INSTALL/usr/config/oscam

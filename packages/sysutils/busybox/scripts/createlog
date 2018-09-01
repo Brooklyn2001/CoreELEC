@@ -1,8 +1,8 @@
 #!/bin/sh
-################################################################################
-#      This file is part of Alex@ELEC - http://www.alexelec.in.ua
-#      Copyright (C) 2011-present Alexandr Zuyev (alex@alexelec.in.ua)
-################################################################################
+
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (C) 2009-2014 Stephan Raue (stephan@openelec.tv)
+# Copyright (C) 2011-present Alex@ELEC (http://alexelec.in.ua)
 
 # create logfile
 
@@ -60,24 +60,8 @@ rm -rf $BASEDIR/$LOGDIR
 mkdir -p $BASEDIR/$LOGDIR
 
 # kodi.log
-  KODI_LOG_DIR=/storage/.kodi/temp
-
   LOGFILE="01_KODI.log"
-  for i in kodi.log kodi.old.log; do
-    [ -f ${KODI_LOG_DIR}/${i} ] && getlog_cmd cat ${KODI_LOG_DIR}/$i
-  done
-
-  LOGFILE="01_KODI_CRASH.log"
-  for i in `find ${KODI_LOG_DIR} -type f -name "kodi_crashlog_*.log" | sort -r`; do
-    getlog_cmd cat $i
-  done
-
-  LOGFILE="01_KODI_OTHER.log"
-  for i in `find ${KODI_LOG_DIR} -type f -name "*.log" | sort`; do
-    iname="${i#${KODI_LOG_DIR}/}"
-    [ ${iname} == kodi.log ] && continue
-    [ ${iname} == kodi.old.log ] && continue
-    [ "${iname#kodi_crashlog_}" != "${iname}" ] && continue
+  for i in `find /storage/.kodi/temp/ -type f -name "*.log"`; do
     getlog_cmd cat $i
   done
 
@@ -159,9 +143,11 @@ mkdir -p $BASEDIR/$LOGDIR
   LOGFILE="09_Journal-cur.log"
   getlog_cmd journalctl --no-pager -b -0
 
-# Journal (prev)
-  LOGFILE="10_Journal-prev.log"
-  getlog_cmd journalctl --no-pager -b -1
+# fw_printenv
+  LOGFILE="10_Printenv.log"
+  if [ -e /usr/sbin/fw_printenv ] ; then
+    getlog_cmd fw_printenv
+  fi
 
 # addons
   LOGFILE="11_Addons.log"
@@ -173,9 +159,21 @@ mkdir -p $BASEDIR/$LOGDIR
     fi
   done
 
+# services config
+  mkdir -p $BASEDIR/$LOGDIR/services
+  cp -f /storage/.cache/services/*.conf $BASEDIR/$LOGDIR/services
+  [ -d "/storage/.cache/coreelec" ] && cp -a /storage/.cache/coreelec $BASEDIR/$LOGDIR/services
+  [ -d "/storage/.cache/libreelec" ] && cp -a /storage/.cache/libreelec $BASEDIR/$LOGDIR/services
+
+# lock files
+  cp -a /var/lock $BASEDIR/$LOGDIR/
+  rm -f $BASEDIR/$LOGDIR/lock/*.tdb
+
 # pack logfiles
   mkdir -p /storage/logfiles
-  zip -jq /storage/logfiles/log-$DATE.zip $BASEDIR/$LOGDIR/*
+  cd $BASEDIR
+  zip -rq /storage/logfiles/log-$DATE.zip $LOGDIR
+  cd /storage
 
 # remove logdir
   rm -rf $BASEDIR/$LOGDIR

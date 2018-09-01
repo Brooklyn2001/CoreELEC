@@ -1,0 +1,16 @@
+{
+	"orbital_pos": "9E",
+	"networkname": "XtraTV",
+	"nid": 0,
+	"autodiscovery": 0,
+	"bouquet": false,
+	"skipinitscan": true,
+	"idlescan": false,
+	"sid_chnum": false,
+	"ignore_chnum": true,
+	"satip_source": 0,
+	"charset": "AUTO",
+	"localtime": 0,
+	"wizard": false,
+	"class": "dvb_network_dvbs"
+}
