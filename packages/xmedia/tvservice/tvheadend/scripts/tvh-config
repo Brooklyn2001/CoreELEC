@@ -1,8 +1,7 @@
 #!/bin/sh
-################################################################################
-#      This file is part of Alex@ELEC - http://www.alexelec.in.ua
-#      Copyright (C) 2011-present Alexandr Zuyev (alex@alexelec.in.ua)
-################################################################################
+
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (C) 2011-present Alex@ELEC (http://alexelec.in.ua)
 
 SERVICE_DIR="/storage/.cache/services"
 LOG_TVH="/var/log/tvheadend.log"
@@ -18,13 +17,11 @@ else
   TVHEADEND_ARG="-B -C -u root -g video -c $TVH_HOME -S"
 fi
 
-# TTV iptv config
-if [ ! -f "$TVH_HOME/ttv-iptv.copy" -a -d /usr/share/tvheadend/iptv ]; then
-  if [ ! -d "$TVH_HOME/input/iptv" ]; then
-    mkdir -p $TVH_HOME/input
-    cp -a /usr/share/tvheadend/iptv $TVH_HOME/input
-  fi
-  touch $TVH_HOME/ttv-iptv.copy
+# DVB & TTV networks config
+if [ ! -f "$TVH_HOME/networks.copy" -a -d /usr/share/tvheadend/networks ]; then
+  mkdir -p $TVH_HOME/input
+  cp -af /usr/share/tvheadend/networks/* $TVH_HOME/input
+  touch $TVH_HOME/networks.copy
 fi
 
 if [ "$TVH_FEINIT" == "1" ] ; then

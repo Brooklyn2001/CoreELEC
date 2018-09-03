@@ -94,9 +94,9 @@ post_makeinstall_target() {
     rm -f $INSTALL/usr/config/tvheadend/dvb-scan/dvb-s/Amos-*
     rm -f $INSTALL/usr/config/tvheadend/dvb-scan/dvb-s/Sirius-*
     cp -a $PKG_DIR/config/* $INSTALL/usr/config/tvheadend
-  #TTV IPTV config
+  #DVB & TTV networks
   mkdir -p $INSTALL/usr/share/tvheadend
-    cp -a $PKG_DIR/ttv/iptv $INSTALL/usr/share/tvheadend
+    cp -a $PKG_DIR/networks $INSTALL/usr/share/tvheadend
 }
 
 post_install() {
