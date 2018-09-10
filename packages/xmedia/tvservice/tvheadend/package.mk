@@ -3,6 +3,7 @@
 
 PKG_NAME="tvheadend"
 PKG_VERSION="923b6bc"
+TVH_VERSION_NUMBER=
 PKG_ARCH="any"
 PKG_LICENSE="GPL"
 PKG_SITE="http://www.tvheadend.org"
@@ -26,9 +27,6 @@ unpack() {
   echo "-----------------------------------------------------------"
   echo -e $RED"****** Tvheadend version:"$ENDCOLOR $YELLOW"$TVH_VERSION_NUMBER"$ENDCOLOR $RED"******"$ENDCOLOR
   echo "-----------------------------------------------------------"
-  cp -f $PKG_DIR/src/version support/version
-  sed -e 's|@TVH_VERSION_NUMBER@|'$TVH_VERSION_NUMBER'|g' -i support/version
-  sed -e 's|'/usr/bin/pngquant'|'$TOOLCHAIN/bin/pngquant'|g' -i support/mkbundle
   cd $ROOT
 }
 
@@ -54,6 +52,11 @@ PKG_CONFIGURE_OPTS_TARGET="--prefix=/usr \
                            --enable-ccdebug \
                            --nowerror \
                            --python=$TOOLCHAIN/bin/python"
+
+post_unpack() {
+  sed -e 's|@TVH_VERSION_NUMBER@|'$TVH_VERSION_NUMBER'|g' -i $PKG_BUILD/support/version
+  sed -e 's|'/usr/bin/pngquant'|'$TOOLCHAIN/bin/pngquant'|g' -i $PKG_BUILD/support/mkbundle
+}
 
 pre_configure_target() {
 # fails to build in subdirs
