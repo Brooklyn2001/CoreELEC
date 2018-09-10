@@ -7,15 +7,14 @@ SERVICE_DIR="/storage/.cache/services"
 ACEPROXY_DIR="/storage/.config/aceproxy"
 ACEPROXY_CONFDIR="$ACEPROXY_DIR/plugins/config"
 
-ACEPROXY_DEBUG="INFO"
-ACEPROXY_LOGIN="none"
-ACEPROXY_PASSW="none"
-
 [ -f $SERVICE_DIR/aceproxy.conf ] && . $SERVICE_DIR/aceproxy.conf
 
-rm -f $ACEPROXY_DIR/aceconfig.pyo
+[ -z $ACEPROXY_DEBUG ] && ACEPROXY_DEBUG="INFO"
+[ -z $ACEPROXY_LOGIN ] && ACEPROXY_LOGIN="none"
+[ -z $ACEPROXY_PASSW ] && ACEPROXY_PASSW="none"
 
 # Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+rm -f $ACEPROXY_DIR/aceconfig.pyo
 sed -i -e "s/loglevel = logging.*/loglevel = logging\.$ACEPROXY_DEBUG/" $ACEPROXY_DIR/aceconfig.py
 
 # Login and Password
