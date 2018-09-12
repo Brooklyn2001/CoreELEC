@@ -12,7 +12,7 @@
 	"spriority": 1,
 	"max_streams": 1,
 	"max_bandwidth": 0,
-	"max_timeout": 60,
+	"max_timeout": 3,
 	"remove_scrambled": true,
 	"networkname": "Torrent-TV",
 	"pnetworkname": "TTV",
