@@ -4,12 +4,13 @@
 # Copyright (C) 2011-present Alex@ELEC (http://alexelec.in.ua)
 
 URL="$@"
-CONFIG_FILE="/storage/.config/acestream/stream-tvh.conf"
-
 LOG="quiet"
-ANALYZE=5000000
-PROBE=5000000
+OPT="-c copy -map 0"
 
+CONFIG_FILE="/storage/.config/acestream/stream-tvh.conf"
 [ -f $CONFIG_FILE ] && . $CONFIG_FILE
 
-/usr/bin/ffmpeg -v $LOG -analyzeduration $ANALYZE -probesize $PROBE -i "$URL" -c copy -map 0 -f mpegts pipe:1
+[ -n $LOG_LEVEL ] && LOG="$LOG_LEVEL"
+[ -n $OPT_FFMPEG ] && OPT="$OPT_FFMPEG"
+
+/usr/bin/ffmpeg -v $LOG -i "$URL" $OPT -f mpegts pipe:1
