@@ -2,12 +2,13 @@
 # Copyright (C) 2011-present Alex@ELEC (http://alexelec.in.ua)
 
 PKG_NAME="tvheadend"
-PKG_VERSION="9b9ee68"
+PKG_VERSION="93bc843"
+TVH_VERSION_NUMBER=
 PKG_ARCH="any"
 PKG_LICENSE="GPL"
 PKG_SITE="http://www.tvheadend.org"
 PKG_URL=""
-PKG_DEPENDS_TARGET="toolchain curl dvb-apps libdvbcsa libiconv openssl pngquant:host Python2:host yasm"
+PKG_DEPENDS_TARGET="toolchain avahi curl dvb-apps libdvbcsa libiconv openssl pngquant:host Python2:host yasm"
 PKG_SECTION="xmedia/tvservice"
 PKG_SHORTDESC="Tvheadend: a TV streaming server for Linux supporting DVB-S, DVB-S2, DVB-C, DVB-T, ATSC, IPTV, and Analog video (V4L) as input sources."
 PKG_LONGDESC="Tvheadend is a TV streaming server for Linux supporting DVB-S, DVB-S2, DVB-C, DVB-T, ATSC, IPTV, and Analog video (V4L) as input sources. It also comes with a powerful and easy to use web interface both used for configuration and day-to-day operations, such as searching the EPG and scheduling recordings. Even so, the most notable feature of Tvheadend is how easy it is to set up: Install it, navigate to the web user interface, drill into the TV adapters tab, select your current location and Tvheadend will start scanning channels and present them to you in just a few minutes. If installing as an Addon a reboot is needed"
@@ -26,9 +27,6 @@ unpack() {
   echo "-----------------------------------------------------------"
   echo -e $RED"****** Tvheadend version:"$ENDCOLOR $YELLOW"$TVH_VERSION_NUMBER"$ENDCOLOR $RED"******"$ENDCOLOR
   echo "-----------------------------------------------------------"
-  cp -f $PKG_DIR/src/version support/version
-  sed -e 's|@TVH_VERSION_NUMBER@|'$TVH_VERSION_NUMBER'|g' -i support/version
-  sed -e 's|'/usr/bin/pngquant'|'$TOOLCHAIN/bin/pngquant'|g' -i support/mkbundle
   cd $ROOT
 }
 
@@ -42,9 +40,10 @@ PKG_CONFIGURE_OPTS_TARGET="--prefix=/usr \
                            --disable-vaapi \
                            --disable-bintray_cache \
                            --disable-hdhomerun_static \
-                           --disable-avahi \
                            --disable-dbus_1 \
                            --disable-dvbscan \
+                           --disable-libmfx_static \
+                           --enable-avahi \
                            --enable-dvbcsa \
                            --enable-tvhcsa \
                            --enable-bundle \
@@ -54,6 +53,11 @@ PKG_CONFIGURE_OPTS_TARGET="--prefix=/usr \
                            --enable-ccdebug \
                            --nowerror \
                            --python=$TOOLCHAIN/bin/python"
+
+post_unpack() {
+  sed -e 's|@TVH_VERSION_NUMBER@|'$TVH_VERSION_NUMBER'|g' -i $PKG_BUILD/support/version
+  sed -e 's|'/usr/bin/pngquant'|'$TOOLCHAIN/bin/pngquant'|g' -i $PKG_BUILD/support/mkbundle
+}
 
 pre_configure_target() {
 # fails to build in subdirs
@@ -66,7 +70,6 @@ pre_configure_target() {
 
 post_make_target() {
   $CC -O -fbuiltin -fomit-frame-pointer -fPIC -shared -o capmt_ca.so src/extra/capmt_ca.c -ldl
-  $STRIP $PKG_BUILD/build.linux/tvheadend
 }
 
 post_makeinstall_target() {
@@ -94,9 +97,9 @@ post_makeinstall_target() {
     rm -f $INSTALL/usr/config/tvheadend/dvb-scan/dvb-s/Amos-*
     rm -f $INSTALL/usr/config/tvheadend/dvb-scan/dvb-s/Sirius-*
     cp -a $PKG_DIR/config/* $INSTALL/usr/config/tvheadend
-  #TTV IPTV config
+  #DVB & TTV networks
   mkdir -p $INSTALL/usr/share/tvheadend
-    cp -a $PKG_DIR/ttv/iptv $INSTALL/usr/share/tvheadend
+    cp -a $PKG_DIR/networks $INSTALL/usr/share/tvheadend
 }
 
 post_install() {

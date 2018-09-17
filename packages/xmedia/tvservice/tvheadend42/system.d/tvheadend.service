@@ -1,0 +1,19 @@
+[Unit]
+Description=Tvheadend
+After=network-online.target oscam.service acestream.service
+Before=kodi.service
+Wants=oscam.service acestream.service
+ConditionPathExists=/storage/.cache/services/tvheadend.conf
+
+[Service]
+EnvironmentFile=-/run/libreelec/tvh.conf
+ExecStartPre=-/usr/bin/tvh-config
+ExecStart=/usr/bin/tvheadend $TVH_ARGS
+ExecStop=/bin/kill -TERM $MAINPID
+TimeoutStopSec=5
+Restart=always
+RestartSec=2
+StartLimitInterval=0
+
+[Install]
+WantedBy=kodi.target

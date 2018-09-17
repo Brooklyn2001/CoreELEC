@@ -142,7 +142,11 @@ makeinstall_target() {
     cp $PKG_DIR/config/profile $INSTALL/etc
     cp $PKG_DIR/config/inputrc $INSTALL/etc
     cp $PKG_DIR/config/httpd.conf $INSTALL/etc
-    cp $PKG_DIR/config/suspend-modules.conf $INSTALL/etc
+
+  # suspend-modules.conf writable
+  mkdir -p $INSTALL/usr/config
+    cp $PKG_DIR/config/suspend-modules.conf $INSTALL/usr/config
+	ln -sf /storage/.config/suspend-modules.conf $INSTALL/etc/suspend-modules.conf
 
   # /etc/fstab is needed by...
     touch $INSTALL/etc/fstab

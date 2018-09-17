@@ -20,6 +20,7 @@ pre_make_target(){
 make_target() {
   CC=$CC CFLAGS=$CFLAGS ./shc -v -r -B -f ttvget-live.src
   CC=$CC CFLAGS=$CFLAGS ./shc -v -r -B -f ttvget-direct.src
+  CC=$CC CFLAGS=$CFLAGS ./shc -v -r -B -f ttvstream.src
   [ -f ttv-logo.src ] && CC=$CC CFLAGS=$CFLAGS ./shc -v -r -B -f ttv-logo.src || true
 }
 
@@ -27,6 +28,7 @@ makeinstall_target() {
   mkdir -p $INSTALL/usr/bin
     cp ttvget-live.src.x $INSTALL/usr/bin/ttvget-live
     cp ttvget-direct.src.x $INSTALL/usr/bin/ttvget-direct
+    cp ttvstream.src.x $INSTALL/usr/bin/ttvstream
     cp ttv-logo.src.x $INSTALL/usr/bin/ttv-logo 2>/dev/null || true
   mkdir -p $INSTALL/usr/config/acestream
     cp $PKG_DIR/config/* $INSTALL/usr/config/acestream

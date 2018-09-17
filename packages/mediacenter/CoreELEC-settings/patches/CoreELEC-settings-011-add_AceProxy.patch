@@ -1,0 +1,197 @@
+diff -Naurp CoreELEC-settings/language/English/strings.po CoreELEC-settings-patch/language/English/strings.po
+--- CoreELEC-settings/language/English/strings.po	2018-09-10 09:52:22.000000000 +0300
++++ CoreELEC-settings-patch/language/English/strings.po	2018-09-10 10:15:22.000000000 +0300
+@@ -978,6 +978,44 @@ msgctxt "#3483"
+ msgid "Enable debugging TorrServer."
+ msgstr ""
+ 
++########## ACEPROXY #########
++
++msgctxt "#34030"
++msgid "AceProxy Server"
++msgstr ""
++
++msgctxt "#34031"
++msgid "Enable"
++msgstr ""
++
++msgctxt "#3431"
++msgid "AceProxy allows you to watch Ace Stream live streams or BitTorrent files over HTTP."
++msgstr ""
++
++msgctxt "#34032"
++msgid "Login:"
++msgstr ""
++
++msgctxt "#3432"
++msgid "Enter your user name to access the service Torrent-TV (http://torrent-tv.ru)."
++msgstr ""
++
++msgctxt "#34033"
++msgid "Password:"
++msgstr ""
++
++msgctxt "#3433"
++msgid "Enter the password to access the service Torrent-TV (http://torrent-tv.ru)."
++msgstr ""
++
++msgctxt "#34034"
++msgid "Debug level"
++msgstr ""
++
++msgctxt "#3434"
++msgid "Select from the list of log level AceProxy."
++msgstr ""
++
+ ########## TTV-LIST #########
+ 
+ msgctxt "#34050"
+diff -Naurp CoreELEC-settings/src/defaults.py CoreELEC-settings-patch/src/defaults.py
+--- CoreELEC-settings/src/defaults.py	2018-09-10 09:52:22.000000000 +0300
++++ CoreELEC-settings-patch/src/defaults.py	2018-09-10 09:57:25.000000000 +0300
+@@ -56,6 +56,10 @@ ace = {
+     'D_TORRSRV_PORT'  : '8090',
+     'D_TORRSRV_DEBUG' : '0',
+     'TORRSRV_GET_SRC' : "%s/torrsrv-get.sh" % SCRIPT_DIR(),
++    #ACEPROXY
++    'D_ACEPROXY_LOGIN'  : '',
++    'D_ACEPROXY_PASSW'  : '',
++    'D_ACEPROXY_DEBUG'  : 'INFO',
+     }
+ 
+ aceplist = {
+@@ -186,6 +190,7 @@ _services = {
+     'acestream': ['acestream.service'],
+     'noxbit': ['noxbit.service'],
+     'torrserver': ['torrserver.service'],
++    'aceproxy': ['aceproxy.service'],
+     'oscam': ['oscam.service'],
+     'tvheadend': ['tvheadend.service'],
+     'transmission': ['transmission.service'],
+diff -Naurp CoreELEC-settings/src/resources/lib/modules/ace.py CoreELEC-settings-patch/src/resources/lib/modules/ace.py
+--- CoreELEC-settings/src/resources/lib/modules/ace.py	2018-09-10 09:52:22.000000000 +0300
++++ CoreELEC-settings-patch/src/resources/lib/modules/ace.py	2018-09-10 10:18:01.000000000 +0300
+@@ -21,6 +21,9 @@ class ace:
+     D_TORRSRV_PORT = None
+     D_TORRSRV_DEBUG = None
+     TORRSRV_GET_SRC = None
++    D_ACEPROXY_LOGIN = None
++    D_ACEPROXY_PASSW = None
++    D_ACEPROXY_DEBUG = None
+ 
+     menu = {'91': {
+         'name': 34000,
+@@ -162,6 +165,58 @@ class ace:
+                             },
+                         },
+                     },
++                'aceproxy': {
++                    'order': 4,
++                    'name': 34030,
++                    'not_supported': [],
++                    'settings': {
++                        'enable_aceproxy': {
++                            'order': 1,
++                            'name': 34031,
++                            'value': None,
++                            'action': 'initialize_aceproxy',
++                            'type': 'bool',
++                            'InfoText': 3431,
++                            },
++                        'aceproxy_login': {
++                            'order': 2,
++                            'name': 34032,
++                            'value': None,
++                            'action': 'initialize_aceproxy',
++                            'type': 'text',
++                            'parent': {
++                                'entry': 'enable_aceproxy',
++                                'value': ['1']
++                                },
++                            'InfoText': 3432,
++                            },
++                        'aceproxy_passw': {
++                            'order': 3,
++                            'name': 34033,
++                            'value': None,
++                            'action': 'initialize_aceproxy',
++                            'type': 'text',
++                            'parent': {
++                                'entry': 'enable_aceproxy',
++                                'value': ['1']
++                                },
++                            'InfoText': 3433,
++                            },
++                        'aceproxy_debug': {
++                            'order': 4,
++                            'name': 34034,
++                            'value': 'INFO',
++                            'values': ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
++                            'action': 'initialize_aceproxy',
++                            'type': 'multivalue',
++                            'parent': {
++                                'entry': 'enable_aceproxy',
++                                'value': ['1']
++                                },
++                            'InfoText': 3434,
++                            },
++                        },
++                    },
+             }
+ 
+             self.oe = oeMain
+@@ -176,6 +231,7 @@ class ace:
+             self.initialize_acestream()
+             self.initialize_noxbit()
+             self.initialize_torrserver()
++            self.initialize_aceproxy()
+             self.oe.dbg_log('ace::start_service', 'exit_function', 0)
+         except Exception, e:
+             self.oe.dbg_log('ace::start_service', 'ERROR: (%s)' % repr(e))
+@@ -248,6 +304,19 @@ class ace:
+             self.struct['torrserver']['settings']['torrsrv_debug']['value'] = \
+             self.oe.get_service_option('torrserver', 'TORRSRV_DEBUG', self.D_TORRSRV_DEBUG).replace('"', '')
+ 
++            # ACEPROXY
++            self.struct['aceproxy']['settings']['enable_aceproxy']['value'] = \
++                    self.oe.get_service_state('aceproxy')
++
++            self.struct['aceproxy']['settings']['aceproxy_login']['value'] = \
++            self.oe.get_service_option('aceproxy', 'ACEPROXY_LOGIN', self.D_ACEPROXY_LOGIN).replace('"', '')
++
++            self.struct['aceproxy']['settings']['aceproxy_passw']['value'] = \
++            self.oe.get_service_option('aceproxy', 'ACEPROXY_PASSW', self.D_ACEPROXY_PASSW).replace('"', '')
++
++            self.struct['aceproxy']['settings']['aceproxy_debug']['value'] = \
++            self.oe.get_service_option('aceproxy', 'ACEPROXY_DEBUG', self.D_ACEPROXY_DEBUG).replace('"', '')
++
+             self.oe.dbg_log('ace::load_values', 'exit_function', 0)
+         except Exception, e:
+             self.oe.dbg_log('ace::load_values', 'ERROR: (%s)' % repr(e))
+@@ -376,6 +445,26 @@ class ace:
+         except Exception, e:
+             self.oe.dbg_log('ace::get_torrsrv_source', 'ERROR: (%s)' % repr(e), 4)
+ 
++    def initialize_aceproxy(self, **kwargs):
++        try:
++            self.oe.dbg_log('ace::initialize_aceproxy', 'enter_function', 0)
++            self.oe.set_busy(1)
++            if 'listItem' in kwargs:
++                self.set_value(kwargs['listItem'])
++            options = {}
++            state = 0
++            if self.struct['aceproxy']['settings']['enable_aceproxy']['value'] == '1':
++                options['ACEPROXY_LOGIN'] = '"%s"' % self.struct['aceproxy']['settings']['aceproxy_login']['value']
++                options['ACEPROXY_PASSW'] = '"%s"' % self.struct['aceproxy']['settings']['aceproxy_passw']['value']
++                options['ACEPROXY_DEBUG'] = '"%s"' % self.struct['aceproxy']['settings']['aceproxy_debug']['value']
++                state = 1
++            self.oe.set_service('aceproxy', options, state)
++            self.oe.set_busy(0)
++            self.oe.dbg_log('ace::initialize_aceproxy', 'exit_function', 0)
++        except Exception, e:
++            self.oe.set_busy(0)
++            self.oe.dbg_log('ace::initialize_aceproxy', 'ERROR: (%s)' % repr(e), 4)
++
+     def exit(self):
+         try:
+             self.oe.dbg_log('ace::exit', 'enter_function', 0)

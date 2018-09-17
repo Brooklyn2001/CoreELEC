@@ -6,7 +6,7 @@ Subject: [PATCH] VideoPlayer: SD channels assume 16:9
 +++ b/xbmc/cores/VideoPlayer/DVDCodecs/Video/DVDVideoCodecAmlogic.cpp	2017-10-09 15:16:51.125484596 +0200
 @@ -130,6 +130,12 @@
      case AV_CODEC_ID_MPEG2VIDEO:
-       if (m_hints.width <= CServiceBroker::GetSettings().GetInt(CSettings::SETTING_VIDEOPLAYER_USEAMCODECMPEG2))
+       if (m_hints.width <= CServiceBroker::GetSettings()->GetInt(CSettings::SETTING_VIDEOPLAYER_USEAMCODECMPEG2))
          goto FAIL;
 +
 +      // if we have SD PAL content assume it is widescreen

@@ -1,0 +1,16 @@
+#!/bin/sh
+
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (C) 2011-present Alex@ELEC (http://alexelec.in.ua)
+
+URL="$@"
+LOG="quiet"
+OPT="-c copy -map 0"
+
+CONFIG_FILE="/storage/.config/acestream/stream-tvh.conf"
+[ -f "$CONFIG_FILE" ] && . $CONFIG_FILE
+
+[ -n "$LOG_LEVEL" ] && LOG="$LOG_LEVEL"
+[ -n "$OPT_FFMPEG" ] && OPT="$OPT_FFMPEG"
+
+/usr/bin/ffmpeg -v $LOG -i "$URL" $OPT -f mpegts pipe:1

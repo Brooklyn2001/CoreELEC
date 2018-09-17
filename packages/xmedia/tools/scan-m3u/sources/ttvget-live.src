@@ -63,7 +63,7 @@ cat $INFILE |
       echo "http://${URL_IP}:6878/ace/getstream?url=${URL_M3U}${CH_PATH}&.mp4" >> $INFILE.ace
 
       echo "#EXTINF:-1 group-title=\"$CH_CAT\" tvg-logo=\"$CH_LOGO\",$CH_NAME" >> $INFILE.tvh
-      echo "pipe://ffmpeg -loglevel quiet -i http://${URL_IP}:6878/ace/getstream?url=${URL_M3U}${CH_PATH}&.mp4 -c copy -map 0 -f mpegts pipe:1" >> $INFILE.tvh
+      echo "pipe://ttvstream http://${URL_IP}:6878/ace/getstream?url=${URL_M3U}${CH_PATH}&.mp4" >> $INFILE.tvh
   done
   rm -f $INFILE
 }
