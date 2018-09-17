@@ -1,27 +1,29 @@
-From de1ae4af91660d71e52a3438409a5aafc177577d Mon Sep 17 00:00:00 2001
+From e5f6d20456d1fa18d6066da2010dde2885f2a41a Mon Sep 17 00:00:00 2001
 From: AkariDN <35409557+AkariDN@users.noreply.github.com>
 Date: Fri, 14 Sep 2018 02:12:43 +0300
 Subject: [PATCH] Fix displaying watched items in plugins and restore
  functionality after #14409
 
 ---
- xbmc/utils/URIUtils.cpp      | 10 +++-
+ xbmc/utils/URIUtils.cpp      | 12 ++++-
  xbmc/video/VideoDatabase.cpp | 89 +++++++++++++++++++++++-------------
- 2 files changed, 67 insertions(+), 32 deletions(-)
+ 2 files changed, 69 insertions(+), 32 deletions(-)
 
 diff --git a/xbmc/utils/URIUtils.cpp b/xbmc/utils/URIUtils.cpp
-index a4762df669ef..008455d322ef 100644
+index a4762df669ef..51a68d42fd61 100644
 --- a/xbmc/utils/URIUtils.cpp
 +++ b/xbmc/utils/URIUtils.cpp
-@@ -335,10 +335,18 @@ bool URIUtils::GetParentPath(const std::string& strPath, std::string& strParent)
+@@ -335,10 +335,20 @@ bool URIUtils::GetParentPath(const std::string& strPath, std::string& strParent)
    }
    else if (url.IsProtocol("plugin"))
    {
 +    if (!url.GetOptions().empty())
 +    {
++      //! @todo Make a new python call to get the plugin content type and remove this temporary hack
 +      // When a plugin provides multiple types, it has "plugin://addon.id/?content_type=xxx" root URL
 +      if (url.GetFileName().empty() && url.HasOption("content_type") && url.GetOptions().find('&') == std::string::npos)
 +        url.SetHostName("");
++      //
 +      url.SetOptions("");
 +      strParent = url.Get();
 +      return true;
@@ -34,7 +36,7 @@ index a4762df669ef..008455d322ef 100644
        return true;
      }
 diff --git a/xbmc/video/VideoDatabase.cpp b/xbmc/video/VideoDatabase.cpp
-index 23fe19339ff4..b7b05c460721 100644
+index 23fe19339ff4..f56e3ad34eb5 100644
 --- a/xbmc/video/VideoDatabase.cpp
 +++ b/xbmc/video/VideoDatabase.cpp
 @@ -3092,8 +3092,12 @@ void CVideoDatabase::DeleteResumeBookMark(const CFileItem& item)
@@ -119,7 +121,7 @@ index 23fe19339ff4..b7b05c460721 100644
 +        if (!m_pDS->eof())
          {
 -          item->GetVideoInfoTag()->SetResumePoint(m_pDS->fv(2).get_asInt(), m_pDS->fv(3).get_asInt(), "");
-+          if (!items.IsPlugin() || !item->GetVideoInfoTag()->IsPlayCountSet())
++          if (!item->GetVideoInfoTag()->IsPlayCountSet())
 +            item->GetVideoInfoTag()->SetPlayCount(m_pDS->fv(1).get_asInt());
 +          if (!item->GetVideoInfoTag()->GetResumePoint().IsSet())
 +            item->GetVideoInfoTag()->SetResumePoint(m_pDS->fv(2).get_asInt(), m_pDS->fv(3).get_asInt(), "");
