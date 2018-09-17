@@ -1,7 +1,7 @@
 # oscam.user
 
 [account]
-user                          = vdr
+user                          = tvh
 pwd                           = 
 group                         = 1,2,3,4
 au                            = 0
