@@ -153,6 +153,7 @@ PART_FILES=`ls $PART_DIR/*m3u`
 if [ "$PART_FILES" != "" ]; then
   echo '#EXTM3U' > $TTV_M3U_FILE
   cat $PART_FILES >> $TTV_M3U_FILE
+  [ -f "$M3U_DIR/add_playlist.m3u" ] && cat $M3U_DIR/add_playlist.m3u >> $TTV_M3U_FILE
   echo "Done! Playlist created."
 else
   echo "Error create file: SITE-TTV.m3u"

@@ -232,6 +232,7 @@ ace_run () {
   if [ "$PART_ACE" != "" ]; then
       echo '#EXTM3U' > $ACE_M3U
       cat $PART_ACE >> $ACE_M3U
+      [ -f "$M3U_DIR/add_playlist.m3u" ] && cat $M3U_DIR/add_playlist.m3u >> $ACE_M3U
   else
       echo "Error create file: AceLive-TTV.m3u"
   fi
@@ -294,6 +295,7 @@ nox_run () {
 
   sed 's/(на модерации)//; s/[ \t]*$//' -i $NOX_M3U
   [ "$ACETTV_IP" == "1" ] && sed "s|127\.0\.0\.1|$URL_IP|g" -i $NOX_M3U
+  [ -f "$M3U_DIR/add_playlist.m3u" ] && cat $M3U_DIR/add_playlist.m3u >> $NOX_M3U
 }
 
 #========= Main =========
