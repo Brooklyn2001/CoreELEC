@@ -325,7 +325,12 @@ case "$TTV_SOFT" in
     nox_run
     ;;
   *)
-    ace_run next
+    if [ "$TRANSLATE" == "Site-TTV" ]; then
+      ret_msg=`/usr/bin/ttvget-direct`
+      RUN_STATUS="$ret_msg"
+    else
+      ace_run next
+    fi
     nox_run
     ;;
 esac
