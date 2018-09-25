@@ -2,15 +2,14 @@
 # Copyright (C) 2016-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="emby"
-PKG_VERSION="3.5.2.0"
-PKG_SHA256="fe5561c27a5d2bbe79a9717ecb2eb8ce4f243592494b813250d2db56da5a3710"
-PKG_REV="123"
-PKG_ARCH="any"
+PKG_VERSION="3.5.3.0"
+PKG_SHA256="f25abb6d34f888c467db561ad333a222626febdc69b6353de86c04848753210c"
+PKG_REV="124"
 PKG_LICENSE="OSS"
 PKG_SITE="http://emby.media"
 PKG_URL="https://github.com/MediaBrowser/Emby.Releases/releases/download/$PKG_VERSION/embyserver-netcore_$PKG_VERSION.zip"
 PKG_SOURCE_DIR="system"
-PKG_DEPENDS_TARGET="toolchain ImageMagick"
+PKG_DEPENDS_TARGET="toolchain imagemagick"
 PKG_SECTION="service"
 PKG_SHORTDESC="Emby Server: a personal media server"
 PKG_LONGDESC="Emby Server ($PKG_VERSION) brings your home videos, music, and photos together, automatically converting and streaming your media on-the-fly to any device"
@@ -28,8 +27,8 @@ addon() {
         -d $ADDON_BUILD/$PKG_ADDON_ID/emby
 
   mkdir -p $ADDON_BUILD/$PKG_ADDON_ID/lib
-  cp -L $(get_build_dir ImageMagick)/.install_pkg/usr/lib/libMagickCore-7.Q16HDRI.so.? \
+  cp -L $(get_build_dir imagemagick)/.install_pkg/usr/lib/libMagickCore-7.Q16HDRI.so.? \
         $ADDON_BUILD/$PKG_ADDON_ID/lib/
-  cp -L $(get_build_dir ImageMagick)/.install_pkg/usr/lib/libMagickWand-7.Q16HDRI.so \
+  cp -L $(get_build_dir imagemagick)/.install_pkg/usr/lib/libMagickWand-7.Q16HDRI.so \
         $ADDON_BUILD/$PKG_ADDON_ID/lib/CORE_RL_Wand_.so
 }
