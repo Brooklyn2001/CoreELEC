@@ -121,29 +121,6 @@ index 72ddf6a..79e81d5 100644
  
    CLinuxPowerSyscall::Register();
    m_lirc.reset(OPTIONALS::LircRegister());
-diff --git a/xbmc/windowing/rpi/WinSystemRpi.cpp b/xbmc/windowing/rpi/WinSystemRpi.cpp
-index fac5cc4..f90e46d 100644
---- a/xbmc/windowing/rpi/WinSystemRpi.cpp
-+++ b/xbmc/windowing/rpi/WinSystemRpi.cpp
-@@ -33,7 +33,9 @@
- #include "guilib/DispResource.h"
- #include "utils/log.h"
- #include "cores/AudioEngine/AESinkFactory.h"
-+#include "cores/AudioEngine/Sinks/AESinkALSA.h"
- #include "cores/AudioEngine/Sinks/AESinkPi.h"
-+#include "cores/AudioEngine/Sinks/AESinkPULSE.h"
- #include "platform/linux/powermanagement/LinuxPowerSyscall.h"
- 
- #include <EGL/egl.h>
-@@ -55,6 +57,8 @@ CWinSystemRpi::CWinSystemRpi() :
- 
-   AE::CAESinkFactory::ClearSinks();
-   CAESinkPi::Register();
-+  CAESinkALSA::Register();
-+  CAESinkPULSE::Register();
-   CLinuxPowerSyscall::Register();
-   m_lirc.reset(OPTIONALS::LircRegister());
-   m_libinput->Start();
 -- 
 2.14.1
 
