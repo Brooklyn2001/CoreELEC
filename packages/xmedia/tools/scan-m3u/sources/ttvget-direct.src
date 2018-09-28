@@ -10,6 +10,9 @@ TTV_CH_LIST_FILE="/tmp/channels.ttv"
 TTV_CAT_LIST_FILE="/tmp/categories.ttv"
 TTV_M3U_FILE="$M3U_DIR/SITE-TTV.m3u"
 
+ACE_DIR="/storage/.config/acestream"
+FAV_LIST="$ACE_DIR/Site-favorite.list"
+
 [ -f $SERVICE_DIR/acettv.conf ] && . $SERVICE_DIR/acettv.conf
 [ -f $SERVICE_DIR/acerun.conf ] && . $SERVICE_DIR/acerun.conf
 
@@ -96,6 +99,25 @@ rm -f $TTV_CAT_LIST_FILE
   [ "$CAT_RELIGION" == 0 ] && sed '/^Религиозные/d' -i $TTV_CH_LIST_FILE
   [ "$CAT_MAN" == 0 ] && sed '/^Мужские/d' -i $TTV_CH_LIST_FILE
   [ "$CAT_LEARN" == 0 ] && sed '/^Познавательные/d' -i $TTV_CH_LIST_FILE
+
+# favorite channel start
+  if [ ! -f "${FAV_LIST}.sample" ]; then
+    cat $TTV_CH_LIST_FILE | awk -F\# '{print $1,"#",$2}' | sed 's/[ \t]*$//g' > ${FAV_LIST}.sample
+  fi
+
+  if [ -f "$FAV_LIST" ]; then
+    rm -f ${TTV_CH_LIST_FILE}.fav
+    cp -f $FAV_LIST /tmp/tmp-fav.list
+    cat /tmp/tmp-fav.list |  
+      while read -r LINE ; do
+        CH_FAV=`echo $LINE | awk -F\# '{print $2}' | sed 's/^[ \t]*//; s/[ \t]*$//'`
+        CH_STRING=`grep -i -m 1 "$CH_FAV #" $TTV_CH_LIST_FILE`
+        [ -n "$CH_STRING" ] && echo "$CH_STRING" >> ${TTV_CH_LIST_FILE}.fav
+      done
+    [ -f "${TTV_CH_LIST_FILE}.fav" ] && mv -f ${TTV_CH_LIST_FILE}.fav $TTV_CH_LIST_FILE
+    rm -f /tmp/tmp-fav.list
+  fi
+# favorite channel end
 
 PART_DIR="/tmp/ttv"
 mkdir -p $PART_DIR

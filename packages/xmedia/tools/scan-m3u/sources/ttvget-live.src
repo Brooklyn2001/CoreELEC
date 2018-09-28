@@ -17,6 +17,7 @@ ACE_DIR="/storage/.config/acestream"
 JSON_FILE="$ACE_DIR/ttv-m3u/acelive.json"
 JSON_FILE_GZ="$JSON_FILE.gz"
 LOGO_LIST="$ACE_DIR/ttv-logo.list"
+FAV_LIST="$ACE_DIR/Trash-favorite.list"
 TMP_LIST="/tmp/tmp-acettv.list"
 RUN_STATUS=
 
@@ -172,6 +173,25 @@ ace_run () {
     /usr/bin/jq -r '.|= sort_by(.cat,.name)|.[]|select(.source=="allfon.json")|select(.name!=null)|select(.cat!=null) | .cat + " # " + .name + " # " + .fname + " # " + .cid' $JSON_FILE >> $TMP_LIST
   fi
   sed '/^$/d' -i $TMP_LIST
+
+  # favorite channel start
+  if [ ! -f "${FAV_LIST}.sample" ]; then
+    cat $TMP_LIST | awk -F\# '{print $1,"#",$2}' | sed 's/[ \t]*$//g' > ${FAV_LIST}.sample
+  fi
+
+  if [ -f "$FAV_LIST" ]; then
+    rm -f ${TMP_LIST}.fav
+    cp -f $FAV_LIST /tmp/tmp-fav.list
+    cat /tmp/tmp-fav.list |  
+      while read -r LINE ; do
+        CH_FAV=`echo $LINE | awk -F\# '{print $2}' | sed 's/^[ \t]*//; s/[ \t]*$//'`
+        CH_STRING=`grep -i -m 1 "$CH_FAV #" $TMP_LIST`
+        [ -n "$CH_STRING" ] && echo "$CH_STRING" >> ${TMP_LIST}.fav
+      done
+    [ -f "${TMP_LIST}.fav" ] && mv -f ${TMP_LIST}.fav $TMP_LIST
+    rm -f /tmp/tmp-fav.list
+  fi
+  # favorite channel end
 
   PART_DIR="/tmp/ttv-get"
   mkdir -p $PART_DIR
