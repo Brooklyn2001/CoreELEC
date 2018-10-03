@@ -1,5 +1,5 @@
 # VERSION: set full version
-  LIBREELEC_VERSION="8.99.06"
+  LIBREELEC_VERSION="8.99.07"
 
 # BUILD: set build name
   LIBREELEC_BUILD="ae-fork"
