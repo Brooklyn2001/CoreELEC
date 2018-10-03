@@ -84,7 +84,7 @@ post_makeinstall_target() {
 
   # create multi keymap to support several remotes OOTB
 
-  default_multi_maps="rc6_mce xbox_360 zotac_ad10 hp_mce xbox_one cubox_i"
+  default_multi_maps="rc6_mce xbox_360 xbox_one cubox_i"
 
   create_multi_keymap multi_ext "RC6 NEC" $default_multi_maps
   create_multi_keymap multi_amlogic "RC6 NEC" $default_multi_maps \
