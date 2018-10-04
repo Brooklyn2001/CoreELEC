@@ -2,7 +2,7 @@
 # Copyright (C) 2011-present Alex@ELEC (http://alexelec.in.ua)
 
 PKG_NAME="tvheadend"
-PKG_VERSION="17dff3e"
+PKG_VERSION="bef96c5"
 TVH_VERSION_NUMBER=
 PKG_ARCH="any"
 PKG_LICENSE="GPL"
