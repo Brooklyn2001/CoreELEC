@@ -1,4 +1,4 @@
-#Yaocoo MCE RC5 remote
+# Yaocoo MCE RC5 remote
 
 factory_code	= 0x800f0001
 work_mode  		= 8
