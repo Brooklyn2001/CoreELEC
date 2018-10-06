@@ -9,6 +9,7 @@ M3U_DIR="/storage/ttv-m3u"
 NOX_M3U="$M3U_DIR/NoxLive-TTV.m3u"
 ACE_M3U="$M3U_DIR/AceLive-TTV.m3u"
 TVH_M3U="$M3U_DIR/TVH-TTV.m3u"
+ACE_PROXY_M3U="$M3U_DIR/AceProxy-TTV.m3u"
 
 NOX_DIR="/storage/.config/noxbit"
 NOX_FILE="$NOX_DIR/ttv-m3u/noxbit.m3u"
@@ -62,9 +63,6 @@ cat $INFILE |
 
       echo "#EXTINF:-1 group-title=\"$CH_CAT\" tvg-logo=\"$CH_LOGO\",$CH_NAME" >> $INFILE.ace
       echo "http://${URL_IP}:6878/ace/getstream?url=${URL_M3U}${CH_PATH}&.mp4" >> $INFILE.ace
-
-      echo "#EXTINF:-1 group-title=\"$CH_CAT\" tvg-logo=\"$CH_LOGO\",$CH_NAME" >> $INFILE.tvh
-      echo "pipe://ttvstream http://${URL_IP}:6878/ace/getstream?url=${URL_M3U}${CH_PATH}&.mp4" >> $INFILE.tvh
   done
   rm -f $INFILE
 }
@@ -252,18 +250,26 @@ ace_run () {
   if [ "$PART_ACE" != "" ]; then
       echo '#EXTM3U' > $ACE_M3U
       cat $PART_ACE >> $ACE_M3U
-      [ -f "$M3U_DIR/add_playlist.m3u" ] && cat $M3U_DIR/add_playlist.m3u >> $ACE_M3U
-  else
-      echo "Error create file: AceLive-TTV.m3u"
-  fi
 
-  
-  PART_TVH=`ls $PART_DIR/*.tvh 2>/dev/null`
-  if [ "$PART_TVH" != "" ]; then
-      echo '#EXTM3U' > $TVH_M3U
-     cat $PART_TVH >> $TVH_M3U
+      # AceProxy playlist
+      if [ -f "$SERVICE_DIR/aceproxy.conf" ]; then
+          cp -f $ACE_M3U $ACE_PROXY_M3U
+          sed 's|:6878/ace/getstream?url=|:8000/url/|g; s|&.mp4$|/stream.mp4|g' -i $ACE_PROXY_M3U
+      fi
+
+      # Tvheadend playlist
+      if [ -f "$SERVICE_DIR/tvheadend.conf" ]; then
+          cp -f $ACE_M3U $TVH_M3U
+          sed 's|^http://|pipe://ttvstream http://|g' -i $TVH_M3U
+      fi
+
+      # Add External playlist
+      if [ -f "$M3U_DIR/add_playlist.m3u" ]; then
+          cat $M3U_DIR/add_playlist.m3u >> $ACE_M3U
+          cat $M3U_DIR/add_playlist.m3u >> $PROXY_M3U
+      fi
   else
-      echo "Error create file: TVH-TTV.m3u"
+      echo "Error create playlist files!"
   fi
 
   rm -fr $PART_DIR

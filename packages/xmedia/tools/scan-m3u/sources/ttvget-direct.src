@@ -9,6 +9,7 @@ TTV_API_URL="http://1ttvxbmc.top/v3"
 TTV_CH_LIST_FILE="/tmp/channels.ttv"
 TTV_CAT_LIST_FILE="/tmp/categories.ttv"
 TTV_M3U_FILE="$M3U_DIR/SITE-TTV.m3u"
+TVH_TTV_M3U_FILE="$M3U_DIR/SITE-TVH-TTV.m3u"
 
 ACE_DIR="/storage/.config/acestream"
 FAV_LIST="$ACE_DIR/Site-favorite.list"
@@ -171,14 +172,20 @@ while true; do
   [ $(ls /tmp/ttv/$patern 2>/dev/null | wc -l) -lt 1 ] && break
 done
 
-PART_FILES=`ls $PART_DIR/*m3u`
+PART_FILES=`ls $PART_DIR/*.m3u 2>/dev/null`
 if [ "$PART_FILES" != "" ]; then
   echo '#EXTM3U' > $TTV_M3U_FILE
   cat $PART_FILES >> $TTV_M3U_FILE
+
+  # Tvheadend playlist
+  if [ -f "$SERVICE_DIR/tvheadend.conf" ]; then
+      cp -f $TTV_M3U_FILE $TVH_TTV_M3U_FILE
+      sed 's|^http://|pipe://ttvstream http://|g' -i $TVH_TTV_M3U_FILE
+  fi
   [ -f "$M3U_DIR/add_playlist.m3u" ] && cat $M3U_DIR/add_playlist.m3u >> $TTV_M3U_FILE
   echo "Done! Playlist created."
 else
-  echo "Error create file: SITE-TTV.m3u"
+  echo "Error create playlist files!"
 fi
 rm -fr $PART_DIR
 
