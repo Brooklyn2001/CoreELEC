@@ -1,0 +1,34 @@
+diff -Naurp HTTPAceProxy-84f9495/acehttp.py HTTPAceProxy-84f9495-patch/acehttp.py
+--- HTTPAceProxy-84f9495/acehttp.py	2018-10-05 11:50:29.000000000 +0300
++++ HTTPAceProxy-84f9495-patch/acehttp.py	2018-10-06 09:48:33.000000000 +0300
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python3
++#!/usr/bin/python
+ # -*- coding: utf-8 -*-
+ '''
+ 
+@@ -435,21 +435,15 @@ except AttributeError: pass  # not avail
+ # Creating ClientCounter
+ AceStuff.clientcounter = ClientCounter()
+ #### AceEngine startup
+-AceStuff.ace = findProcess('ace_engine.exe' if AceConfig.osplatform == 'Windows' else os.path.basename(AceConfig.acecmd))
+-if not AceStuff.ace and AceConfig.acespawn:
+-   AceStuff.acecmd = '' if AceConfig.osplatform == 'Windows' else AceConfig.acecmd.split()
+-   if spawnAce(AceStuff.acecmd, AceConfig.acestartuptimeout):
+-       logger.info('Local AceStream engine spawned with pid %s' % AceStuff.ace.pid)
+-elif AceStuff.ace:
++AceStuff.ace = findProcess('acestream.start')
++if AceStuff.ace:
+    AceStuff.ace = psutil.Process(AceStuff.ace)
+    logger.info('Local AceStream engine found with pid %s' % AceStuff.ace.pid)
+ 
+ # If AceEngine started (found) localy
+ if AceStuff.ace:
+     AceConfig.ace['aceHostIP'] = '127.0.0.1'
+-    # Refreshes the acestream.port file for OS Windows.....
+-    if AceConfig.osplatform == 'Windows': detectPort()
+-    else: gevent.sleep(AceConfig.acestartuptimeout)
++    gevent.sleep(AceConfig.acestartuptimeout)
+ else:
+     try:
+        url = 'http://%s:%s/webui/api/service' % (AceConfig.ace['aceHostIP'], AceConfig.ace['aceHTTPport'])
