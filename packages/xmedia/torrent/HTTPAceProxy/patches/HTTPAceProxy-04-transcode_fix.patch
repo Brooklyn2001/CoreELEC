@@ -28,7 +28,7 @@ diff -Naurp HTTPAceProxy-84f9495/aceconfig.py HTTPAceProxy-84f9495-patch/aceconf
      # Other settings
 diff -Naurp HTTPAceProxy-84f9495/acehttp.py HTTPAceProxy-84f9495-patch/acehttp.py
 --- HTTPAceProxy-84f9495/acehttp.py	2018-10-06 14:58:48.000000000 +0300
-+++ HTTPAceProxy-84f9495-patch/acehttp.py	2018-10-06 14:55:48.000000000 +0300
++++ HTTPAceProxy-84f9495-patch/acehttp.py	2018-10-06 15:40:33.000000000 +0300
 @@ -199,20 +199,17 @@ class HTTPHandler(BaseHTTPRequestHandler
              # streaming to client
              self.transcoder = None
@@ -56,6 +56,15 @@ diff -Naurp HTTPAceProxy-84f9495/acehttp.py HTTPAceProxy-84f9495-patch/acehttp.p
  
              logger.info('Streaming "%s" to %s started' % (self.channelName, self.clientip))
              # Sending videostream headers to client
+@@ -231,7 +228,7 @@ class HTTPHandler(BaseHTTPRequestHandler
+             while self.connection: gevent.sleep(0.5) # Stream data to client from AceStreamReader
+ 
+             if self.transcoder is not None:
+-                try: self.transcoder.kill(); logger.warning('Ffmpeg transcoding stoped')
++                try: self.transcoder.kill(); logger.warning('FFmpeg transcoding stoped')
+                 except: pass
+             logger.info('Streaming "%s" to %s finished' % (self.channelName, self.clientip))
+ 
 @@ -402,7 +399,7 @@ def check_compatibility(gevent_version,
  logging.basicConfig(level=AceConfig.loglevel, filename=AceConfig.logfile, format=AceConfig.logfmt, datefmt=AceConfig.logdatefmt)
  logger = logging.getLogger('HTTPServer')
