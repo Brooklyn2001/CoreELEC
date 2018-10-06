@@ -1,0 +1,67 @@
+diff -Naurp HTTPAceProxy-84f9495/aceconfig.py HTTPAceProxy-84f9495-patch/aceconfig.py
+--- HTTPAceProxy-84f9495/aceconfig.py	2018-10-06 14:58:48.000000000 +0300
++++ HTTPAceProxy-84f9495-patch/aceconfig.py	2018-10-06 15:00:06.000000000 +0300
+@@ -81,20 +81,12 @@ class AceConfig(acedefconfig.AceDefConfi
+     #
+     # ----------------------------------------------------
+     #       Transcoding configuration for HTTP AceProxy
+-    # (Lnux based OS Only!!! This solution didn't work on Windows OS)
+     # ----------------------------------------------------
+     # Transcoding Dictionary with a set of transcoding commands. Transcoding command is an executable commandline expression
+-    # that reads an input stream from STDIN and writes a transcoded stream to STDOUT. The commands are selected
+-    # according to the value of the 'fmt' request parameter. For example, the following url:
+-    # http://loclahost:8000/channels/?type=m3u&fmt=mp2
+-    # contains the fmt=mp2. It means that the 'mp2' command will be used for transcoding. You may add any number
+-    # of commands to this dictionary.
+-    # !!!!!! Ffmpeg instaled is required !!!!!!
+-    transcodecmd = {}
+-    #transcodecmd['100k'] = 'ffmpeg -i - -c:a copy -b 100k -f mpegts -'.split()
+-    #transcodecmd['mp2'] = 'ffmpeg -i - -c:a mp2 -c:v mpeg2video -f mpegts -qscale:v 2 -'.split()
+-    #transcodecmd['mkv'] = 'ffmpeg -i - -map 0 -c:v copy -c:a copy -f matroska -'.split()
+-    #transcodecmd['default'] = 'ffmpeg -i - -map 0 -c:a copy -c:v copy -f mpegts -'.split()
++    # that reads an input stream from STDIN and writes a transcoded stream to STDOUT.
++    transcode = False
++    transcodecmd = 'ffmpeg -i - -map 0 -c:a copy -c:v copy -f mpegts -'.split()
++    #transcodecmd = 'ffmpeg -i - -map 0:0 -map 0:1 -c:a copy -c:v copy -f mpegts -'.split()
+     #
+     # ----------------------------------------------------
+     # Other settings
+diff -Naurp HTTPAceProxy-84f9495/acehttp.py HTTPAceProxy-84f9495-patch/acehttp.py
+--- HTTPAceProxy-84f9495/acehttp.py	2018-10-06 14:58:48.000000000 +0300
++++ HTTPAceProxy-84f9495-patch/acehttp.py	2018-10-06 14:55:48.000000000 +0300
+@@ -199,20 +199,17 @@ class HTTPHandler(BaseHTTPRequestHandler
+             # streaming to client
+             self.transcoder = None
+             self.out = self.wfile
+-            if fmt and AceConfig.osplatform != 'Windows':
+-                if fmt in AceConfig.transcodecmd:
+-                    stderr = None if AceConfig.loglevel == logging.DEBUG else DEVNULL
+-                    popen_params = { 'bufsize': 1048576,
++            if AceConfig.transcode:
++                stderr = None if AceConfig.loglevel == logging.DEBUG else DEVNULL
++                popen_params = { 'bufsize': 1048576,
+                                      'stdin'  : gevent.subprocess.PIPE,
+                                      'stdout' : self.wfile,
+                                      'stderr' : stderr,
+                                      'shell'  : False }
+ 
+-                    self.transcoder = gevent.subprocess.Popen(AceConfig.transcodecmd[fmt], **popen_params)
+-                    self.out = self.transcoder.stdin
+-                    logger.warning('Ffmpeg transcoding started')
+-                else:
+-                    logger.error("Can't found fmt key. Ffmpeg transcoding not started!")
++                self.transcoder = gevent.subprocess.Popen(AceConfig.transcodecmd, **popen_params)
++                self.out = self.transcoder.stdin
++                logger.info('FFmpeg transcoding started')
+ 
+             logger.info('Streaming "%s" to %s started' % (self.channelName, self.clientip))
+             # Sending videostream headers to client
+@@ -402,7 +399,7 @@ def check_compatibility(gevent_version,
+ logging.basicConfig(level=AceConfig.loglevel, filename=AceConfig.logfile, format=AceConfig.logfmt, datefmt=AceConfig.logdatefmt)
+ logger = logging.getLogger('HTTPServer')
+ ### Initial settings for devnull
+-if AceConfig.acespawn or not AceConfig.transcodecmd: DEVNULL = open(os.devnull, 'wb')
++if AceConfig.acespawn or AceConfig.transcode: DEVNULL = open(os.devnull, 'wb')
+ 
+ logger.info('Ace Stream HTTP Proxy server on Python %s starting .....' % sys.version.split()[0])
+ logger.debug('Using: gevent %s, psutil %s' % (gevent.__version__, psutil.__version__))
