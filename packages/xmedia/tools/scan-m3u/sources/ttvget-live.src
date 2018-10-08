@@ -9,6 +9,7 @@ M3U_DIR="/storage/ttv-m3u"
 NOX_M3U="$M3U_DIR/NoxLive-TTV.m3u"
 ACE_M3U="$M3U_DIR/AceLive-TTV.m3u"
 TVH_M3U="$M3U_DIR/TVH-TTV.m3u"
+ACE_PROXY_M3U="$M3U_DIR/AceProxy-TTV.m3u"
 
 NOX_DIR="/storage/.config/noxbit"
 NOX_FILE="$NOX_DIR/ttv-m3u/noxbit.m3u"
@@ -17,6 +18,7 @@ ACE_DIR="/storage/.config/acestream"
 JSON_FILE="$ACE_DIR/ttv-m3u/acelive.json"
 JSON_FILE_GZ="$JSON_FILE.gz"
 LOGO_LIST="$ACE_DIR/ttv-logo.list"
+FAV_LIST="$ACE_DIR/Trash-favorite.list"
 TMP_LIST="/tmp/tmp-acettv.list"
 RUN_STATUS=
 
@@ -61,9 +63,6 @@ cat $INFILE |
 
       echo "#EXTINF:-1 group-title=\"$CH_CAT\" tvg-logo=\"$CH_LOGO\",$CH_NAME" >> $INFILE.ace
       echo "http://${URL_IP}:6878/ace/getstream?url=${URL_M3U}${CH_PATH}&.mp4" >> $INFILE.ace
-
-      echo "#EXTINF:-1 group-title=\"$CH_CAT\" tvg-logo=\"$CH_LOGO\",$CH_NAME" >> $INFILE.tvh
-      echo "pipe://ttvstream http://${URL_IP}:6878/ace/getstream?url=${URL_M3U}${CH_PATH}&.mp4" >> $INFILE.tvh
   done
   rm -f $INFILE
 }
@@ -173,6 +172,25 @@ ace_run () {
   fi
   sed '/^$/d' -i $TMP_LIST
 
+  # favorite channel start
+  if [ ! -f "${FAV_LIST}.sample" ]; then
+    cat $TMP_LIST | awk -F\# '{print $1,"#",$2}' | sed 's/[ \t]*$//g' > ${FAV_LIST}.sample
+  fi
+
+  if [ -f "$FAV_LIST" ]; then
+    rm -f ${TMP_LIST}.fav
+    cp -f $FAV_LIST /tmp/tmp-fav.list
+    cat /tmp/tmp-fav.list |  
+      while read -r LINE ; do
+        CH_FAV=`echo $LINE | awk -F\# '{print $2}' | sed 's/^[ \t]*//; s/[ \t]*$//'`
+        CH_STRING=`grep -i -m 1 "$CH_FAV #" $TMP_LIST`
+        [ -n "$CH_STRING" ] && echo "$CH_STRING" >> ${TMP_LIST}.fav
+      done
+    [ -f "${TMP_LIST}.fav" ] && mv -f ${TMP_LIST}.fav $TMP_LIST
+    rm -f /tmp/tmp-fav.list
+  fi
+  # favorite channel end
+
   PART_DIR="/tmp/ttv-get"
   mkdir -p $PART_DIR
   COUNT_LINES=`wc -l $TMP_LIST | awk '{print $1}'`
@@ -232,17 +250,26 @@ ace_run () {
   if [ "$PART_ACE" != "" ]; then
       echo '#EXTM3U' > $ACE_M3U
       cat $PART_ACE >> $ACE_M3U
-  else
-      echo "Error create file: AceLive-TTV.m3u"
-  fi
 
-  
-  PART_TVH=`ls $PART_DIR/*.tvh 2>/dev/null`
-  if [ "$PART_TVH" != "" ]; then
-      echo '#EXTM3U' > $TVH_M3U
-     cat $PART_TVH >> $TVH_M3U
+      # AceProxy playlist
+      if [ -f "$SERVICE_DIR/aceproxy.conf" ]; then
+          cp -f $ACE_M3U $ACE_PROXY_M3U
+          sed 's|:6878/ace/getstream?url=|:8000/url/|g; s|&.mp4$|/stream.mp4|g' -i $ACE_PROXY_M3U
+      fi
+
+      # Tvheadend playlist
+      if [ -f "$SERVICE_DIR/tvheadend.conf" ]; then
+          cp -f $ACE_M3U $TVH_M3U
+          sed 's|^http://|pipe://ttvstream http://|g' -i $TVH_M3U
+      fi
+
+      # Add External playlist
+      if [ -f "$M3U_DIR/add_playlist.m3u" ]; then
+          cat $M3U_DIR/add_playlist.m3u >> $ACE_M3U
+          cat $M3U_DIR/add_playlist.m3u >> $PROXY_M3U
+      fi
   else
-      echo "Error create file: TVH-TTV.m3u"
+      echo "Error create playlist files!"
   fi
 
   rm -fr $PART_DIR
@@ -294,6 +321,7 @@ nox_run () {
 
   sed 's/(на модерации)//; s/[ \t]*$//' -i $NOX_M3U
   [ "$ACETTV_IP" == "1" ] && sed "s|127\.0\.0\.1|$URL_IP|g" -i $NOX_M3U
+  [ -f "$M3U_DIR/add_playlist.m3u" ] && cat $M3U_DIR/add_playlist.m3u >> $NOX_M3U
 }
 
 #========= Main =========
@@ -323,7 +351,12 @@ case "$TTV_SOFT" in
     nox_run
     ;;
   *)
-    ace_run next
+    if [ "$TRANSLATE" == "Site-TTV" ]; then
+      ret_msg=`/usr/bin/ttvget-direct`
+      RUN_STATUS="$ret_msg"
+    else
+      ace_run next
+    fi
     nox_run
     ;;
 esac

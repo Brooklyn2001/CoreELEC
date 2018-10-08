@@ -3,8 +3,8 @@
 # Copyright (C) 2011-present Alex@ELEC (http://alexelec.in.ua)
 
 PKG_NAME="ImageMagick"
-PKG_VERSION="7.0.8-10"
-PKG_SHA256="119f99e7849805741fbf0a7890bae0b0a6530fdab35dd3f39185b2dddba272f8"
+PKG_VERSION="7.0.8-11"
+PKG_SHA256="95e4da5fa109bc8b59b5e7a54cdfcf1af3230067c95adf608ff21c08eca1de20"
 PKG_ARCH="any"
 PKG_LICENSE="http://www.imagemagick.org/script/license.php"
 PKG_SITE="http://www.imagemagick.org"

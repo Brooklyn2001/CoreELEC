@@ -1,0 +1,68 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (C) 2018-present Team LibreELEC (https://libreelec.tv)
+
+echo "Supported keys:
+← ↑ ↓ →         Left | Up | Down | Right
+Context Menu    c
+Player Debug    d
+Fullscreen      f
+Info            i
+Codec Info      o
+Pause           p
+Screenshot      s
+Skin Debug      t
+Stop            x
+Volume Down     -
+Volume Up       +
+Back            Backspace
+Select          Enter
+Quit Remote     q or ctrl+c
+"
+
+com() {
+  kodi-send --action="$key" > /dev/null 2>&1
+  echo -ne "\r$key\e[K";
+}
+
+while true; do
+  read -r -sn1 k
+  case "$k" in
+    A) key="Up"; com
+      ;;
+    B) key="Down"; com
+      ;;
+    C) key="Right"; com
+      ;;
+    D) key="Left"; com
+      ;;
+    c) key="ContextMenu"; com
+      ;;
+    d) key="PlayerDebug"; com
+      ;;
+    f) key="FullScreen"; com
+      ;;
+    i) key="Info"; com
+      ;;
+    o) key="CodecInfo"; com
+      ;;
+    p) key="Pause"; com
+      ;;
+    s) key="TakeScreenshot"; com
+      ;;
+    t) key="Skin.ToggleDebug"; com
+      ;;
+    x) key="Stop"; com
+      ;;
+    -) key="VolumeDown"; com
+      ;;
+    +) key="VolumeUp"; com
+      ;;
+    $'\177') key="Back"; com
+      ;;
+    "") key="Select"; com
+      ;;
+    q) exit
+      ;;
+  esac
+done

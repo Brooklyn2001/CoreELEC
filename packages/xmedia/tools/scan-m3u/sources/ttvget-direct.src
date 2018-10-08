@@ -9,6 +9,10 @@ TTV_API_URL="http://1ttvxbmc.top/v3"
 TTV_CH_LIST_FILE="/tmp/channels.ttv"
 TTV_CAT_LIST_FILE="/tmp/categories.ttv"
 TTV_M3U_FILE="$M3U_DIR/SITE-TTV.m3u"
+TVH_TTV_M3U_FILE="$M3U_DIR/SITE-TVH-TTV.m3u"
+
+ACE_DIR="/storage/.config/acestream"
+FAV_LIST="$ACE_DIR/Site-favorite.list"
 
 [ -f $SERVICE_DIR/acettv.conf ] && . $SERVICE_DIR/acettv.conf
 [ -f $SERVICE_DIR/acerun.conf ] && . $SERVICE_DIR/acerun.conf
@@ -97,6 +101,25 @@ rm -f $TTV_CAT_LIST_FILE
   [ "$CAT_MAN" == 0 ] && sed '/^Мужские/d' -i $TTV_CH_LIST_FILE
   [ "$CAT_LEARN" == 0 ] && sed '/^Познавательные/d' -i $TTV_CH_LIST_FILE
 
+# favorite channel start
+  if [ ! -f "${FAV_LIST}.sample" ]; then
+    cat $TTV_CH_LIST_FILE | awk -F\# '{print $1,"#",$2}' | sed 's/[ \t]*$//g' > ${FAV_LIST}.sample
+  fi
+
+  if [ -f "$FAV_LIST" ]; then
+    rm -f ${TTV_CH_LIST_FILE}.fav
+    cp -f $FAV_LIST /tmp/tmp-fav.list
+    cat /tmp/tmp-fav.list |  
+      while read -r LINE ; do
+        CH_FAV=`echo $LINE | awk -F\# '{print $2}' | sed 's/^[ \t]*//; s/[ \t]*$//'`
+        CH_STRING=`grep -i -m 1 "$CH_FAV #" $TTV_CH_LIST_FILE`
+        [ -n "$CH_STRING" ] && echo "$CH_STRING" >> ${TTV_CH_LIST_FILE}.fav
+      done
+    [ -f "${TTV_CH_LIST_FILE}.fav" ] && mv -f ${TTV_CH_LIST_FILE}.fav $TTV_CH_LIST_FILE
+    rm -f /tmp/tmp-fav.list
+  fi
+# favorite channel end
+
 PART_DIR="/tmp/ttv"
 mkdir -p $PART_DIR
 COUNT_LINES=`wc -l $TTV_CH_LIST_FILE | awk '{print $1}'`
@@ -149,13 +172,20 @@ while true; do
   [ $(ls /tmp/ttv/$patern 2>/dev/null | wc -l) -lt 1 ] && break
 done
 
-PART_FILES=`ls $PART_DIR/*m3u`
+PART_FILES=`ls $PART_DIR/*.m3u 2>/dev/null`
 if [ "$PART_FILES" != "" ]; then
   echo '#EXTM3U' > $TTV_M3U_FILE
   cat $PART_FILES >> $TTV_M3U_FILE
+
+  # Tvheadend playlist
+  if [ -f "$SERVICE_DIR/tvheadend.conf" ]; then
+      cp -f $TTV_M3U_FILE $TVH_TTV_M3U_FILE
+      sed 's|^http://|pipe://ttvstream http://|g' -i $TVH_TTV_M3U_FILE
+  fi
+  [ -f "$M3U_DIR/add_playlist.m3u" ] && cat $M3U_DIR/add_playlist.m3u >> $TTV_M3U_FILE
   echo "Done! Playlist created."
 else
-  echo "Error create file: SITE-TTV.m3u"
+  echo "Error create playlist files!"
 fi
 rm -fr $PART_DIR
 

@@ -1,24 +1,9 @@
-################################################################################
-#      This file is part of LibreELEC - https://libreelec.tv
-#      Copyright (C) 2018-present Team LibreELEC
-#
-#  LibreELEC is free software: you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation, either version 2 of the License, or
-#  (at your option) any later version.
-#
-#  LibreELEC is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License
-#  along with LibreELEC.  If not, see <http://www.gnu.org/licenses/>.
-################################################################################
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (C) 2018-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="libretro-fsuae"
-PKG_VERSION="7990f7a"
-PKG_SHA256="ad8a499e86ad782a0ecbdc4452c7fb70e1fabff42a2e5fbb081ec1b1f314a897"
+PKG_VERSION="d4493d6e9499821956ca39fa42be371c23b22b62"
+PKG_SHA256="68a8b5c9714ab70f34d772ab9110eaab324c6b35939d4cd495189aba308cae7a"
 PKG_ARCH="x86_64"
 PKG_LICENSE="GPLv3"
 PKG_SITE="https://github.com/libretro/libretro-fsuae"

@@ -1,0 +1,15 @@
+diff -Naurp HTTPAceProxy-84f9495/acehttp.py HTTPAceProxy-84f9495-patch/acehttp.py
+--- HTTPAceProxy-84f9495/acehttp.py	2018-10-06 09:48:33.000000000 +0300
++++ HTTPAceProxy-84f9495-patch/acehttp.py	2018-10-06 13:54:28.000000000 +0300
+@@ -160,6 +160,11 @@ class HTTPHandler(BaseHTTPRequestHandler
+         # Make dict with parameters
+         # [file_indexes, developer_id, affiliate_id, zone_id, stream_id]
+         paramsdict = {}.fromkeys(aceclient.acemessages.AceConst.START_PARAMS, '0')
++        if self.splittedpath[2] == 'http:' and self.splittedpath[5] == 'trash' and self.splittedpath[9] == 'stream.mp4':
++            self.correcturl = 'http://' + self.splittedpath[4] + '/' + self.splittedpath[5] + '/' + self.splittedpath[6] + '/' + self.splittedpath[7] + '/' + self.splittedpath[8]
++            self.correctpath = [self.splittedpath[0], self.splittedpath[1], self.correcturl, self.splittedpath[9]]
++            self.splittedpath = self.correctpath
++            logger.info("Correct URL: [%s]" % self.correcturl)
+         for i in range(3, len(self.splittedpath)):
+             paramsdict[aceclient.acemessages.AceConst.START_PARAMS[i-3]] = self.splittedpath[i] if self.splittedpath[i].isdigit() else '0'
+         paramsdict[self.reqtype] = requests.compat.unquote(self.splittedpath[2]) #self.path_unquoted
