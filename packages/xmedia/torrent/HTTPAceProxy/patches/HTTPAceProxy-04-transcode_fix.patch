@@ -28,7 +28,7 @@ diff -Naurp HTTPAceProxy-f8a3206/aceconfig.py HTTPAceProxy-f8a3206-patch/aceconf
      # Other settings
 diff -Naurp HTTPAceProxy-f8a3206/acehttp.py HTTPAceProxy-f8a3206-patch/acehttp.py
 --- HTTPAceProxy-f8a3206/acehttp.py	2018-10-08 09:27:23.000000000 +0300
-+++ HTTPAceProxy-f8a3206-patch/acehttp.py	2018-10-08 09:35:24.000000000 +0300
++++ HTTPAceProxy-f8a3206-patch/acehttp.py	2018-10-08 12:17:21.000000000 +0300
 @@ -198,16 +198,13 @@ class HTTPHandler(BaseHTTPRequestHandler
              # streaming to client
              self.transcoder = None
@@ -47,7 +47,7 @@ diff -Naurp HTTPAceProxy-f8a3206/acehttp.py HTTPAceProxy-f8a3206-patch/acehttp.p
 +                stderr = None if AceConfig.loglevel == logging.DEBUG else DEVNULL
 +                popen_params = { 'bufsize': 1048576, 'stdin': gevent.subprocess.PIPE,
 +                                 'stdout': self.wfile, 'stderr': stderr, 'shell': False }
-+                self.transcoder = gevent.subprocess.Popen(AceConfig.transcodecmd[fmt], **popen_params)
++                self.transcoder = gevent.subprocess.Popen(AceConfig.transcodecmd, **popen_params)
 +                self.out = self.transcoder.stdin
 +                logger.warning('FFmpeg transcoding started')
  
