@@ -1,6 +1,6 @@
-diff -Naurp HTTPAceProxy-84f9495/aceconfig.py HTTPAceProxy-84f9495-patch/aceconfig.py
---- HTTPAceProxy-84f9495/aceconfig.py	2018-10-06 14:58:48.000000000 +0300
-+++ HTTPAceProxy-84f9495-patch/aceconfig.py	2018-10-06 15:00:06.000000000 +0300
+diff -Naurp HTTPAceProxy-f8a3206/aceconfig.py HTTPAceProxy-f8a3206-patch/aceconfig.py
+--- HTTPAceProxy-f8a3206/aceconfig.py	2018-10-08 09:27:23.000000000 +0300
++++ HTTPAceProxy-f8a3206-patch/aceconfig.py	2018-10-08 09:30:09.000000000 +0300
 @@ -81,20 +81,12 @@ class AceConfig(acedefconfig.AceDefConfi
      #
      # ----------------------------------------------------
@@ -26,37 +26,34 @@ diff -Naurp HTTPAceProxy-84f9495/aceconfig.py HTTPAceProxy-84f9495-patch/aceconf
      #
      # ----------------------------------------------------
      # Other settings
-diff -Naurp HTTPAceProxy-84f9495/acehttp.py HTTPAceProxy-84f9495-patch/acehttp.py
---- HTTPAceProxy-84f9495/acehttp.py	2018-10-06 14:58:48.000000000 +0300
-+++ HTTPAceProxy-84f9495-patch/acehttp.py	2018-10-06 15:40:33.000000000 +0300
-@@ -199,20 +199,17 @@ class HTTPHandler(BaseHTTPRequestHandler
+diff -Naurp HTTPAceProxy-f8a3206/acehttp.py HTTPAceProxy-f8a3206-patch/acehttp.py
+--- HTTPAceProxy-f8a3206/acehttp.py	2018-10-08 09:27:23.000000000 +0300
++++ HTTPAceProxy-f8a3206-patch/acehttp.py	2018-10-08 09:35:24.000000000 +0300
+@@ -198,16 +198,13 @@ class HTTPHandler(BaseHTTPRequestHandler
              # streaming to client
              self.transcoder = None
              self.out = self.wfile
 -            if fmt and AceConfig.osplatform != 'Windows':
 -                if fmt in AceConfig.transcodecmd:
 -                    stderr = None if AceConfig.loglevel == logging.DEBUG else DEVNULL
--                    popen_params = { 'bufsize': 1048576,
-+            if AceConfig.transcode:
-+                stderr = None if AceConfig.loglevel == logging.DEBUG else DEVNULL
-+                popen_params = { 'bufsize': 1048576,
-                                      'stdin'  : gevent.subprocess.PIPE,
-                                      'stdout' : self.wfile,
-                                      'stderr' : stderr,
-                                      'shell'  : False }
- 
+-                    popen_params = { 'bufsize': 1048576, 'stdin': gevent.subprocess.PIPE,
+-                                     'stdout': self.wfile, 'stderr': stderr, 'shell': False }
 -                    self.transcoder = gevent.subprocess.Popen(AceConfig.transcodecmd[fmt], **popen_params)
 -                    self.out = self.transcoder.stdin
 -                    logger.warning('Ffmpeg transcoding started')
 -                else:
 -                    logger.error("Can't found fmt key. Ffmpeg transcoding not started!")
-+                self.transcoder = gevent.subprocess.Popen(AceConfig.transcodecmd, **popen_params)
++            if AceConfig.transcode:
++                stderr = None if AceConfig.loglevel == logging.DEBUG else DEVNULL
++                popen_params = { 'bufsize': 1048576, 'stdin': gevent.subprocess.PIPE,
++                                 'stdout': self.wfile, 'stderr': stderr, 'shell': False }
++                self.transcoder = gevent.subprocess.Popen(AceConfig.transcodecmd[fmt], **popen_params)
 +                self.out = self.transcoder.stdin
-+                logger.info('FFmpeg transcoding started')
++                logger.warning('FFmpeg transcoding started')
  
              logger.info('Streaming "%s" to %s started' % (self.channelName, self.clientip))
              # Sending videostream headers to client
-@@ -231,7 +228,7 @@ class HTTPHandler(BaseHTTPRequestHandler
+@@ -226,7 +223,7 @@ class HTTPHandler(BaseHTTPRequestHandler
              while self.connection: gevent.sleep(0.5) # Stream data to client from AceStreamReader
  
              if self.transcoder is not None:
@@ -65,7 +62,7 @@ diff -Naurp HTTPAceProxy-84f9495/acehttp.py HTTPAceProxy-84f9495-patch/acehttp.p
                  except: pass
              logger.info('Streaming "%s" to %s finished' % (self.channelName, self.clientip))
  
-@@ -402,7 +399,7 @@ def check_compatibility(gevent_version,
+@@ -397,7 +394,7 @@ def check_compatibility(gevent_version,
  logging.basicConfig(level=AceConfig.loglevel, filename=AceConfig.logfile, format=AceConfig.logfmt, datefmt=AceConfig.logdatefmt)
  logger = logging.getLogger('HTTPServer')
  ### Initial settings for devnull
