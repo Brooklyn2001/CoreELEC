@@ -1,25 +1,26 @@
-diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayerAudio.cpp kodi-patch/xbmc/cores/VideoPlayer/VideoPlayerAudio.cpp
---- kodi/xbmc/cores/VideoPlayer/VideoPlayerAudio.cpp	2018-09-10 11:17:13.000000000 +0300
-+++ kodi-patch/xbmc/cores/VideoPlayer/VideoPlayerAudio.cpp	2018-09-10 11:26:28.000000000 +0300
-@@ -77,8 +77,6 @@ bool CVideoPlayerAudio::OpenStream(CDVDS
+diff --git a/xbmc/cores/VideoPlayer/VideoPlayerAudio.cpp b/xbmc/cores/VideoPlayer/VideoPlayerAudio.cpp
+index 7b15b42..16f9a0c 100644
+--- a/xbmc/cores/VideoPlayer/VideoPlayerAudio.cpp
++++ b/xbmc/cores/VideoPlayer/VideoPlayerAudio.cpp
+@@ -78,8 +78,6 @@ bool CVideoPlayerAudio::OpenStream(CDVDStreamInfo hints)
  {
    CLog::Log(LOGNOTICE, "Finding audio codec for: %i", hints.codec);
-   bool allowpassthrough = !CServiceBroker::GetSettings()->GetBool(CSettings::SETTING_VIDEOPLAYER_USEDISPLAYASCLOCK);
+   bool allowpassthrough = !CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(CSettings::SETTING_VIDEOPLAYER_USEDISPLAYASCLOCK);
 -  if (m_processInfo.IsRealtimeStream())
 -    allowpassthrough = false;
  
    CAEStreamInfo::DataType streamType = m_audioSink.GetPassthroughStreamType(hints.codec, hints.samplerate);
-   if (hints.profile == FF_PROFILE_DTS_HD_HRA) {
-@@ -137,8 +135,6 @@ void CVideoPlayerAudio::OpenStream(CDVDS
+   CDVDAudioCodec* codec = CDVDFactoryCodec::CreateAudioCodec(hints, m_processInfo,
+@@ -134,8 +132,6 @@ void CVideoPlayerAudio::OpenStream(CDVDStreamInfo &hints, CDVDAudioCodec* codec)
    m_synctype = SYNC_DISCON;
-   if (CServiceBroker::GetSettings()->GetBool(CSettings::SETTING_VIDEOPLAYER_USEDISPLAYASCLOCK))
+   if (CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(CSettings::SETTING_VIDEOPLAYER_USEDISPLAYASCLOCK))
      m_synctype = SYNC_RESAMPLE;
 -  else if (m_processInfo.IsRealtimeStream())
 -    m_synctype = SYNC_RESAMPLE;
  
    m_prevskipped = false;
  
-@@ -474,18 +470,6 @@ bool CVideoPlayerAudio::ProcessDecoderOu
+@@ -454,18 +450,6 @@ bool CVideoPlayerAudio::ProcessDecoderOutput(DVDAudioFrame &audioframe)
        }
      }
  
@@ -38,10 +39,10 @@ diff -Naurp kodi/xbmc/cores/VideoPlayer/VideoPlayerAudio.cpp kodi-patch/xbmc/cor
      // demuxer reads metatags that influence channel layout
      if (m_streaminfo.codec == AV_CODEC_ID_FLAC && m_streaminfo.channellayout)
        audioframe.format.m_channelLayout = CAEUtil::GetAEChannelLayout(m_streaminfo.channellayout);
-@@ -627,7 +611,7 @@ bool CVideoPlayerAudio::SwitchCodecIfNee
+@@ -604,7 +588,7 @@ bool CVideoPlayerAudio::SwitchCodecIfNeeded()
  {
    CLog::Log(LOGDEBUG, "CVideoPlayerAudio: stream props changed, checking for passthrough");
-   bool allowpassthrough = !CServiceBroker::GetSettings()->GetBool(CSettings::SETTING_VIDEOPLAYER_USEDISPLAYASCLOCK);
+   bool allowpassthrough = !CServiceBroker::GetSettingsComponent()->GetSettings()->GetBool(CSettings::SETTING_VIDEOPLAYER_USEDISPLAYASCLOCK);
 -  if (m_processInfo.IsRealtimeStream() || m_synctype == SYNC_RESAMPLE)
 +  if (m_synctype == SYNC_RESAMPLE)
      allowpassthrough = false;
