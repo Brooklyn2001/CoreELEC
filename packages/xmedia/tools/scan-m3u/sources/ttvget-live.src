@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (C) 2011-present Alex@ELEC (http://alexelec.in.ua)
 
+ARG_LOGO="$1"
 SERVICE_DIR="/storage/.cache/services"
 M3U_DIR="/storage/ttv-m3u"
 
@@ -234,7 +235,7 @@ ace_run () {
   rm -f $TMP_LIST
 
   # get logos
-  [ -x /usr/bin/ttv-logo ] && /usr/bin/ttv-logo > /dev/null 2>&1
+  [ -x /usr/bin/ttv-logo -a "$ARG_LOGO" != "nologo" ] && /usr/bin/ttv-logo > /dev/null 2>&1
 
   for fpart in $(ls $PART_DIR); do
     build_m3u "$PART_DIR/$fpart" &
