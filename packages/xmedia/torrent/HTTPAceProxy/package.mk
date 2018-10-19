@@ -2,7 +2,7 @@
 # Copyright (C) 2011-present Alex@ELEC (http://alexelec.in.ua)
 
 PKG_NAME="HTTPAceProxy"
-PKG_VERSION="f8a3206"
+PKG_VERSION="5795059"
 PKG_ARCH="any"
 PKG_LICENSE="GPL"
 PKG_SITE="https://github.com/pepsik-kiev/HTTPAceProxy"
