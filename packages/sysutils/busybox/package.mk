@@ -4,8 +4,8 @@
 # Copyright (C) 2011-present Alex@ELEC (http://alexelec.in.ua)
 
 PKG_NAME="busybox"
-PKG_VERSION="1.29.2"
-PKG_SHA256="67d2fa6e147a45875fe972de62d907ef866fe784c495c363bf34756c444a5d61"
+PKG_VERSION="1.29.3"
+PKG_SHA256="97648636e579462296478e0218e65e4bc1e9cd69089a3b1aeb810bff7621efb7"
 PKG_ARCH="any"
 PKG_LICENSE="GPL"
 PKG_SITE="http://www.busybox.net"
