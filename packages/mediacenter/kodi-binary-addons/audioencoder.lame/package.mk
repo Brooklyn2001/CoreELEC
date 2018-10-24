@@ -1,24 +1,10 @@
-################################################################################
-#      This file is part of OpenELEC - http://www.openelec.tv
-#      Copyright (C) 2009-2016 Stephan Raue (stephan@openelec.tv)
-#
-#  OpenELEC is free software: you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation, either version 2 of the License, or
-#  (at your option) any later version.
-#
-#  OpenELEC is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License
-#  along with OpenELEC.  If not, see <http://www.gnu.org/licenses/>.
-################################################################################
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (C) 2009-2016 Stephan Raue (stephan@openelec.tv)
+# Copyright (C) 2018-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="audioencoder.lame"
-PKG_VERSION="c6fff50"
-PKG_SHA256="9d37e4da6dab2877e8d029ad086dd517e79846cc27a12784f6c4b83130c00755"
+PKG_VERSION="476f4b2e70f527a1db18bd8022c045ba16957deb"
+PKG_SHA256="1965fd14053cd70b5034df570ba43aa450702560d2eef2dd39e6ed1520ab4810"
 PKG_REV="2"
 PKG_ARCH="any"
 PKG_LICENSE="GPL"
