@@ -2,16 +2,12 @@
 # Copyright (C) 2016-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="libretro-fbalpha"
-PKG_VERSION="9ceab7f6293864591e63a2669396dc200e3246bb"
-PKG_SHA256="26eb3e4c3f5c7238fd9632c055d2941be50348fc16998c774126aba2e81508d2"
-PKG_ARCH="any"
+PKG_VERSION="d013e285571a9ec7e3e0482ef4bc184de1a0c919"
+PKG_SHA256="3720f53f352fa609a34c4312651d8b254df7ce5c232a5ee6528c2289d7048c98"
 PKG_LICENSE="GPLv3"
 PKG_SITE="https://github.com/libretro/fbalpha"
 PKG_URL="https://github.com/libretro/fbalpha/archive/$PKG_VERSION.tar.gz"
-PKG_SOURCE_DIR="fbalpha-$PKG_VERSION*"
 PKG_DEPENDS_TARGET="toolchain kodi-platform"
-PKG_SECTION="emulation"
-PKG_SHORTDESC="game.libretro.fba: fba for Kodi"
 PKG_LONGDESC="game.libretro.fba: fba for Kodi"
 PKG_TOOLCHAIN="manual"
 # linking takes too long with lto
@@ -21,7 +17,11 @@ PKG_LIBPATH="$PKG_LIBNAME"
 PKG_LIBVAR="FBALPHA_LIB"
 
 make_target() {
-  make -f makefile.libretro
+  if target_has_feature neon; then
+    make -f makefile.libretro HAVE_NEON=1
+  else
+    make -f makefile.libretro
+  fi
 }
 
 makeinstall_target() {
