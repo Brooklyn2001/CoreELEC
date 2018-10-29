@@ -184,7 +184,7 @@ ace_run () {
     cat /tmp/tmp-fav.list |  
       while read -r LINE ; do
         CH_FAV=`echo $LINE | awk -F\# '{print $2}' | sed 's/^[ \t]*//; s/[ \t]*$//'`
-        CH_STRING=`grep -i -m 1 "$CH_FAV #" $TMP_LIST`
+        CH_STRING=`grep -m 1 "# $CH_FAV #" $TMP_LIST`
         [ -n "$CH_STRING" ] && echo "$CH_STRING" >> ${TMP_LIST}.fav
       done
     [ -f "${TMP_LIST}.fav" ] && mv -f ${TMP_LIST}.fav $TMP_LIST
