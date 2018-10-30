@@ -1,0 +1,26 @@
+From 1bfb83ad5cd3acffce94c79ff69f17ca339840a4 Mon Sep 17 00:00:00 2001
+From: cdu13a <cdu13a@gmail.com>
+Date: Mon, 29 Oct 2018 12:58:41 -0400
+Subject: [PATCH] hdmitx: Set Max TMDS clock based on the highest value
+
+Instead of just using the maxpixelclock from the range block when
+Max TMDS is to low, use it anytime that it is the higher value.
+---
+ drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c
+index 1636e09e790..033e1b9c9b3 100644
+--- a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c
++++ b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c
+@@ -2066,8 +2066,8 @@ int hdmitx_edid_parse(struct hdmitx_dev *hdmitx_device)
+ 				info->hdr_info.hdr_support);
+ 		}
+ 	}
+-
+-	if (pRXCap->Max_TMDS_Clock1 < 15){
++    /* Go with the higher Value for maxTMDSclock  */
++	if (pRXCap->Max_TMDS_Clock1 < (maxPixelClock * 2)){
+ 		hdmi_print(IMP, EDID "Setting maxTMDSclock from range block\n");
+ 		pRXCap->Max_TMDS_Clock1 = maxPixelClock * 2;
+ 	}
