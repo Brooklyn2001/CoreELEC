@@ -2,13 +2,11 @@
 # Copyright (C) 2016-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="dvb-latest"
-PKG_VERSION="44385b9"
-#PKG_SHA256="bd42e350cd95b3fcdcb1a138d2445c6de595c0b26851d4bbb50c18118bf8389b"
-PKG_ARCH="any"
+PKG_VERSION="44385b9c61ecc27059a651885895c8ea09cd4179"
+PKG_SHA256="b0aadb700260e078612686b7dcb0eebb34f15c7f4ac90bb56f3e1471e41a88ec"
 PKG_LICENSE="GPL"
 PKG_SITE="http://git.linuxtv.org/media_build.git"
 PKG_URL="https://git.linuxtv.org/media_build.git/snapshot/${PKG_VERSION}.tar.gz"
-PKG_SOURCE_DIR="${PKG_VERSION}"
 PKG_DEPENDS_TARGET="toolchain linux media_tree"
 PKG_NEED_UNPACK="$LINUX_DEPENDS media_tree"
 PKG_SECTION="driver.dvb"
@@ -57,6 +55,7 @@ make_target() {
     sed -e 's/CONFIG_VIDEO_TVP7002=m/# CONFIG_VIDEO_TVP7002 is not set/g' -i $PKG_BUILD/v4l/.config
     sed -e 's/CONFIG_VIDEO_CADENCE_CSI2RX=m/# CONFIG_VIDEO_CADENCE_CSI2RX is not set/g' -i $PKG_BUILD/v4l/.config
     sed -e 's/CONFIG_VIDEO_CADENCE_CSI2TX=m/# CONFIG_VIDEO_CADENCE_CSI2TX is not set/g' -i $PKG_BUILD/v4l/.config
+    sed -e 's/# CONFIG_MEDIA_TUNER_TDA18250 is not set/CONFIG_MEDIA_TUNER_TDA18250=m/g' -i $PKG_BUILD/v4l/.config
  fi
 
   kernel_make VER=$KERNEL_VER SRCDIR=$(kernel_path)

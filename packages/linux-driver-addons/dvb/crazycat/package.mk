@@ -4,11 +4,9 @@
 PKG_NAME="crazycat"
 PKG_VERSION="835dc72da3ee63df7f4057bd0507887454c005d1"
 PKG_SHA256="3d68d368a9eda15688c6686caa854a045a753740ec93553d80a4bcfc14c2950a"
-PKG_ARCH="any"
 PKG_LICENSE="GPL"
 PKG_SITE="https://bitbucket.org/CrazyCat/media_build"
 PKG_URL="https://bitbucket.org/CrazyCat/media_build/get/$PKG_VERSION.tar.gz"
-PKG_SOURCE_DIR="CrazyCat-media_build-*"
 PKG_DEPENDS_TARGET="toolchain linux media_tree_cc"
 PKG_NEED_UNPACK="$LINUX_DEPENDS media_tree_cc"
 PKG_SECTION="driver.dvb"
@@ -60,6 +58,7 @@ make_target() {
     sed -e 's/CONFIG_VIDEO_TVP7002=m/# CONFIG_VIDEO_TVP7002 is not set/g' -i $PKG_BUILD/v4l/.config
     sed -e 's/CONFIG_VIDEO_CADENCE_CSI2RX=m/# CONFIG_VIDEO_CADENCE_CSI2RX is not set/g' -i $PKG_BUILD/v4l/.config
     sed -e 's/CONFIG_VIDEO_CADENCE_CSI2TX=m/# CONFIG_VIDEO_CADENCE_CSI2TX is not set/g' -i $PKG_BUILD/v4l/.config
+    sed -e 's/# CONFIG_MEDIA_TUNER_TDA18250 is not set/CONFIG_MEDIA_TUNER_TDA18250=m/g' -i $PKG_BUILD/v4l/.config
   fi
 
   # add menuconfig to edit .config

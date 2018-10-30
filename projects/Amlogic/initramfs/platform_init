@@ -1,8 +1,8 @@
 #!/bin/sh
-################################################################################
-#      This file is part of Alex@ELEC - http://www.alexelec.in.ua
-#      Copyright (C) 2011-present Alexandr Zuyev (alex@alexelec.in.ua)
-################################################################################
+
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (C) 2017-present Team LibreELEC (https://libreelec.tv)
+# Copyright (C) 2011-present Alex@ELEC (http://alexelec.in.ua)
 
 display_mode=$(cat /sys/class/display/mode)
 
@@ -36,6 +36,9 @@ if [ -z "$BOOT_IMAGE" -o -z "$boot" -o -z "$disk" ]; then
   fi
   echo "$cmdline" > /proc/cmdline
 fi
+
+# Set colorspace to avoid no HDMI signal with non-4K output modes
+echo 422,8bit > /sys/class/amhdmitx/amhdmitx0/attr
 
 # Enable HDMI output if cable is connected and not already enabled by u-boot
 if [ "$(cat /sys/class/amhdmitx/amhdmitx0/hpd_state)" != "0" ] && [ "$display_mode" != "$hdmimode" ]; then

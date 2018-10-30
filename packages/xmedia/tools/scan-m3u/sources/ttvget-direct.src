@@ -112,7 +112,7 @@ rm -f $TTV_CAT_LIST_FILE
     cat /tmp/tmp-fav.list |  
       while read -r LINE ; do
         CH_FAV=`echo $LINE | awk -F\# '{print $2}' | sed 's/^[ \t]*//; s/[ \t]*$//'`
-        CH_STRING=`grep -i -m 1 "$CH_FAV #" $TTV_CH_LIST_FILE`
+        CH_STRING=`grep -m 1 "# $CH_FAV #" $TTV_CH_LIST_FILE`
         [ -n "$CH_STRING" ] && echo "$CH_STRING" >> ${TTV_CH_LIST_FILE}.fav
       done
     [ -f "${TTV_CH_LIST_FILE}.fav" ] && mv -f ${TTV_CH_LIST_FILE}.fav $TTV_CH_LIST_FILE
