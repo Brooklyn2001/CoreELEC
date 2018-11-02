@@ -1,0 +1,37 @@
+From 3cab9ef2f5907af62918bae2ad461cc6321443c9 Mon Sep 17 00:00:00 2001
+From: cdu13a <cdu13a@gmail.com>
+Date: Tue, 30 Oct 2018 13:02:52 -0400
+Subject: [PATCH] Make sure we can display at least 1080p60
+
+If despite our best efforts to read a value for max_TMDS_clock
+from edid we still end up with to low a value Set a value high
+enough to still get 1080p60.
+
+This might cause problems for a 720p display with bad edid info
+but atleast the much more common 1080p60 displays will work.
+---
+ drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c | 11 +++++++++--
+ 1 file changed, 9 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c
+index 1636e09e790..4547fc400a3 100644
+--- a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c
++++ b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c
+@@ -2068,8 +2068,15 @@ int hdmitx_edid_parse(struct hdmitx_dev *hdmitx_device)
+ 	}
+ 
+ 	if (pRXCap->Max_TMDS_Clock1 < 15){
+-		hdmi_print(IMP, EDID "Setting maxTMDSclock from range block\n");
+-		pRXCap->Max_TMDS_Clock1 = maxPixelClock * 2;
++		hdmi_print(IMP, EDID "Try Setting maxTMDSclock from range block\n");
++        pRXCap->Max_TMDS_Clock1 = maxPixelClock * 2;
++        /* Something is wrong with EDID info make sure we can atleast do 1080p60hz. */
++        if (pRXCap->Max_TMDS_Clock1 < 15){
++            pRXCap->Max_TMDS_Clock1 = 35;
++            hdmi_print(IMP, EDID "No Valid maxTMDSclock Setting to 175Mhz\n");
++        
++            
++        }
+ 	}
+ 
+ 	return 0;
