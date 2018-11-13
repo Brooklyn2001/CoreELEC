@@ -1,20 +1,5 @@
-################################################################################
-#      This file is part of OpenELEC - http://www.openelec.tv
-#      Copyright (C) 2009-2016 Stephan Raue (stephan@openelec.tv)
-#
-#  OpenELEC is free software: you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation, either version 2 of the License, or
-#  (at your option) any later version.
-#
-#  OpenELEC is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License
-#  along with OpenELEC.  If not, see <http://www.gnu.org/licenses/>.
-################################################################################
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (C) 2009-2016 Stephan Raue (stephan@openelec.tv)
 
 PKG_NAME="script.config.vdr"
 PKG_VERSION="61c2dde"
@@ -34,9 +19,9 @@ PKG_IS_ADDON="yes"
 PKG_ADDON_TYPE="dummy"
 
 make_target() {
-  $SED -e "s|@ADDON_VERSION@|$ADDON_VERSION.$PKG_REV|g" \
-       -e "s|@OS_VERSION@|$OS_VERSION|g" \
-       -i addon.xml
+  sed -e "s|@ADDON_VERSION@|$ADDON_VERSION.$PKG_REV|g" \
+      -e "s|@OS_VERSION@|$OS_VERSION|g" \
+      -i addon.xml
 }
 
 addon() {
