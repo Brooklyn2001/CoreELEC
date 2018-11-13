@@ -1,7 +1,7 @@
-################################################################################
-#      This file is part of Alex@ELEC - http://www.alexelec.in.ua
-#      Copyright (C) 2011-present Alexandr Zuyev (alex@alexelec.in.ua)
-################################################################################
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (C) 2009-2016 Stephan Raue (stephan@openelec.tv)
+# Copyright (C) 2017-present Team LibreELEC (https://libreelec.tv)
+# Copyright (C) 2011-present Alex@ELEC (http://alexelec.in.ua)
 
 PKG_NAME="mediacenter"
 PKG_VERSION=""
@@ -20,6 +20,9 @@ PKG_LONGDESC="Mediacenter: Metapackage"
   for i in $SKINS; do
     PKG_DEPENDS_TARGET="$PKG_DEPENDS_TARGET $MEDIACENTER-theme-$i"
   done
+
+# python-based tool for kodi management
+  PKG_DEPENDS_TARGET="$PKG_DEPENDS_TARGET texturecache.py"
 
 # some python stuff needed for various addons
   PKG_DEPENDS_TARGET="$PKG_DEPENDS_TARGET Pillow \
