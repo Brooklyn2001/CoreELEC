@@ -11,160 +11,152 @@
 ################################################################################
 
 # set variables
-  LE_TMP=$(mktemp -d)
-  SAVE_ERROR="$LE_TMP/save_error"
+LE_TMP=$(mktemp -d)
+SAVE_ERROR="${LE_TMP}/save_error"
 
-  if [ -z "$SYSTEM_SIZE" -o -z "$SYSTEM_PART_START" ]; then
-    echo "mkimage: SYSTEM_SIZE and SYSTEM_PART_START must be configured!"
-    exit 1
-  fi
+if [ -z "${SYSTEM_SIZE}" -o -z "${SYSTEM_PART_START}" ]; then
+  echo "mkimage: SYSTEM_SIZE and SYSTEM_PART_START must be configured!"
+  exit 1
+fi
 
-  if [ "$BOOTLOADER" = "syslinux" ]; then
-    DISK_LABEL=gpt
-  else
-    DISK_LABEL=msdos
-  fi
+DISK_LABEL=msdos
+STORAGE_SIZE=32 # STORAGE_SIZE must be >= 32 !
 
-  STORAGE_SIZE=32 # STORAGE_SIZE must be >= 32 !
+DISK_START_PADDING=$(( (${SYSTEM_PART_START} + 2048 - 1) / 2048 ))
+DISK_GPT_PADDING=1
+DISK_SIZE=$(( ${DISK_START_PADDING} + ${SYSTEM_SIZE} + ${STORAGE_SIZE} + ${DISK_GPT_PADDING} ))
+DISK_BASENAME="${TARGET_IMG}/${IMAGE_NAME}"
+DISK="${DISK_BASENAME}.img"
 
-  DISK_START_PADDING=$(( ($SYSTEM_PART_START + 2048 - 1) / 2048 ))
-  DISK_GPT_PADDING=1
-  DISK_SIZE=$(( $DISK_START_PADDING + $SYSTEM_SIZE + $STORAGE_SIZE + $DISK_GPT_PADDING ))
-  DISK_BASENAME="$TARGET_IMG/$IMAGE_NAME"
-  DISK="${DISK_BASENAME}.img"
+cleanup() {
+  echo -e "image: cleanup...\n"
+  rm -rf "${LE_TMP}"
+}
 
-# functions
-  cleanup() {
-    echo "image: cleanup..."
-    rm -rf "$LE_TMP"
-    echo
-    exit
-  }
-
-  show_error() {
-    echo "image: error happen..."
-    echo
-    cat "$SAVE_ERROR"
-    echo
-    cleanup
-    exit
-  }
+show_error() {
+  echo -e "image: error happen...\n"
+  cat "${SAVE_ERROR}"
+  echo
+  cleanup
+  exit 1
+}
 
 trap cleanup SIGINT
 
 # generate volume id for fat partition
-  UUID_1=$(date '+%d%m')
-  UUID_2=$(date '+%M%S')
-  FAT_SERIAL_NUMBER="${UUID_1}${UUID_2}"
-  UUID_SYSTEM="${UUID_1}-${UUID_2}"
+UUID_1=$(date '+%d%m')
+UUID_2=$(date '+%M%S')
+FAT_SERIAL_NUMBER="${UUID_1}${UUID_2}"
+UUID_SYSTEM="${UUID_1}-${UUID_2}"
 
 # create an image
-  echo
-  echo "image: creating file $(basename $DISK)..."
-  dd if=/dev/zero of="$DISK" bs=1M count="$DISK_SIZE" conv=fsync >"$SAVE_ERROR" 2>&1 || show_error
+echo -e "\nimage: creating file $(basename ${DISK})..."
+dd if=/dev/zero of="${DISK}" bs=1M count="${DISK_SIZE}" conv=fsync >"${SAVE_ERROR}" 2>&1 || show_error
 
 # write a disklabel
-  echo "image: creating $DISK_LABEL partition table..."
-  parted -s "$DISK" mklabel $DISK_LABEL
-  sync
+echo "image: creating ${DISK_LABEL} partition table..."
+parted -s "${DISK}" mklabel ${DISK_LABEL}
+sync
 
 # create part1
-  echo "image: creating part1..."
-  SYSTEM_PART_END=$(( $SYSTEM_PART_START + ($SYSTEM_SIZE * 1024 * 1024 / 512) - 1 ))
-  if [ "$DISK_LABEL" = "gpt" ]; then
-    parted -s "$DISK" -a min unit s mkpart system fat32 $SYSTEM_PART_START $SYSTEM_PART_END
-    parted -s "$DISK" set 1 legacy_boot on
-  else
-    parted -s "$DISK" -a min unit s mkpart primary fat32 $SYSTEM_PART_START $SYSTEM_PART_END
-    parted -s "$DISK" set 1 boot on
-  fi
-  sync
+echo "image: creating part1..."
+SYSTEM_PART_END=$(( ${SYSTEM_PART_START} + (${SYSTEM_SIZE} * 1024 * 1024 / 512) - 1 ))
+if [ "${DISK_LABEL}" = "gpt" ]; then
+  parted -s "${DISK}" -a min unit s mkpart system fat32 ${SYSTEM_PART_START} ${SYSTEM_PART_END}
+  parted -s "${DISK}" set 1 legacy_boot on
+else
+  parted -s "${DISK}" -a min unit s mkpart primary fat32 ${SYSTEM_PART_START} ${SYSTEM_PART_END}
+  parted -s "${DISK}" set 1 boot on
+fi
+sync
 
 # create part2
-  echo "image: creating part2..."
-  STORAGE_PART_START=$(( $SYSTEM_PART_END + 1 ))
-  STORAGE_PART_END=$(( $STORAGE_PART_START + ($STORAGE_SIZE * 1024 * 1024 / 512) - 1 ))
-  if [ "$DISK_LABEL" = "gpt" ]; then
-    parted -s "$DISK" -a min unit s mkpart storage ext4 $STORAGE_PART_START $STORAGE_PART_END
-  else
-    parted -s "$DISK" -a min unit s mkpart primary ext4 $STORAGE_PART_START $STORAGE_PART_END
-  fi
-  sync
+echo "image: creating part2..."
+STORAGE_PART_START=$(( ${SYSTEM_PART_END} + 1 ))
+STORAGE_PART_END=$(( ${STORAGE_PART_START} + (${STORAGE_SIZE} * 1024 * 1024 / 512) - 1 ))
+if [ "${DISK_LABEL}" = "gpt" ]; then
+  parted -s "${DISK}" -a min unit s mkpart storage ext4 ${STORAGE_PART_START} ${STORAGE_PART_END}
+else
+  parted -s "${DISK}" -a min unit s mkpart primary ext4 ${STORAGE_PART_START} ${STORAGE_PART_END}
+fi
+sync
 
 # create filesystem on part1
-  echo "image: creating filesystem on part1..."
-  OFFSET=$(( $SYSTEM_PART_START * 512 ))
-  HEADS=4
-  TRACKS=32
-  SECTORS=$(( $SYSTEM_SIZE * 1024 * 1024 / 512 / $HEADS / $TRACKS ))
+echo "image: creating filesystem on part1..."
+OFFSET=$(( ${SYSTEM_PART_START} * 512 ))
+HEADS=4
+TRACKS=32
+SECTORS=$(( ${SYSTEM_SIZE} * 1024 * 1024 / 512 / ${HEADS} / ${TRACKS} ))
 
-  shopt -s expand_aliases  # enables alias expansion in script
-  alias mformat="mformat -i $DISK@@$OFFSET -h $HEADS -t $TRACKS -s $SECTORS"
-  alias mcopy="mcopy -i $DISK@@$OFFSET"
-  alias mmd="mmd -i $DISK@@$OFFSET"
+shopt -s expand_aliases  # enables alias expansion in script
+alias mformat="mformat -i ${DISK}@@${OFFSET} -h ${HEADS} -t ${TRACKS} -s ${SECTORS}"
+alias mcopy="mcopy -i ${DISK}@@${OFFSET}"
+alias mmd="mmd -i ${DISK}@@${OFFSET}"
 
-  mformat -v "$DISTRO_BOOTLABEL" -N "$FAT_SERIAL_NUMBER" ::
-  sync
+mformat -v "${DISTRO_BOOTLABEL}" -N "${FAT_SERIAL_NUMBER}" ::
+sync
 
-if [ "$BOOTLOADER" = "u-boot" -a \( -n "$UBOOT_SYSTEM" -o "$UBOOT_VERSION" = "vendor" \) ]; then
+if [ "${BOOTLOADER}" = "u-boot" -a \( -n "${UBOOT_SYSTEM}" -o "${UBOOT_VERSION}" = "vendor" \) ]; then
   # create bootloader configuration
-    echo "image: creating bootloader configuration..."
+  echo "image: creating bootloader configuration..."
 
-    if [ -f $PROJECT_DIR/$PROJECT/devices/$DEVICE/bootloader/mkimage ]; then
-      . $PROJECT_DIR/$PROJECT/devices/$DEVICE/bootloader/mkimage
-    elif [ -f $PROJECT_DIR/$PROJECT/bootloader/mkimage ]; then
-      . $PROJECT_DIR/$PROJECT/bootloader/mkimage
-    else
-      echo "image: skipping u-boot. no mkimage script found"
-    fi
+  if [ -f "${PROJECT_DIR}/${PROJECT}/devices/${DEVICE}/bootloader/mkimage" ]; then
+    . "${PROJECT_DIR}/${PROJECT}/devices/${DEVICE}/bootloader/mkimage"
+  elif [ -f "${PROJECT_DIR}/${PROJECT}/bootloader/mkimage" ]; then
+    . "${PROJECT_DIR}/${PROJECT}/bootloader/mkimage"
+  else
+    echo "image: skipping u-boot. no mkimage script found"
+  fi
 
-    echo "image: copying files to part1..."
-    mcopy $TARGET_IMG/$IMAGE_NAME.kernel "::/$KERNEL_NAME"
-    mcopy $TARGET_IMG/$IMAGE_NAME.system ::/SYSTEM
-    mcopy $RELEASE_DIR/target/KERNEL.md5 "::/$KERNEL_NAME.md5"
-    mcopy $RELEASE_DIR/target/SYSTEM.md5 ::/SYSTEM.md5
+  echo "image: copying files to part1..."
+  mcopy "${TARGET_IMG}/${IMAGE_NAME}.kernel" "::/${KERNEL_NAME}"
+  mcopy "${TARGET_IMG}/${IMAGE_NAME}.system" ::/SYSTEM
+  mcopy "${RELEASE_DIR}/target/KERNEL.md5" "::/${KERNEL_NAME}.md5"
+  mcopy "${RELEASE_DIR}/target/SYSTEM.md5" ::/SYSTEM.md5
 
-elif [ "$BOOTLOADER" = "u-boot" ]; then
+elif [ "${BOOTLOADER}" = "u-boot" ]; then
   echo "to make an image using u-boot UBOOT_SYSTEM must be set"
   cleanup
+  exit
 fi # bootloader
 
 # extract part2 from image to format and copy files
-  echo "image: extracting part2 from image..."
-  STORAGE_PART_COUNT=$(( $STORAGE_PART_END - $STORAGE_PART_START + 1 ))
-  sync
-  dd if="$DISK" of="$LE_TMP/part2.ext4" bs=512 skip="$STORAGE_PART_START" count="$STORAGE_PART_COUNT" conv=fsync >"$SAVE_ERROR" 2>&1 || show_error
+echo "image: extracting part2 from image..."
+STORAGE_PART_COUNT=$(( ${STORAGE_PART_END} - ${STORAGE_PART_START} + 1 ))
+sync
+dd if="${DISK}" of="${LE_TMP}/part2.ext4" bs=512 skip="${STORAGE_PART_START}" count="${STORAGE_PART_COUNT}" conv=fsync >"${SAVE_ERROR}" 2>&1 || show_error
 
 # create filesystem on part2
-  echo "image: creating filesystem on part2..."
-  mke2fs -F -q -t ext4 -m 0 "$LE_TMP/part2.ext4"
-  tune2fs -L "$DISTRO_DISKLABEL" -U $UUID_STORAGE "$LE_TMP/part2.ext4" >"$SAVE_ERROR" 2>&1 || show_error
-  e2fsck -n "$LE_TMP/part2.ext4" >"$SAVE_ERROR" 2>&1 || show_error
-  sync
+echo "image: creating filesystem on part2..."
+mke2fs -F -q -t ext4 -m 0 "${LE_TMP}/part2.ext4"
+tune2fs -L "${DISTRO_DISKLABEL}" -U ${UUID_STORAGE} "${LE_TMP}/part2.ext4" >"${SAVE_ERROR}" 2>&1 || show_error
+e2fsck -n "${LE_TMP}/part2.ext4" >"${SAVE_ERROR}" 2>&1 || show_error
+sync
 
 # add resize mark
-  mkdir "$LE_TMP/part2.fs"
-  touch "$LE_TMP/part2.fs/.please_resize_me"
-  echo "image: populating filesystem on part2..."
-  populatefs -U -d "$LE_TMP/part2.fs" "$LE_TMP/part2.ext4" >"$SAVE_ERROR" 2>&1 || show_error
-  sync
-  e2fsck -n "$LE_TMP/part2.ext4" >"$SAVE_ERROR" 2>&1 || show_error
+mkdir "${LE_TMP}/part2.fs"
+touch "${LE_TMP}/part2.fs/.please_resize_me"
+echo "image: populating filesystem on part2..."
+populatefs -U -d "${LE_TMP}/part2.fs" "${LE_TMP}/part2.ext4" >"${SAVE_ERROR}" 2>&1 || show_error
+sync
+e2fsck -n "${LE_TMP}/part2.ext4" >"${SAVE_ERROR}" 2>&1 || show_error
 
 # merge part2 back to disk image
-  echo "image: merging part2 back to image..."
-  dd if="$LE_TMP/part2.ext4" of="$DISK" bs=512 seek="$STORAGE_PART_START" conv=fsync,notrunc >"$SAVE_ERROR" 2>&1 || show_error
+echo "image: merging part2 back to image..."
+dd if="${LE_TMP}/part2.ext4" of="${DISK}" bs=512 seek="${STORAGE_PART_START}" conv=fsync,notrunc >"${SAVE_ERROR}" 2>&1 || show_error
 
 # extract part1 from image to run fsck
-  echo "image: extracting part1 from image..."
-  SYSTEM_PART_COUNT=$(( $SYSTEM_PART_END - $SYSTEM_PART_START + 1 ))
-  sync
-  dd if="$DISK" of="$LE_TMP/part1.fat" bs=512 skip="$SYSTEM_PART_START" count="$SYSTEM_PART_COUNT" conv=fsync >"$SAVE_ERROR" 2>&1 || show_error
-  echo "image: checking filesystem on part1..."
-  fsck -n $LE_TMP/part1.fat >"$SAVE_ERROR" 2>&1 || show_error
+echo "image: extracting part1 from image..."
+SYSTEM_PART_COUNT=$(( ${SYSTEM_PART_END} - ${SYSTEM_PART_START} + 1 ))
+sync
+dd if="${DISK}" of="${LE_TMP}/part1.fat" bs=512 skip="${SYSTEM_PART_START}" count="${SYSTEM_PART_COUNT}" conv=fsync >"${SAVE_ERROR}" 2>&1 || show_error
+echo "image: checking filesystem on part1..."
+fsck -n "${LE_TMP}/part1.fat" >"${SAVE_ERROR}" 2>&1 || show_error
 
 # gzip
-  echo "image: compressing..."
-  gzip < $DISK > $DISK.gz
+echo "image: compressing..."
+gzip < "${DISK}" > "${DISK}".gz
 
 # cleanup
-  cleanup
+cleanup
+exit
