@@ -3,17 +3,15 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (C) 2011-present Alex@ELEC (http://alexelec.in.ua)
 
-XMLTV_DIR="/storage/ttv-xmltv"
-
 ################################### --MAIN-- #####################################
 
 if [ $# -lt 1 ]; then
   . /etc/profile
 
   [ -x /usr/bin/ttv-xmltv ] && /usr/bin/ttv-xmltv > /dev/null 2>&1
-  XMLTV_NAME=`ls /storage/ttv-xmltv 2>/dev/null`
-  [ -z "$XMLTV_NAME" ] && exit 1
-  zcat "$XMLTV_DIR/$XMLTV_NAME"
+  XMLTV_FILE=`ls /storage/ttv-xmltv/*-ttvxmltv.xml.gz 2>/dev/null`
+  [ ! -e "$XMLTV_FILE" ] && exit 1
+  zcat "$XMLTV_FILE"
   exit 0
 fi
 
