@@ -234,8 +234,9 @@ ace_run () {
 
   rm -f $TMP_LIST
 
-  # get logos
+  # get logos & xmltv
   [ -x /usr/bin/ttv-logo -a "$ARG_LOGO" != "nologo" ] && /usr/bin/ttv-logo > /dev/null 2>&1
+  [ ! -f "/storage/.config/acestream/ttv-xmltv.none" -a -x /usr/bin/ttv-xmltv ] && /usr/bin/ttv-xmltv > /dev/null 2>&1
 
   for fpart in $(ls $PART_DIR); do
     build_m3u "$PART_DIR/$fpart" &
