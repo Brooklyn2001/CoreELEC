@@ -16,7 +16,7 @@
 			"use_category_not_genre": false,
 			"name": "XMLTV: torrent-tv.ru grabber",
 			"type": "Internal",
-			"enabled": true,
+			"enabled": false,
 			"priority": 3
 		},
 		"/storage/.config/tvheadend/bin/tv_grab_sample": {
