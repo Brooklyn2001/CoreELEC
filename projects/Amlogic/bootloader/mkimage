@@ -1,8 +1,8 @@
 #!/bin/bash
-################################################################################
-#      This file is part of Alex@ELEC - http://www.alexelec.in.ua
-#      Copyright (C) 2011-present Alexandr Zuyev (alex@alexelec.in.ua)
-################################################################################
+
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (C) 2017-present Team LibreELEC (https://libreelec.tv)
+# Copyright (C) 2011-present Alex@ELEC (http://alexelec.in.ua)
 
 # compile and copy amlogic autoscript files to part1
 mcopy $RELEASE_DIR/3rdparty/bootloader/*autoscript :: 2>&1 > /dev/null || true
@@ -31,7 +31,11 @@ if [ -f "$RELEASE_DIR/3rdparty/bootloader/u-boot" ]; then
 fi
 
 if [ -f "$RELEASE_DIR/3rdparty/bootloader/boot.ini" ]; then
-  mcopy $RELEASE_DIR/3rdparty/bootloader/boot.ini ::
+  cp -p "$RELEASE_DIR/3rdparty/bootloader/boot.ini" "$LE_TMP/boot.ini"
+  sed -e "s/@BOOT_UUID@/$UUID_SYSTEM/" \
+      -e "s/@DISK_UUID@/$UUID_STORAGE/" \
+      -i "$LE_TMP/boot.ini"
+  mcopy "$LE_TMP/boot.ini" ::
 fi
 
 if [ -f "$RELEASE_DIR/3rdparty/bootloader/config.ini" ]; then

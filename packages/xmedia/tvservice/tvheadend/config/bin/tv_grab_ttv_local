@@ -1,0 +1,42 @@
+#!/bin/sh
+
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (C) 2011-present Alex@ELEC (http://alexelec.in.ua)
+
+################################### --MAIN-- #####################################
+
+if [ $# -lt 1 ]; then
+  . /etc/profile
+
+  [ -x /usr/bin/ttv-xmltv ] && /usr/bin/ttv-xmltv > /dev/null 2>&1
+  XMLTV_FILE=`ls /storage/ttv-xmltv/*-ttvxmltv.xml.gz 2>/dev/null`
+  [ ! -e "$XMLTV_FILE" ] && exit 1
+  zcat "$XMLTV_FILE"
+  exit 0
+fi
+
+dflag=
+vflag=
+cflag=
+
+for a in "$@"
+do
+  [ "$a" = "-d" -o "$a" = "--description"  ] && dflag=1
+  [ "$a" = "-v" -o "$a" = "--version"      ] && vflag=1
+  [ "$a" = "-c" -o "$a" = "--capabilities" ] && cflag=1
+done
+
+if [ -n "$dflag" ]
+then
+  echo "TTV-API local grabber"
+fi
+
+if [ -n "$vflag" ]
+then
+  echo "1.0"
+fi
+
+if [ -n "$cflag" ]
+then
+  echo "baseline"
+fi

@@ -4,13 +4,13 @@
 # Copyright (C) 2011-present Alex@ELEC (http://alexelec.in.ua)
 
 PKG_NAME="pvr.hts"
-PKG_VERSION="b13a5707a53bba018eb4f78f4da063d9377975ef"
-PKG_SHA256="e115ae03d698c922844ed7f02b6908a50d5ea5357147aeafcd899c72c039f305"
+PKG_VERSION="f4ea60f944d0cfb8b73c0f9dc2181e54d3c367bf"
+PKG_SHA256="751cbd3d2f7938a675ab65b63fb16ba4379f34cecaa1adff7dc1c0a412d7e168"
 PKG_REV="2"
 PKG_ARCH="any"
 PKG_LICENSE="GPL"
-PKG_SITE="http://www.kodi.tv"
-PKG_URL="https://github.com/kodi-pvr/pvr.hts/archive/$PKG_VERSION.tar.gz"
+PKG_SITE="https://github.com/kodi-pvr/pvr.hts"
+PKG_URL="$PKG_SITE/archive/$PKG_VERSION.tar.gz"
 PKG_DEPENDS_TARGET="toolchain kodi-platform"
 PKG_SECTION=""
 PKG_SHORTDESC="pvr.hts"

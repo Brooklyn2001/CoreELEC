@@ -15,6 +15,7 @@ PKG_TOOLCHAIN="manual"
 
 pre_make_target(){
   cp $ROOT/private/$PKG_NAME/ttv-logo.src $PKG_BUILD 2>/dev/null || true
+  cp $ROOT/private/$PKG_NAME/ttv-xmltv.src $PKG_BUILD 2>/dev/null || true
 }
 
 make_target() {
@@ -22,6 +23,7 @@ make_target() {
   CC=$CC CFLAGS=$CFLAGS ./shc -v -r -B -f ttvget-direct.src
   CC=$CC CFLAGS=$CFLAGS ./shc -v -r -B -f ttvstream.src
   [ -f ttv-logo.src ] && CC=$CC CFLAGS=$CFLAGS ./shc -v -r -B -f ttv-logo.src || true
+  [ -f ttv-xmltv.src ] && CC=$CC CFLAGS=$CFLAGS ./shc -v -r -B -f ttv-xmltv.src || true
 }
 
 makeinstall_target() {
@@ -30,6 +32,7 @@ makeinstall_target() {
     cp ttvget-direct.src.x $INSTALL/usr/bin/ttvget-direct
     cp ttvstream.src.x $INSTALL/usr/bin/ttvstream
     cp ttv-logo.src.x $INSTALL/usr/bin/ttv-logo 2>/dev/null || true
+    cp ttv-xmltv.src.x $INSTALL/usr/bin/ttv-xmltv 2>/dev/null || true
   mkdir -p $INSTALL/usr/config/acestream
     cp $PKG_DIR/config/* $INSTALL/usr/config/acestream
 }
