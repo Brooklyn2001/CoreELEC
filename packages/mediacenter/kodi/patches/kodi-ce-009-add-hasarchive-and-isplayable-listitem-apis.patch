@@ -202,8 +202,8 @@ index 501d3e2821..37a0087faa 100644
 --- a/xbmc/interfaces/json-rpc/schema/version.txt
 +++ b/xbmc/interfaces/json-rpc/schema/version.txt
 @@ -1 +1 @@
--JSONRPC_VERSION 9.7.2
-+JSONRPC_VERSION 9.8.0
+-JSONRPC_VERSION 10.0.0
++JSONRPC_VERSION 10.1.0
 diff --git a/xbmc/pvr/PVRGUIInfo.cpp b/xbmc/pvr/PVRGUIInfo.cpp
 index 708f943eaf..ebe31011b2 100644
 --- a/xbmc/pvr/PVRGUIInfo.cpp
