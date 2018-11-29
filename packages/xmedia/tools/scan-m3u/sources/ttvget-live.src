@@ -242,7 +242,7 @@ ace_run () {
   # get logos & xmltv
   [ -x /usr/bin/ttv-logo -a "$ARG_LOGO" != "nologo" ] && /usr/bin/ttv-logo > /dev/null 2>&1
   [ -f "$ACE_DIR/ttv-xmltv-epg.conf" ] && . $ACE_DIR/ttv-xmltv-epg.conf
-  [ -x /usr/bin/ttv-xmltv -a "$ENABLE_EPG" != "no" ] && /usr/bin/ttv-xmltv > /dev/null 2>&1
+  [ -x /usr/bin/ttv-xmltv -a "$ENABLE_EPG" == "yes" ] && /usr/bin/ttv-xmltv > /dev/null 2>&1
 
   for fpart in $(ls $PART_DIR); do
     build_m3u "$PART_DIR/$fpart" &
