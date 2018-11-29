@@ -60,7 +60,6 @@ cat $INFILE |
       CH_CAT=`echo $LINE | awk -F\\# '{print $1}' | sed 's/^[ \t]*//; s/[ \t]*$//'`
       CH_NAME=`echo $LINE | awk -F\\# '{print $2}' | sed 's/^[ \t]*//; s/[ \t]*$//'`
       CH_PATH=`echo $LINE | awk -F\\# '{print $3}' | sed 's/^[ \t]*//; s/[ \t]*$//'`
-      CH_CID=`echo $LINE | awk -F\\# '{print $4}' | sed 's/^[ \t]*//; s/[ \t]*$//'`
       CH_LOGO=`grep -m 1 "^$CH_NAME #" $LOGO_LIST | awk -F\\# '{print $2}' | sed 's/^[ \t]*//; s/[ \t]*$//'`
 
       echo "#EXTINF:-1 group-title=\"$CH_CAT\" tvg-logo=\"$CH_LOGO\",$CH_NAME" >> $INFILE.ace
@@ -111,14 +110,14 @@ ace_run () {
 
   case "$TRANSLATE" in
     Trash-TTV)
-      /usr/bin/jq -r '.|= sort_by(.cat,.name)|.[]|select(.source=="ttv.json")|select(.name!=null)|select(.cat!=null) | .cat + " # " + .name + " # " + .fname + " # " + .cid' $JSON_FILE > $TMP_LIST
+      /usr/bin/jq -r '.|= sort_by(.cat,.name)|.[]|select(.source=="ttv.json")|select(.name!=null)|select(.cat!=null) | .cat + " # " + .name + " # " + .fname' $JSON_FILE > $TMP_LIST
     ;;
     Trash-Ace)
-      /usr/bin/jq -r '.|= sort_by(.cat,.name)|.[]|select(.source=="as.json")|select(.provkey=="ace")|select(.name!=null)|select(.cat!=null) | .cat + " # " + .name + " # " + .fname + " # " + .cid' $JSON_FILE > $TMP_LIST
+      /usr/bin/jq -r '.|= sort_by(.cat,.name)|.[]|select(.source=="as.json")|select(.provkey=="ace")|select(.name!=null)|select(.cat!=null) | .cat + " # " + .name + " # " + .fname' $JSON_FILE > $TMP_LIST
     ;;
     Trash-All)
-      /usr/bin/jq -r '.|= sort_by(.cat,.name)|.[]|select(.source=="ttv.json")|select(.name!=null)|select(.cat!=null) | .cat + " # " + .name + " # " + .fname + " # " + .cid' $JSON_FILE > $TMP_LIST
-      /usr/bin/jq -r '.|= sort_by(.cat,.name)|.[]|select(.source=="as.json")|select(.provkey=="ace")|select(.name!=null)|select(.cat!=null) | .cat + " # " + .name + " # " + .fname + " # " + .cid' $JSON_FILE >> $TMP_LIST
+      /usr/bin/jq -r '.|= sort_by(.cat,.name)|.[]|select(.source=="ttv.json")|select(.name!=null)|select(.cat!=null) | .cat + " # " + .name + " # " + .fname' $JSON_FILE > $TMP_LIST
+      /usr/bin/jq -r '.|= sort_by(.cat,.name)|.[]|select(.source=="as.json")|select(.provkey=="ace")|select(.name!=null)|select(.cat!=null) | .cat + " # " + .name + " # " + .fname' $JSON_FILE >> $TMP_LIST
     ;;
   esac
 
@@ -242,7 +241,7 @@ ace_run () {
   # get logos & xmltv
   [ -x /usr/bin/ttv-logo -a "$ARG_LOGO" != "nologo" ] && /usr/bin/ttv-logo > /dev/null 2>&1
   [ -f "$ACE_DIR/ttv-xmltv-epg.conf" ] && . $ACE_DIR/ttv-xmltv-epg.conf
-  [ -x /usr/bin/ttv-xmltv -a "$ENABLE_EPG" == "yes" ] && /usr/bin/ttv-xmltv > /dev/null 2>&1
+  [ -x /usr/bin/ttv-xmltv -a "$ENABLE_EPG" != "no" ] && /usr/bin/ttv-xmltv > /dev/null 2>&1
 
   for fpart in $(ls $PART_DIR); do
     build_m3u "$PART_DIR/$fpart" &
