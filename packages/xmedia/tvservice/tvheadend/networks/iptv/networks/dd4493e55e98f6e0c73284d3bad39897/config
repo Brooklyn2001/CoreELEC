@@ -5,7 +5,7 @@
 	"ssl_peer_verify": false,
 	"tsid_zero": false,
 	"remove_args": "ticket",
-	"ignore_path": 9,
+	"ignore_path": 2,
 	"scan_create": false,
 	"service_sid": 1,
 	"priority": 1,
