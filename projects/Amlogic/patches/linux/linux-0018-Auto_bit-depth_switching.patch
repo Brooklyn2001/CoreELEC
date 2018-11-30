@@ -1,30 +1,27 @@
-From cc4569afc5ecd893d317f4769b9fac43e0a386aa Mon Sep 17 00:00:00 2001
-From: Graham Horner <graham@hornercs.co.uk>
-Date: Fri, 7 Sep 2018 16:17:56 +0100
-Subject: [PATCH 01/17] Auto bit-depth switching, improved messaging for video
- and other video tweaks [experimental]
-
----
- drivers/amlogic/amports/video.c               | 216 ++++++++++++++++--
- drivers/amlogic/display/osd/osd_fb.c          |   2 +-
- drivers/amlogic/display/vout/tv_vout.h        |   1 +
- drivers/amlogic/display/vout/vout_serve.c     |   2 +-
- .../hdmi/hdmi_common/hdmi_parameters.c        |   5 +-
- .../amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c    |  16 +-
- .../amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c    | 142 +++++++++---
- .../amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c   |   5 +
- .../amlogic/hdmi/hdmi_tx_20/hw/hdmi_tx_hw.c   |  26 +--
- drivers/amlogic/hdmi/hdmi_tx_20/hw/hw_clk.c   |   9 +-
- 10 files changed, 346 insertions(+), 78 deletions(-)
- mode change 100644 => 100755 drivers/amlogic/amports/video.c
- mode change 100644 => 100755 drivers/amlogic/hdmi/hdmi_common/hdmi_parameters.c
-
-diff --git a/drivers/amlogic/amports/video.c b/drivers/amlogic/amports/video.c
-old mode 100644
-new mode 100755
-index eefb3766b03..e882ff5a3d8
---- a/drivers/amlogic/amports/video.c
-+++ b/drivers/amlogic/amports/video.c
+diff -Naurp linux/drivers/amlogic/amports/vh265.c linux-patch/drivers/amlogic/amports/vh265.c
+--- linux/drivers/amlogic/amports/vh265.c	2018-11-30 09:45:44.000000000 +0200
++++ linux-patch/drivers/amlogic/amports/vh265.c	2018-11-30 09:51:02.000000000 +0200
+@@ -8349,7 +8349,7 @@ static int amvdec_h265_probe(struct plat
+ 
+ 	if ((get_cpu_type() >= MESON_CPU_MAJOR_ID_GXTVBB) &&
+ 		(parser_sei_enable & 0x100) == 0)
+-		parser_sei_enable = 1;
++		parser_sei_enable = 7;
+ 	hevc->m_ins_flag = 0;
+ 	hevc->init_flag = 0;
+ 	hevc->uninit_list = 0;
+@@ -8561,7 +8561,7 @@ static int ammvdec_h265_probe(struct pla
+ #endif
+ 	if ((get_cpu_type() >= MESON_CPU_MAJOR_ID_GXTVBB) &&
+ 		(parser_sei_enable & 0x100) == 0)
+-		parser_sei_enable = 1;
++		parser_sei_enable = 7;
+ 	hevc->m_ins_flag = 1;
+ 	hevc->init_flag = 0;
+ 	hevc->uninit_list = 0;
+diff -Naurp linux/drivers/amlogic/amports/video.c linux-patch/drivers/amlogic/amports/video.c
+--- linux/drivers/amlogic/amports/video.c	2018-11-30 09:45:44.000000000 +0200
++++ linux-patch/drivers/amlogic/amports/video.c	2018-11-30 09:51:02.000000000 +0200
 @@ -49,7 +49,7 @@
  #include <linux/dma-mapping.h>
  #include <linux/dma-contiguous.h>
@@ -34,7 +31,17 @@ index eefb3766b03..e882ff5a3d8
  
  
  #include "amports_priv.h"
-@@ -3736,6 +3736,76 @@ static int dolby_vision_need_wait(void)
+@@ -697,6 +697,9 @@ static u32 ori2_end_y_lines;
+ /* wide settings */
+ static u32 wide_setting = 1;
+ 
++/* auto colour depth switching: 0 = on, 1 = off */
++static u32 disable_cdsw = 0;
++
+ /* black out policy */
+ #if defined(CONFIG_JPEGLOGO)
+ static u32 blackout;
+@@ -3740,6 +3743,76 @@ static int dolby_vision_need_wait(void)
  		return 1;
  	return 0;
  }
@@ -111,21 +118,21 @@ index eefb3766b03..e882ff5a3d8
  
  #ifdef FIQ_VSYNC
  void vsync_fisr(void)
-@@ -3761,6 +3831,7 @@ static irqreturn_t vsync_isr(int irq, void *dev_id)
+@@ -3765,6 +3838,7 @@ static irqreturn_t vsync_isr(int irq, vo
  #endif
  	struct vframe_s *toggle_vf = NULL;
  	int video1_off_req = 0;
-+	struct hdmitx_dev *hdmitx_device;
++	struct hdmitx_dev *hdev;
  
  	if (debug_flag & DEBUG_FLAG_VSYNC_DONONE)
  		return IRQ_HANDLED;
-@@ -3801,12 +3872,52 @@ static irqreturn_t vsync_isr(int irq, void *dev_id)
+@@ -3805,13 +3879,56 @@ static irqreturn_t vsync_isr(int irq, vo
  #endif
  
  	vf = video_vf_peek();
-+   	hdmitx_device = get_hdmitx_device();
++   	hdev = get_hdmitx_device();
 +	enum hdmi_color_depth cur_cd;
-+	cur_cd = hdmitx_device->para->cd;
++	cur_cd = hdev->para->cd;
  	if ((vf) && ((vf->type & VIDTYPE_NO_VIDEO_ENABLE) == 0)) {
 +		int bitdepthY;
 +		enum hdmi_color_depth new_cd;
@@ -141,14 +148,14 @@ index eefb3766b03..e882ff5a3d8
 +			default:
 +				new_cd = COLORDEPTH_24B;
 +		}
-+		if (new_cd != cur_cd){
-+			hdmitx_device->para->cd = new_cd;
-+			pr_info(" Colourdepth set from stream as %dB in para 0x%08x (%s)\n",(int) hdmitx_device->para->cd * 6, &hdmitx_device->para, hdmitx_device->para->name);
-+			pr_info(" Colourdepth in stream changed to %d\n", hdmitx_device->para->cd * 2);
-+			if (hdmitx_device->cur_video_param != NULL){
-+				hdmitx_device->cur_video_param->color_depth = new_cd;
-+				pr_info(" Colourdepth set from stream as %d in cur_param 0x%08x (VIC: %d)\n", hdmitx_device->cur_video_param->color_depth,
-+						&hdmitx_device->cur_video_param, hdmitx_device->cur_video_param->VIC);
++		if (new_cd != cur_cd && disable_cdsw != 1){
++			video_property_changed = true;
++			hdev->para->cd = new_cd;
++			pr_info(" Colourdepth changed in stream to %dB in para 0x%08x (%s)\n",(int) hdev->para->cd * 6, hdev->para, hdev->para->name);
++			if (hdev->cur_video_param != NULL){
++				hdev->cur_video_param->color_depth = new_cd;
++				pr_info(" Colourdepth set from stream as %d in cur_param 0x%08x (VIC: %d)\n", hdev->cur_video_param->color_depth,
++						hdev->cur_video_param, hdev->cur_video_param->VIC);
 +			}
 +		}
  		if ((old_vmode != new_vmode) || (debug_flag == 8)) {
@@ -157,23 +164,27 @@ index eefb3766b03..e882ff5a3d8
 -			pr_info("detect vout mode change!!!!!!!!!!!!\n");
 +			pr_info(" detect vout mode change! was %d now %d\n",old_vmode,new_vmode);
  			old_vmode = new_vmode;
+ 		}
++		if (video_property_changed)
 +			dump_params(vf);
-+		}
++
 +	} else if (!vf && cur_cd != COLORDEPTH_24B) {
 +		struct vframe_provider_s *vfp = vf_get_provider(RECEIVER_NAME);
 +		if (!vfp){
 +			pr_info(" Frame provider: none\n");
-+			hdmitx_device->para->cd = COLORDEPTH_24B; // assume 8-bit if not using hw accel
-+			pr_info(" Colourdepth reset to %dB in para 0x%08x (%s)\n",(int) hdmitx_device->para->cd * 6, &hdmitx_device->para, hdmitx_device->para->name);
-+			if (hdmitx_device->cur_video_param != NULL){
-+				hdmitx_device->cur_video_param->color_depth = COLORDEPTH_24B;
-+				pr_info(" Colourdepth reset from stream as %d in cur_param 0x%08x (VIC: %d)\n", hdmitx_device->cur_video_param->color_depth,
-+						&hdmitx_device->cur_video_param, hdmitx_device->cur_video_param->VIC);
++			hdev->para->cd = COLORDEPTH_24B; // assume 8-bit if not using hw accel
++			pr_info(" Colourdepth reset to %dB in para 0x%08x (%s)\n",(int) hdev->para->cd * 6, hdev->para, hdev->para->name);
++			if (hdev->cur_video_param != NULL){
++				hdev->cur_video_param->color_depth = COLORDEPTH_24B;
++				pr_info(" Colourdepth reset from stream as %d in cur_param 0x%08x (VIC: %d)\n", hdev->cur_video_param->color_depth,
++						hdev->cur_video_param, hdev->cur_video_param->VIC);
 +			}
- 		}
++			video_property_changed = true;
++		}
  	}
  #ifdef CONFIG_AM_VIDEO_LOG
-@@ -3898,7 +4009,8 @@ static irqreturn_t vsync_isr(int irq, void *dev_id)
+ 	toggle_cnt = 0;
+@@ -3902,7 +4019,8 @@ static irqreturn_t vsync_isr(int irq, vo
  		u32 system_time = timestamp_pcrscr_get();
  		video_notify_flag |= VIDEO_NOTIFY_TRICK_WAIT;
  		atomic_set(&trickmode_framedone, 1);
@@ -183,7 +194,7 @@ index eefb3766b03..e882ff5a3d8
  		if ((diff - omx_pts_interval_upper) > 0
  			|| (diff - omx_pts_interval_lower) < 0) {
  			timestamp_pcrscr_enable(1);
-@@ -6534,15 +6646,15 @@ static u32 yuv2rgb(u32 yuv)
+@@ -6639,15 +6757,15 @@ static u32 yuv2rgb(u32 yuv)
  	r = r - 16;
  	if (r < 0)
  		r = 0;
@@ -202,18 +213,52 @@ index eefb3766b03..e882ff5a3d8
  
  	r = (r <= 0) ? 0 : (r >= 255) ? 255 : r;
  	g = (g <= 0) ? 0 : (g >= 255) ? 255 : g;
-@@ -6913,20 +7025,94 @@ static ssize_t frame_format_show(struct class *cla,
+@@ -6839,6 +6957,32 @@ static ssize_t video_disable_store(struc
+ 	return count;
+ }
+ 
++static ssize_t cdsw_disable_show(struct class *cla,
++				  struct class_attribute *attr, char *buf)
++{
++	return sprintf(buf, "%d\n", disable_cdsw);
++}
++
++static ssize_t cdsw_disable_store(struct class *cla,
++				   struct class_attribute *attr,
++				   const char *buf, size_t count)
++{
++	size_t r;
++	int val;
++	if (debug_flag)
++		pr_info("%s(%s)\n", __func__, buf);
++	r = sscanf(buf, "%d", &val);
++	if (r != 1)
++		return -EINVAL;
++	if ((val < 0) || (val > 1))
++		return -EINVAL;
++
++    disable_cdsw = val;
++    
++	return count;
++}
++
++
+ static ssize_t video_freerun_mode_show(struct class *cla,
+ 				       struct class_attribute *attr, char *buf)
+ {
+@@ -7018,20 +7162,93 @@ static ssize_t frame_format_show(struct
  				 struct class_attribute *attr, char *buf)
  {
  	ssize_t ret = 0;
+-
+-	if (cur_dispbuf) {
+-		if ((cur_dispbuf->type & VIDTYPE_TYPEMASK) ==
 +	struct vframe_s *dispbuf;
 +	struct vframe_provider_s *vfp;
 +	int bitdepthY;
 +	int vid_format;
 +	int vid_range;
- 
--	if (cur_dispbuf) {
--		if ((cur_dispbuf->type & VIDTYPE_TYPEMASK) ==
++
 +	if (cur_dispbuf){
 +	   dispbuf = cur_dispbuf;
 +	   ret = sprintf(buf, "cur_dispbuf\n");
@@ -279,7 +324,6 @@ index eefb3766b03..e882ff5a3d8
 +		else
 +			ret+= sprintf(buf + ret, "No colour data present\n");
 +
-+
 +		if (dispbuf->prop.bbar.bottom == 0 || dispbuf->prop.bbar.right == 0)
 +			ret+= sprintf(buf + ret, "No black bar info\n");
 +		else {
@@ -304,7 +348,7 @@ index eefb3766b03..e882ff5a3d8
  		return ret;
  	}
  
-@@ -6971,12 +7157,12 @@ static ssize_t frame_rate_show(struct class *cla, struct class_attribute *attr,
+@@ -7076,12 +7293,12 @@ static ssize_t frame_rate_show(struct cl
  	if (vinfo->sync_duration_den > 0) {
  		ret =
  		    sprintf(buf,
@@ -319,498 +363,20 @@ index eefb3766b03..e882ff5a3d8
  	}
  	if ((debugflags & DEBUG_FLAG_CALC_PTS_INC) && time > HZ * 10
  	    && vsync_rate > 0) {
-diff --git a/drivers/amlogic/display/osd/osd_fb.c b/drivers/amlogic/display/osd/osd_fb.c
-index bc204c486f5..62b1fee08be 100644
---- a/drivers/amlogic/display/osd/osd_fb.c
-+++ b/drivers/amlogic/display/osd/osd_fb.c
-@@ -1303,7 +1303,7 @@ int osd_notify_callback(struct notifier_block *block, unsigned long cmd,
- 		osd_log_err("current vinfo NULL\n");
- 		return -1;
- 	}
--	osd_log_info("current vmode=%s, cmd: 0x%lx\n",
-+	osd_log_info("osd current vmode=%s, cmd: 0x%lx\n",
- 		vinfo->name, cmd);
- 	switch (cmd) {
- #if 0
-diff --git a/drivers/amlogic/display/vout/tv_vout.h b/drivers/amlogic/display/vout/tv_vout.h
-index 2849b0cef4f..f1b7fd96209 100644
---- a/drivers/amlogic/display/vout/tv_vout.h
-+++ b/drivers/amlogic/display/vout/tv_vout.h
-@@ -147,6 +147,7 @@ static struct vmode_tvmode_tab_s mode_tab[] = {
- 	{TVMODE_4K05K_200HZ_Y420, VMODE_4K05K_200HZ_Y420},
- 	{TVMODE_4K05K_240HZ, VMODE_4K05K_240HZ},
- 	{TVMODE_4K05K_240HZ_Y420, VMODE_4K05K_240HZ_Y420},
-+	{TVMODE_NULL,VMODE_NULL},
- };
- 
- #ifdef CONFIG_AML_VOUT_FRAMERATE_AUTOMATION
-diff --git a/drivers/amlogic/display/vout/vout_serve.c b/drivers/amlogic/display/vout/vout_serve.c
-index 67a271ae0fd..6254ed99176 100644
---- a/drivers/amlogic/display/vout/vout_serve.c
-+++ b/drivers/amlogic/display/vout/vout_serve.c
-@@ -392,7 +392,7 @@ static ssize_t vout_attr_vinfo_show(struct class *class,
- 		info->sync_duration_num, info->sync_duration_den,
- 		info->screen_real_width, info->screen_real_height,
- 		info->video_clk, info->viu_color_fmt);
--	len += sprintf(buf+len, "hdr_info:\n"
-+	len += sprintf(buf+len, "hdr master display info:\n"
- 		"    present_flag          %d\n"
- 		"    features              0x%x\n"
- 		"    primaries             0x%x, 0x%x\n"
-diff --git a/drivers/amlogic/hdmi/hdmi_common/hdmi_parameters.c b/drivers/amlogic/hdmi/hdmi_common/hdmi_parameters.c
-old mode 100644
-new mode 100755
-index ef6a3e0da69..7f1dc431354
---- a/drivers/amlogic/hdmi/hdmi_common/hdmi_parameters.c
-+++ b/drivers/amlogic/hdmi/hdmi_common/hdmi_parameters.c
-@@ -1224,7 +1224,10 @@ struct hdmi_format_para *hdmi_get_fmt_name(char const *name, char const *attr)
- 		case HDMI_3840x2160p60_64x27:
- 			break;
- 		default:
--			para = &fmt_para_non_hdmi_fmt;
-+			/* fall back to something which must be supported */
-+			pr_err("Y420 mode illegal at that resolution - falling back to RGB,8bit");
-+			para->cs = COLORSPACE_RGB444;
-+			para->cd = COLORDEPTH_24B;
- 			break;
- 		}
- 	}
-diff --git a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c
-index 8cdf0ed4abe..3613c54a305 100644
---- a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c
-+++ b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c
-@@ -2424,11 +2424,11 @@ int hdmitx_edid_dump(struct hdmitx_dev *hdmitx_device, char *buffer,
- 		"Manufacture Year: %d\n", pRXCap->manufacture_year+1990);
- 
- 	pos += snprintf(buffer+pos, buffer_len-pos,
--		"Physcial size(cm): %d x %d\n",
-+		"Physical size(cm): %d x %d\n",
- 		pRXCap->physcial_weight, pRXCap->physcial_height);
- 
- 	pos += snprintf(buffer+pos, buffer_len-pos,
--		"EDID Verison: %d.%d\n",
-+		"EDID Version: %d.%d\n",
- 		pRXCap->edid_version, pRXCap->edid_revision);
- 
- 	pos += snprintf(buffer+pos, buffer_len-pos,
-@@ -2444,11 +2444,11 @@ int hdmitx_edid_dump(struct hdmitx_dev *hdmitx_device, char *buffer,
- 		hdmitx_device->hdmi_info.vsdb_phy_addr.d);
- 
- 	pos += snprintf(buffer+pos, buffer_len-pos,
--		"native Mode %x, VIC (native %d):\n",
--		pRXCap->native_Mode, pRXCap->native_VIC);
-+		"YCC support 0x%02x, VIC (native %d):\n",
-+		(pRXCap->native_Mode & 0x30) >> 4, pRXCap->native_VIC);
- 
- 	pos += snprintf(buffer+pos, buffer_len-pos,
--		"ColorDeepSupport %x\n", pRXCap->ColorDeepSupport);
-+		"ColorDeepSupport 0x%02x\n", pRXCap->ColorDeepSupport);
- 
- 	for (i = 0 ; i < pRXCap->VIC_count ; i++) {
- 		pos += snprintf(buffer+pos, buffer_len-pos, "%d ",
-@@ -2459,19 +2459,19 @@ int hdmitx_edid_dump(struct hdmitx_dev *hdmitx_device, char *buffer,
- 		"Audio {format, channel, freq, cce}\n");
- 	for (i = 0; i < pRXCap->AUD_count; i++) {
- 		pos += snprintf(buffer+pos, buffer_len-pos,
--			"{%d, %d, %x, %x}\n",
-+			"{%d, %d, 0x%02x, 0x%02x}\n",
- 			pRXCap->RxAudioCap[i].audio_format_code,
- 			pRXCap->RxAudioCap[i].channel_num_max,
- 			pRXCap->RxAudioCap[i].freq_cc,
- 			pRXCap->RxAudioCap[i].cc3);
- 	}
- 	pos += snprintf(buffer+pos, buffer_len-pos,
--		"Speaker Allocation: %x\n", pRXCap->RxSpeakerAllocation);
-+		"Speaker Allocation: 0x%02x\n", pRXCap->RxSpeakerAllocation);
- 	pos += snprintf(buffer+pos, buffer_len-pos, "Vendor: 0x%x\n",
- 		pRXCap->IEEEOUI);
- 
- 	pos += snprintf(buffer+pos, buffer_len-pos,
--		"MaxTMDSClock1 %d MHz\n", pRXCap->Max_TMDS_Clock1 * 5);
-+		"MaxTMDSClock1 %d MHz%s\n", pRXCap->Max_TMDS_Clock1 * 5, pRXCap->Max_TMDS_Clock1 == 1 ? " or less" : "");
- 
- 	if (pRXCap->HF_IEEEOUI) {
- 		pos += snprintf(buffer+pos, buffer_len-pos, "Vendor2: 0x%x\n",
-diff --git a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c
-index c99678721e0..5013e3bfd82 100644
---- a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c
-+++ b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c
-@@ -62,6 +62,7 @@
- #include <linux/amlogic/hdmi_tx/hdmi_config.h>
- #include <linux/i2c.h>
- #include "hw/tvenc_conf.h"
-+#include "hw/hdmi_tx_reg.h"
- #ifdef CONFIG_INSTABOOT
- #include <linux/amlogic/instaboot/instaboot.h>
- #endif
-@@ -516,15 +517,30 @@ static int set_disp_mode_auto(void)
- 	struct hdmi_format_para *para = NULL;
- 	unsigned char mode[32];
- 	enum hdmi_vic vic = HDMI_Unkown;
-+	enum hdmi_color_depth stream_cur_cd;
-+	char* pix_fmt[] = {"RGB","YUV422","YUV444","YUV420"};
-+	char* eotf[] = {"SDR","HDR","HDR10","HLG"};
-+	char* range[] = {"default","limited","full"};
-+	char* colour_str[] = {"default", "SMPTE-C", "bt709", "xvYCC601","xvYCC709",
-+		"sYCC601","opYCC601","opRGB","bt2020c","bt2020nc","P3 D65","P3 theater"};
-+	
- 	/* vic_ready got from IP */
- 	enum hdmi_vic vic_ready = hdev->HWOp.GetState(
- 		hdev, STAT_VIDEO_VIC, 0);
- 
- 	memset(mode, 0, sizeof(mode));
- 
-+	/* save colourdepth of the stream */
-+	stream_cur_cd = hdev->para->cd;
-+	pr_info("hdmitx: stream colourdepth was %d in para 0x%08x (%s)\n",stream_cur_cd * 2, hdev->para, hdev->para->name);
-+	if (hdev->cur_video_param != NULL){
-+		pr_info("hdmitx: display colourdepth was %d in cur_param 0x%08x (VIC: %d)\n",hdev->cur_video_param->color_depth * 2,
-+			hdev->cur_video_param,  hdev->cur_video_param->VIC);
-+	}
-+
- 	/* get current vinfo */
- 	info = hdmi_get_current_vinfo();
--	hdmi_print(IMP, VID "get current mode: %s\n",
-+	hdmi_print(IMP, VID "auto - get current mode: %s\n",
- 		info ? info->name : "null");
- 	if (info == NULL)
- 		return -1;
-@@ -558,6 +574,7 @@ static int set_disp_mode_auto(void)
- 		hdev->HWOp.CntlMisc(hdev, MISC_TMDS_PHY_OP, TMDS_PHY_DISABLE);
- 		hdev->HWOp.CntlConfig(hdev, CONF_VIDEO_BLANK_OP, VIDEO_UNBLANK);
- 		hdev->para = para = hdmi_get_fmt_name("invalid", fmt_attr);
-+		para->cd = stream_cur_cd;
- 		return -1;
- 	} else {
- 		memcpy(mode, info->name, strlen(info->name));
-@@ -580,31 +597,39 @@ static int set_disp_mode_auto(void)
- 	 * as two different modes, such Scrambler
- 	 * So if node "attr" contains 420, need append 420 to mode.
- 	 */
--	if (strstr(fmt_attr, "420")) {
--		if (!strstr(mode, "420"))
--			strncat(mode, "420", 3);
--	}
-+
- 	para = hdmi_get_fmt_name(mode, fmt_attr);
-+	/* check display caps - warn but don't force - these can only be set by sysfs */
-+	if (para->cs == COLORSPACE_YUV422 && !(hdev->RXCap.native_Mode && 0x10))
-+		   pr_warn("Colourspace is set to Y422 but display does not support it");
-+	/* only RGB is mandatory in HDMI1.4 */
-+	if (para->cs == COLORSPACE_YUV444 && !(hdev->RXCap.native_Mode && 0x20))
-+		   pr_warn("Colourspace is set to Y444 but display does not support it");
- 	hdev->para = para;
-+	pr_info("hdmitx: hdev->para now = para at 0x%08x\n",hdev->para);
-+	/* going to use cur_video_param for the bitdepth we really want */
-+	if (hdev->cur_video_param != NULL){
-+		if (strstr(fmt_attr,"bit") != NULL){
-+			hdev->cur_video_param->color_depth = para->cd;
-+		pr_info("hdmitx: display colourdepth set by attr to %d in cur_param 0x%08x (VIC: %d)\n",hdev->cur_video_param->color_depth * 2,
-+				hdev->cur_video_param,  hdev->cur_video_param->VIC);
-+		} else {
-+		pr_info("hdmitx: display colourdepth still %d in cur_param 0x%08x (VIC: %d)\n",hdev->cur_video_param->color_depth * 2,
-+				hdev->cur_video_param,  hdev->cur_video_param->VIC);
-+		}
-+		if (hdev->cur_video_param->color_depth > COLORDEPTH_24B && !(hdev->RXCap.ColorDeepSupport & 0x78))
-+			pr_warn("Bitdepth is set to %d bits but display does not support deep colour",
-+				hdev->cur_video_param->color_depth * 2);
-+	}
-+
-+	/* and recover the original bitstream bitdepth */
-+	para->cd = stream_cur_cd;
-+	pr_info("hdmitx: Stream colourdepth is %d in para 0x%08x (%s - VIC: %d)\n",stream_cur_cd * 2, hdev->para, hdev->para->name, hdev->para->vic);
- 	/* msleep(500); */
- 	vic = hdmitx_edid_get_VIC(hdev, mode, 1);
--	if (strncmp(info->name, "2160p30hz", strlen("2160p30hz")) == 0) {
--		vic = HDMI_4k2k_30;
--	} else if (strncmp(info->name, "2160p25hz",
--		strlen("2160p25hz")) == 0) {
--		vic = HDMI_4k2k_25;
--	} else if (strncmp(info->name, "2160p24hz",
--		strlen("2160p24hz")) == 0) {
--		vic = HDMI_4k2k_24;
--	} else if (strncmp(info->name, "smpte24hz",
--		strlen("smpte24hz")) == 0)
--		vic = HDMI_4k2k_smpte_24;
--	else {
--	/* nothing */
--	}
- 	if (suspend_flag == 1)
- 		vic_ready = HDMI_Unkown;
--	if ((vic_ready != HDMI_Unkown) && (vic_ready == vic)) {
-+	if ((vic_ready != HDMI_Unkown) && (vic_ready == vic) && (strstr(fmt_attr,"now") == NULL)) {
- 		hdmi_print(IMP, SYS "[%s] ALREADY init VIC = %d\n",
- 			__func__, vic);
- 		if (hdev->RXCap.IEEEOUI == 0) {
-@@ -628,13 +653,18 @@ static int set_disp_mode_auto(void)
- 	} else
- 		hdmitx_pre_display_init();
- 
-+	/* now is one-shot but attrs are sticky */
-+	if (strstr(fmt_attr,"now") != NULL){
-+		memcpy(strstr(fmt_attr,"now"), " ", 3);
-+	}
-+
- 	hdev->cur_VIC = HDMI_Unkown;
- /* if vic is HDMI_Unkown, hdmitx_set_display will disable HDMI */
- 	ret = hdmitx_set_display(hdev, vic);
--	pr_info("%s %d %d\n", info->name, info->sync_duration_num,
-+	hdmi_print(IMP, VID"vinfo: %s %d %d\n", info->name, info->sync_duration_num,
- 		info->sync_duration_den);
- 	recalc_vinfo_sync_duration(info, hdev->frac_rate_policy);
--	pr_info("%s %d %d\n", info->name, info->sync_duration_num,
-+	hdmi_print(IMP, VID"vinfo recalc: %s %d %d\n", info->name, info->sync_duration_num,
- 		info->sync_duration_den);
- 	if (ret >= 0) {
- 		hdev->HWOp.Cntl(hdev, HDMITX_AVMUTE_CNTL, AVMUTE_CLEAR);
-@@ -661,8 +691,47 @@ static int set_disp_mode_auto(void)
- 	hdmitx_set_audio(hdev, &(hdev->cur_audio_param), hdmi_ch);
- 	hdev->output_blank_flag = 1;
- 	hdev->ready = 1;
-+	/* report hdmi video status */ 
-+
-+	hdmi_print(IMP, VID "VIC: %d (%d) %s\n",
-+			(hdmitx_rd_reg(HDMITX_DWC_FC_AVIVID) > 0 ? hdmitx_rd_reg(HDMITX_DWC_FC_AVIVID) :
-+			 hdmitx_rd_reg(HDMITX_DWC_FC_VSDPAYLOAD1)), hdev->cur_VIC, hdev->para->name);
-+
-+	hdmi_print(IMP, VID "Bit depth: %d-bit, Colour range: %s, Colourspace: %s\n",
-+			(((hdmitx_rd_reg(HDMITX_DWC_TX_INVID0) & 0x6) >> 1) + 4 ) * 2,
-+			range[(hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF2) & 4) >> 2],
-+			pix_fmt[(hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF0) & 0x3)]);
-+
-+	if (((hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF1) & 0xc0) >> 6) < 0x3)
-+		hdmi_print(IMP, VID "Colorimetry: %s\n",
-+				colour_str[(hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF1) & 0xc0) >> 6]);
-+	else	
-+		hdmi_print(IMP, VID "Colorimetry: %s\n",
-+				colour_str[((hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF2) & 0x70) >> 4) + 3]);
-+
-+	if ((hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB00) & 3) == 0x02) {
-+		hdmi_print(IMP, VID "HDR data: EOTF: %s, Colour range: %s\n", eotf[(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB00) & 3)],
-+				range[((hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF3) & 4) >> 2) + 1]);
-+		if (hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB02) > 0x0) {
-+			hdmi_print(IMP, VID "Master display colours:\nPrimary one 0.%04d,0.%04d, two 0.%04d,0.%04d, three 0.%04d,0.%04d\nWhite 0.%04d,0.%04d, Luminance max/min: %d,0.%03d\n",
-+					(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB02) | (hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB03) << 8)) * 2 / 10,
-+					(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB04) | (hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB05) << 8)) * 2 / 10,
-+					(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB06) | (hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB07) << 8)) * 2 / 10,
-+					(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB08) | (hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB09) << 8)) * 2 / 10,
-+					(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB10) | (hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB11) << 8)) * 2 / 10,
-+					(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB12) | (hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB13) << 8)) * 2 / 10,
-+					(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB14) | (hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB15) << 8)) * 2 / 10,
-+					(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB16) | (hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB17) << 8)) * 2 / 10,
-+					(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB18) | (hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB19) << 8)) / 10000,
-+					(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB20) | (hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB21) << 8)));
-+			hdmi_print(IMP, VID "Max content luminance: %d, Max frame average luminance: %d\n",
-+					(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB22) | (hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB23) << 8)) / 10000,
-+					(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB24) | (hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB25) << 8)) / 10000);
-+		}
-+		else hdmi_print(IMP, VID "No master display info\n");
-+	}		
- 	return ret;
--}
-+} /* set_disp_mode_auto */
- 
- static unsigned char is_dispmode_valid_for_hdmi(void)
- {
-@@ -704,9 +773,12 @@ static ssize_t store_attr(struct device *dev,
- 	struct device_attribute *attr, const char *buf, size_t count)
- {
- 	memcpy(fmt_attr, buf, sizeof(fmt_attr));
-+	if (strstr(fmt_attr,"now"))
-+			set_disp_mode_auto();
- 	return count;
- }
- 
-+
- /*aud_mode attr*/
- static ssize_t show_aud_mode(struct device *dev,
- 	struct device_attribute *attr, char *buf)
-@@ -1179,15 +1251,21 @@ static ssize_t show_config(struct device *dev,
- 	struct hdmitx_dev *hdev = &hdmitx_device;
- 
- 	pos += snprintf(buf+pos, PAGE_SIZE, "cur_VIC: %d\n", hdev->cur_VIC);
--	if (hdev->cur_video_param)
--		pos += snprintf(buf+pos, PAGE_SIZE,
--			"cur_video_param->VIC=%d\n",
--			hdev->cur_video_param->VIC);
--	if (hdev->para) {
--		pos += snprintf(buf+pos, PAGE_SIZE, "cd = %d\n",
--			hdev->para->cd);
--		pos += snprintf(buf+pos, PAGE_SIZE, "cs = %d\n",
--			hdev->para->cs);
-+	if (hdev->para){
-+		struct hdmi_format_para *para;
-+	   	para = hdev->para;
-+
-+		pos += snprintf(buf+pos, PAGE_SIZE, "VIC: %d %s\n",
-+				hdmitx_device.cur_VIC, para->name);
-+		char* pix_fmt[] = {"RGB","YUV422","YUV444","YUV420"};
-+		char* eotf[] = {"null","DV","HDR10","SDR"};
-+		char* range[] = {"default","limited","full"};
-+		pos += snprintf(buf + pos, PAGE_SIZE, "Colour depth: %d-bit\nColourspace: %s\nColour range: %s\nEOTF: %s\nPQ colour range: %s\n",
-+				(((hdmitx_rd_reg(HDMITX_DWC_TX_INVID0) & 0x6) >> 1) + 4 ) * 2,
-+				pix_fmt[(hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF0) & 0x3)],
-+				range[(hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF2) & 0xc) >> 2],
-+				"TBC", //eotf[(hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF1) & 4)],
-+				range[((hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF3) & 0xc) >> 2) + 1]);
- 	}
- 
- 	switch (hdev->tx_aud_cfg) {
-diff --git a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c
-index 933be3229a7..cafc3e7051c 100644
---- a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c
-+++ b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c
-@@ -627,7 +627,12 @@ int hdmitx_set_display(struct hdmitx_dev *hdev, enum hdmi_vic VideoCode)
- 	}
- 
- 	param = hdmi_get_video_param(VideoCode);
-+	pr_info("hdmitx: video: params found at 0x%08x\n", param);
-+	/* recover the bitdepth set in hdmi_tx_main */
-+	if (hdev->cur_video_param != NULL)
-+		param->color_depth = hdev->cur_video_param->color_depth;
- 	hdev->cur_video_param = param;
-+	pr_info("hdmitx: video: cur_param = param at 0x%08x colourdepth %d\n", hdev->cur_video_param, hdev->cur_video_param->color_depth * 2);
- 	if (param) {
- 		param->color = param->color_prefer;
- 		if (hdmi_output_rgb || is_philips_2009(&hdev->RXCap)) {
-diff --git a/drivers/amlogic/hdmi/hdmi_tx_20/hw/hdmi_tx_hw.c b/drivers/amlogic/hdmi/hdmi_tx_20/hw/hdmi_tx_hw.c
-index 28f57973970..f61fd0da4df 100644
---- a/drivers/amlogic/hdmi/hdmi_tx_20/hw/hdmi_tx_hw.c
-+++ b/drivers/amlogic/hdmi/hdmi_tx_20/hw/hdmi_tx_hw.c
-@@ -1864,7 +1864,7 @@ static int hdmitx_set_dispmode(struct hdmitx_dev *hdev)
- 	case HDMI_4096x2160p50_256x135:
- 	case HDMI_4096x2160p60_256x135:
- 		if ((hdev->para->cs == COLORSPACE_YUV420)
--			&& (hdev->para->cd == COLORDEPTH_24B))
-+			&& (hdev->cur_video_param->color_depth == COLORDEPTH_24B))
- 			hdev->para->tmds_clk_div40 = 0;
- 		else
- 			hdev->para->tmds_clk_div40 = 1;
-@@ -1875,7 +1875,7 @@ static int hdmitx_set_dispmode(struct hdmitx_dev *hdev)
- 	case HDMI_4096x2160p60_256x135_Y420:
- 	case HDMI_3840x2160p50_64x27_Y420:
- 	case HDMI_3840x2160p60_64x27_Y420:
--		if (hdev->para->cd == COLORDEPTH_24B)
-+		if (hdev->cur_video_param->color_depth == COLORDEPTH_24B)
- 			hdev->para->tmds_clk_div40 = 0;
- 		else
- 			hdev->para->tmds_clk_div40 = 1;
-@@ -1887,7 +1887,7 @@ static int hdmitx_set_dispmode(struct hdmitx_dev *hdev)
- 	case HDMI_3840x2160p30_16x9:
- 	case HDMI_3840x2160p30_64x27:
- 		if ((hdev->para->cs == COLORSPACE_YUV422)
--			|| (hdev->para->cd == COLORDEPTH_24B))
-+			|| (hdev->cur_video_param->color_depth == COLORDEPTH_24B))
- 			hdev->para->tmds_clk_div40 = 0;
- 		else
- 			hdev->para->tmds_clk_div40 = 1;
-@@ -1899,19 +1899,6 @@ static int hdmitx_set_dispmode(struct hdmitx_dev *hdev)
- 	set_tmds_clk_div40(hdev->para->tmds_clk_div40);
- 	scdc_config(hdev);
- 
--	if (color_depth_f == 24)
--		hdev->cur_video_param->color_depth = COLORDEPTH_24B;
--	else if (color_depth_f == 30)
--		hdev->cur_video_param->color_depth = COLORDEPTH_30B;
--	else if (color_depth_f == 36)
--		hdev->cur_video_param->color_depth = COLORDEPTH_36B;
--	else if (color_depth_f == 48)
--		hdev->cur_video_param->color_depth = COLORDEPTH_48B;
--	hdmi_print(INF, SYS "set mode VIC %d (cd%d,cs%d,pm%d,vd%d,%x)\n",
--		hdev->cur_video_param->VIC, color_depth_f, COLORSPACE_f,
--		power_mode, power_off_vdac_flag, serial_reg_val);
--	if (COLORSPACE_f != 0)
--		hdev->cur_video_param->color = COLORSPACE_f;
- 	hdmitx_set_pll(hdev);
- 	/*hdmitx_set_phy(hdev);*/
- 	if (hdev->flag_3dfp)
-@@ -4495,14 +4482,17 @@ static void config_hdmi20_tx(enum hdmi_vic vic,
- 	hdmitx_set_reg_bits(HDMITX_DWC_FC_AVICONF1, 0x8, 0, 4);
- 
- 	hdmitx_set_avi_colorimetry(para);
--	if (hdev->hdr_src_feature)
-+	if (hdev->hdr_src_feature){
- 		hdev->HWOp.CntlConfig(hdev, CONF_AVI_BT2020, SET_AVI_BT2020);
-+		pr_info("hdmitx: hw set BT2020");
-+	}
- 
- 	data32  = 0;
- 	data32 |= (((0 == COLORRANGE_FUL) ? 1 : 0) << 2);
- 	data32 |= (0 << 0);
- 	hdmitx_wr_reg(HDMITX_DWC_FC_AVICONF3,   data32);
- 
-+	hdmitx_set_reg_bits(HDMITX_DWC_FC_AVICONF2, hdev->para->cr + 1, 2, 2);
- 	hdmitx_wr_reg(HDMITX_DWC_FC_AVIVID, (para->vic & HDMITX_VIC_MASK));
- 
- 	/* write Audio Infoframe packet configuration */
-@@ -4924,7 +4914,7 @@ static void hdmitx_set_hw(struct hdmitx_dev *hdev)
- 
- 	pr_info("%s[%d] set VIC = %d\n", __func__, __LINE__, para->vic);
- 	config_hdmi20_tx(vic, hdev,
--			hdev->para->cd,
-+			hdev->cur_video_param->color_depth,
- 			TX_INPUT_COLOR_FORMAT,
- 			hdev->para->cs);
- 	return;
-diff --git a/drivers/amlogic/hdmi/hdmi_tx_20/hw/hw_clk.c b/drivers/amlogic/hdmi/hdmi_tx_20/hw/hw_clk.c
-index e3a0bf98adf..5f033197755 100644
---- a/drivers/amlogic/hdmi/hdmi_tx_20/hw/hw_clk.c
-+++ b/drivers/amlogic/hdmi/hdmi_tx_20/hw/hw_clk.c
-@@ -849,10 +849,15 @@ void hdmitx_set_clk(struct hdmitx_dev *hdev)
- {
- 	enum hdmi_vic vic = hdev->cur_VIC;
- 	struct hdmi_format_para *para = NULL;
-+	enum hdmi_color_depth cd;
-+	if (hdev->cur_video_param->color_depth && hdev->cur_video_param->color_depth > 0)
-+		cd = hdev->cur_video_param->color_depth;
-+	else
-+		cd = hdev->para->cd;
- 
- 	frac_rate = hdev->frac_rate_policy;
- 	pr_info("hdmitx: set clk: VIC = %d  cd = %d  frac_rate = %d\n", vic,
--		hdev->para->cd, frac_rate);
-+		cd, frac_rate);
- 	para = hdmi_get_fmt_paras(vic);
- 	if (para && (para->name) && likely_frac_rate_mode(para->name))
- 		;
-@@ -866,7 +871,7 @@ void hdmitx_set_clk(struct hdmitx_dev *hdev)
- 		return;
- 	}
- 	if (hdev->para->cs != COLORSPACE_YUV422)
--		hdmitx_set_clk_(vic, hdev->para->cd);
-+		hdmitx_set_clk_(vic, cd);
- 	else
- 		hdmitx_set_clk_(vic, COLORDEPTH_24B);
- }
-
-From 42fdb2c34a5a51318af676c586a81d2dae28c85e Mon Sep 17 00:00:00 2001
-From: Graham Horner <graham@hornercs.co.uk>
-Date: Mon, 10 Sep 2018 13:17:24 +0100
-Subject: [PATCH 02/17] Fix for limited range streams signalled as full-range
-
----
- drivers/amlogic/amports/video.c                |  1 -
- drivers/amlogic/amvecm/amcsc.c                 | 18 ++++++++----------
- .../amlogic/hdmi/hdmi_common/hdmi_parameters.c |  2 +-
- drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c |  8 ++++----
- 4 files changed, 13 insertions(+), 16 deletions(-)
-
-diff --git a/drivers/amlogic/amports/video.c b/drivers/amlogic/amports/video.c
-index e882ff5a3d8..ddbd722d58d 100755
---- a/drivers/amlogic/amports/video.c
-+++ b/drivers/amlogic/amports/video.c
-@@ -7091,7 +7091,6 @@ static ssize_t frame_format_show(struct class *cla,
- 		else
- 			ret+= sprintf(buf + ret, "No colour data present\n");
- 
--
- 		if (dispbuf->prop.bbar.bottom == 0 || dispbuf->prop.bbar.right == 0)
- 			ret+= sprintf(buf + ret, "No black bar info\n");
- 		else {
-diff --git a/drivers/amlogic/amvecm/amcsc.c b/drivers/amlogic/amvecm/amcsc.c
-index 5b375914e20..ed701779727 100644
---- a/drivers/amlogic/amvecm/amcsc.c
-+++ b/drivers/amlogic/amvecm/amcsc.c
+@@ -7513,6 +7730,10 @@ static struct class_attribute amvideo_cl
+ 	       S_IRUGO | S_IWUSR | S_IWGRP,
+ 	       video_disable_show,
+ 	       video_disable_store),
++	__ATTR(disable_cdsw,
++	       S_IRUGO | S_IWUSR | S_IWGRP,
++	       cdsw_disable_show,
++	       cdsw_disable_store),
+ 	__ATTR(zoom,
+ 	       S_IRUGO | S_IWUSR | S_IWGRP,
+ 	       video_zoom_show,
+diff -Naurp linux/drivers/amlogic/amvecm/amcsc.c linux-patch/drivers/amlogic/amvecm/amcsc.c
+--- linux/drivers/amlogic/amvecm/amcsc.c	2018-11-30 09:45:45.000000000 +0200
++++ linux-patch/drivers/amlogic/amvecm/amcsc.c	2018-11-30 09:51:02.000000000 +0200
 @@ -3560,14 +3560,18 @@ static void bypass_hdr_process(
  				CSC_OFF);
  
@@ -855,11 +421,82 @@ index 5b375914e20..ed701779727 100644
  			}
  		}
  
-diff --git a/drivers/amlogic/hdmi/hdmi_common/hdmi_parameters.c b/drivers/amlogic/hdmi/hdmi_common/hdmi_parameters.c
-index 7f1dc431354..de5ede2868d 100755
---- a/drivers/amlogic/hdmi/hdmi_common/hdmi_parameters.c
-+++ b/drivers/amlogic/hdmi/hdmi_common/hdmi_parameters.c
-@@ -1168,7 +1168,7 @@ static void hdmi_parse_attr(struct hdmi_format_para *para, char const *name)
+diff -Naurp linux/drivers/amlogic/display/osd/osd_fb.c linux-patch/drivers/amlogic/display/osd/osd_fb.c
+--- linux/drivers/amlogic/display/osd/osd_fb.c	2018-06-27 06:13:58.000000000 +0300
++++ linux-patch/drivers/amlogic/display/osd/osd_fb.c	2018-11-30 09:51:02.000000000 +0200
+@@ -1303,7 +1303,7 @@ int osd_notify_callback(struct notifier_
+ 		osd_log_err("current vinfo NULL\n");
+ 		return -1;
+ 	}
+-	osd_log_info("current vmode=%s, cmd: 0x%lx\n",
++	osd_log_info("osd current vmode=%s, cmd: 0x%lx\n",
+ 		vinfo->name, cmd);
+ 	switch (cmd) {
+ #if 0
+diff -Naurp linux/drivers/amlogic/display/vout/tv_vout.h linux-patch/drivers/amlogic/display/vout/tv_vout.h
+--- linux/drivers/amlogic/display/vout/tv_vout.h	2018-06-27 06:13:58.000000000 +0300
++++ linux-patch/drivers/amlogic/display/vout/tv_vout.h	2018-11-30 09:51:02.000000000 +0200
+@@ -147,6 +147,7 @@ static struct vmode_tvmode_tab_s mode_ta
+ 	{TVMODE_4K05K_200HZ_Y420, VMODE_4K05K_200HZ_Y420},
+ 	{TVMODE_4K05K_240HZ, VMODE_4K05K_240HZ},
+ 	{TVMODE_4K05K_240HZ_Y420, VMODE_4K05K_240HZ_Y420},
++	{TVMODE_NULL,VMODE_NULL},
+ };
+ 
+ #ifdef CONFIG_AML_VOUT_FRAMERATE_AUTOMATION
+diff -Naurp linux/drivers/amlogic/display/vout/vout_serve.c linux-patch/drivers/amlogic/display/vout/vout_serve.c
+--- linux/drivers/amlogic/display/vout/vout_serve.c	2018-11-30 09:45:44.000000000 +0200
++++ linux-patch/drivers/amlogic/display/vout/vout_serve.c	2018-11-30 09:51:02.000000000 +0200
+@@ -392,7 +392,18 @@ static ssize_t vout_attr_vinfo_show(stru
+ 		info->sync_duration_num, info->sync_duration_den,
+ 		info->screen_real_width, info->screen_real_height,
+ 		info->video_clk, info->viu_color_fmt);
+-	len += sprintf(buf+len, "hdr_info:\n"
++	len += sprintf(buf+len, "hdr info:\n"
++		"    hdr_support           0x%08x\n"
++		"    lumi_max              %d\n"
++		"    lumi_avg              %d\n"
++		"    lumi_min              %d\n"
++		"    sink_flag             %s\n\n",
++		info->hdr_info.hdr_support,
++		info->hdr_info.lumi_max,
++		info->hdr_info.lumi_avg,
++		info->hdr_info.lumi_min,
++		info->hdr_info.sink_flag ? "panel" : "hdmi out");
++	len += sprintf(buf+len, "hdr master display info:\n"
+ 		"    present_flag          %d\n"
+ 		"    features              0x%x\n"
+ 		"    primaries             0x%x, 0x%x\n"
+diff -Naurp linux/drivers/amlogic/hdmi/hdmi_common/hdmi_parameters.c linux-patch/drivers/amlogic/hdmi/hdmi_common/hdmi_parameters.c
+--- linux/drivers/amlogic/hdmi/hdmi_common/hdmi_parameters.c	2018-06-27 06:13:58.000000000 +0300
++++ linux-patch/drivers/amlogic/hdmi/hdmi_common/hdmi_parameters.c	2018-11-30 09:51:02.000000000 +0200
+@@ -880,9 +880,9 @@ static struct hdmi_format_para fmt_para_
+ 	.progress_mode = 1,
+ 	.scrambler_en = 0,
+ 	.tmds_clk_div40 = 0,
+-	.tmds_clk = 594000,
++	.tmds_clk = 297000,
+ 	.timing = {
+-		.pixel_freq = 594000,
++		.pixel_freq = 297000,
+ 		.h_freq = 112500,
+ 		.v_freq = 50000,
+ 		.vsync_polarity = 1,
+@@ -942,10 +942,10 @@ static struct hdmi_format_para fmt_para_
+ 	.progress_mode = 1,
+ 	.scrambler_en = 0,
+ 	.tmds_clk_div40 = 0,
+-	.tmds_clk = 594000,
++	.tmds_clk = 297000,
+ 	.timing = {
+-		.pixel_freq = 594000,
+-		.frac_freq = 593407,
++		.pixel_freq = 297000,
++		.frac_freq = 296703,
+ 		.h_freq = 135000,
+ 		.v_freq = 60000,
+ 		.vsync_polarity = 1,
+@@ -1168,7 +1168,7 @@ static void hdmi_parse_attr(struct hdmi_
  	}
  	/* set default value */
  	if (i == sizeof(parse_cr_) / sizeof(struct parse_cr))
@@ -868,60 +505,429 @@ index 7f1dc431354..de5ede2868d 100755
  }
  
  /*
-diff --git a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c
-index 5013e3bfd82..20467877856 100644
---- a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c
-+++ b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c
-@@ -699,13 +699,13 @@ static int set_disp_mode_auto(void)
+@@ -1224,7 +1224,9 @@ struct hdmi_format_para *hdmi_get_fmt_na
+ 		case HDMI_3840x2160p60_64x27:
+ 			break;
+ 		default:
+-			para = &fmt_para_non_hdmi_fmt;
++			/* fall back to something which is hdmi legal */
++			pr_info("YUV420 mode illegal at that resolution - setting YUV444");
++			para->cs = COLORSPACE_YUV444;
+ 			break;
+ 		}
+ 	}
+diff -Naurp linux/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c linux-patch/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c
+--- linux/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c	2018-06-27 06:13:58.000000000 +0300
++++ linux-patch/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c	2018-11-30 09:51:02.000000000 +0200
+@@ -155,6 +155,18 @@ static int Edid_find_name_block(unsigned
+ 		ret = 1;
+ 	return ret;
+ }
++static int Edid_find_range_block(unsigned char *data)
++{
++	int ret = 0;
++	int i;
++	for (i = 0; i < 3; i++) {
++		if (data[i])
++			return ret;
++	}
++	if (data[3] == 0xfd)
++		ret = 1;
++	return ret;
++}
  
- 	hdmi_print(IMP, VID "Bit depth: %d-bit, Colour range: %s, Colourspace: %s\n",
- 			(((hdmitx_rd_reg(HDMITX_DWC_TX_INVID0) & 0x6) >> 1) + 4 ) * 2,
--			range[(hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF2) & 4) >> 2],
-+			range[(hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF2) & 0xc) >> 2],
- 			pix_fmt[(hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF0) & 0x3)]);
- 
- 	if (((hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF1) & 0xc0) >> 6) < 0x3)
- 		hdmi_print(IMP, VID "Colorimetry: %s\n",
- 				colour_str[(hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF1) & 0xc0) >> 6]);
--	else	
-+	else
- 		hdmi_print(IMP, VID "Colorimetry: %s\n",
- 				colour_str[((hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF2) & 0x70) >> 4) + 3]);
- 
-@@ -1258,13 +1258,13 @@ static ssize_t show_config(struct device *dev,
- 		pos += snprintf(buf+pos, PAGE_SIZE, "VIC: %d %s\n",
- 				hdmitx_device.cur_VIC, para->name);
- 		char* pix_fmt[] = {"RGB","YUV422","YUV444","YUV420"};
--		char* eotf[] = {"null","DV","HDR10","SDR"};
-+		char* eotf[] = {"SDR","HDR","HDR10","HLG"};
- 		char* range[] = {"default","limited","full"};
- 		pos += snprintf(buf + pos, PAGE_SIZE, "Colour depth: %d-bit\nColourspace: %s\nColour range: %s\nEOTF: %s\nPQ colour range: %s\n",
- 				(((hdmitx_rd_reg(HDMITX_DWC_TX_INVID0) & 0x6) >> 1) + 4 ) * 2,
- 				pix_fmt[(hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF0) & 0x3)],
- 				range[(hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF2) & 0xc) >> 2],
--				"TBC", //eotf[(hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF1) & 4)],
-+				eotf[(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB00) & 3)],
- 				range[((hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF3) & 0xc) >> 2) + 1]);
+ static void Edid_ReceiverProductNameParse(struct rx_cap *pRxCap,
+ 	unsigned char *data)
+@@ -1402,10 +1414,14 @@ static int hdmitx_edid_block_parse(struc
+ 				pRXCap->IEEEOUI = 0x000c03;
+ 			else
+ 				goto case_hf;
+-			pRXCap->ColorDeepSupport =
+-				(unsigned long)BlockBuf[offset+5];
+-			pRXCap->Max_TMDS_Clock1 =
+-				(unsigned long)BlockBuf[offset+6];
++			if (count > 5){
++				pRXCap->ColorDeepSupport =
++					(unsigned long)BlockBuf[offset+5];
++				pRXCap->Max_TMDS_Clock1 =
++					(unsigned long)BlockBuf[offset+6];
++			}
++			else
++				pRXCap->Max_TMDS_Clock1 = 0;
+ 			if (count > 7) {
+ 				tmp = BlockBuf[offset+7];
+ 				idx = offset + 8;
+@@ -1436,7 +1452,7 @@ case_hf:
+ 			if ((BlockBuf[offset] == 0xd8) &&
+ 				(BlockBuf[offset+1] == 0x5d) &&
+ 				(BlockBuf[offset+2] == 0xc4))
+-				pRXCap->HF_IEEEOUI = 0xd85dc4;
++				pRXCap->HF_IEEEOUI = 0xc45dd8;
+ 			pRXCap->Max_TMDS_Clock2 = BlockBuf[offset+4];
+ 			pRXCap->scdc_present =
+ 				!!(BlockBuf[offset+5] & (1 << 7));
+@@ -1829,6 +1845,7 @@ int hdmitx_edid_parse(struct hdmitx_dev
+ 	unsigned char BlockCount;
+ 	unsigned char *EDID_buf;
+ 	int i, j, ret_val;
++	int maxPixelClock = 0;
+ 	int idx[4];
+ 	struct rx_cap *pRXCap = &(hdmitx_device->RXCap);
+ 	struct vinfo_s *info = NULL;
+@@ -1878,6 +1895,9 @@ int hdmitx_edid_parse(struct hdmitx_dev
+ 		if (Edid_find_name_block(&EDID_buf[idx[i]]))
+ 			Edid_ReceiverProductNameParse(&hdmitx_device->RXCap,
+ 				&EDID_buf[idx[i]+5]);
++
++		if (Edid_find_range_block(&EDID_buf[idx[i]]))
++			maxPixelClock = EDID_buf[idx[i]+9];
  	}
  
-
-From d7951008c66aac6ff72e429b7a67eb9bf8aefaa0 Mon Sep 17 00:00:00 2001
-From: Graham Horner <graham@hornercs.co.uk>
-Date: Wed, 12 Sep 2018 19:47:03 +0100
-Subject: [PATCH 03/17] Block VICs reported as valid when Max_TMDS_Clock1
- doesn't support them Fall back to 422 or 8-bit if Max_TMDS_Clock1 doesn't
- support 10/12 bit.
-
----
- .../amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c    | 33 ++++++++++++-------
- .../amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c   | 14 ++++++++
- 2 files changed, 35 insertions(+), 12 deletions(-)
-
-diff --git a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c
-index 20467877856..6bc1f5f6f41 100644
---- a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c
-+++ b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c
-@@ -1419,23 +1419,32 @@ static ssize_t show_disp_cap(struct device *dev,
+ 	Edid_ManufactureDateParse(&hdmitx_device->RXCap, &EDID_buf[16]);
+@@ -2046,6 +2066,30 @@ int hdmitx_edid_parse(struct hdmitx_dev
+ 				info->hdr_info.hdr_support);
+ 		}
+ 	}
++	/* Set maxTMDSclock1 from range block if it doesn't seem to be set right */
++	if (pRXCap->Max_TMDS_Clock1 < 15){
++		hdmi_print(IMP, EDID "Setting maxTMDSclock1 from range block\n");
++		pRXCap->Max_TMDS_Clock1 = maxPixelClock * 2;
++	}
++	/* Make sure we have a usable maxTMDSclock1 */
++	if (pRXCap->Max_TMDS_Clock1 < 15){
++		pRXCap->Max_TMDS_Clock1 = 35;
++		hdmi_print(IMP, EDID "No Valid maxTMDSclock1 Setting to 175Mhz\n");
++	}
++	/* If we have a high clock but no HF-VSDB it's probably HDMI 2, so fake a HF-VSDB */
++	if (maxPixelClock > 34 && ! pRXCap->Max_TMDS_Clock2 && ! pRXCap->HF_IEEEOUI){
++		hdmi_print(IMP, EDID "High clock, no HF-VSDB block, Is it missing?\n");
++		hdmi_print(IMP, EDID "Faking HF-VSDB block\n");
++		pRXCap->HF_IEEEOUI = 0xd85dc4;
++		pRXCap->Max_TMDS_Clock2 = maxPixelClock * 2;
++		pRXCap->scdc_present = 1;
++		pRXCap->scdc_rr_capable = 0;
++		pRXCap->lte_340mcsc_scramble = 0;
++		pRXCap->dc_30bit_420 = 0;
++		pRXCap->dc_36bit_420 = 0;
++		pRXCap->dc_48bit_420 = 0;
++	}
++
+ 	return 0;
+ 
+ }
+@@ -2424,11 +2468,11 @@ int hdmitx_edid_dump(struct hdmitx_dev *
+ 		"Manufacture Year: %d\n", pRXCap->manufacture_year+1990);
+ 
+ 	pos += snprintf(buffer+pos, buffer_len-pos,
+-		"Physcial size(cm): %d x %d\n",
++		"Physical size(cm): %d x %d\n",
+ 		pRXCap->physcial_weight, pRXCap->physcial_height);
+ 
+ 	pos += snprintf(buffer+pos, buffer_len-pos,
+-		"EDID Verison: %d.%d\n",
++		"EDID Version: %d.%d\n",
+ 		pRXCap->edid_version, pRXCap->edid_revision);
+ 
+ 	pos += snprintf(buffer+pos, buffer_len-pos,
+@@ -2444,11 +2488,13 @@ int hdmitx_edid_dump(struct hdmitx_dev *
+ 		hdmitx_device->hdmi_info.vsdb_phy_addr.d);
+ 
+ 	pos += snprintf(buffer+pos, buffer_len-pos,
+-		"native Mode %x, VIC (native %d):\n",
+-		pRXCap->native_Mode, pRXCap->native_VIC);
++		"YCC support 0x%02x, VIC (native %d):\n",
++		(pRXCap->native_Mode & 0x30) >> 4, pRXCap->native_VIC);
+ 
+ 	pos += snprintf(buffer+pos, buffer_len-pos,
+-		"ColorDeepSupport %x\n", pRXCap->ColorDeepSupport);
++		"ColorDeepSupport 0x%02x 10/12/16/Y444 %d/%d/%d/%d\n",
++		pRXCap->ColorDeepSupport, pRXCap->dc_30bit, pRXCap->dc_36bit,
++		pRXCap->dc_48bit, pRXCap->dc_y444);
+ 
+ 	for (i = 0 ; i < pRXCap->VIC_count ; i++) {
+ 		pos += snprintf(buffer+pos, buffer_len-pos, "%d ",
+@@ -2459,19 +2505,19 @@ int hdmitx_edid_dump(struct hdmitx_dev *
+ 		"Audio {format, channel, freq, cce}\n");
+ 	for (i = 0; i < pRXCap->AUD_count; i++) {
+ 		pos += snprintf(buffer+pos, buffer_len-pos,
+-			"{%d, %d, %x, %x}\n",
++			"{%d, %d, 0x%02x, 0x%02x}\n",
+ 			pRXCap->RxAudioCap[i].audio_format_code,
+ 			pRXCap->RxAudioCap[i].channel_num_max,
+ 			pRXCap->RxAudioCap[i].freq_cc,
+ 			pRXCap->RxAudioCap[i].cc3);
+ 	}
+ 	pos += snprintf(buffer+pos, buffer_len-pos,
+-		"Speaker Allocation: %x\n", pRXCap->RxSpeakerAllocation);
++		"Speaker Allocation: 0x%02x\n", pRXCap->RxSpeakerAllocation);
+ 	pos += snprintf(buffer+pos, buffer_len-pos, "Vendor: 0x%x\n",
+ 		pRXCap->IEEEOUI);
+ 
+ 	pos += snprintf(buffer+pos, buffer_len-pos,
+-		"MaxTMDSClock1 %d MHz\n", pRXCap->Max_TMDS_Clock1 * 5);
++		"MaxTMDSClock1 %d MHz%s\n", pRXCap->Max_TMDS_Clock1 * 5, pRXCap->Max_TMDS_Clock1 == 1 ? " or less" : "");
+ 
+ 	if (pRXCap->HF_IEEEOUI) {
+ 		pos += snprintf(buffer+pos, buffer_len-pos, "Vendor2: 0x%x\n",
+diff -Naurp linux/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c linux-patch/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c
+--- linux/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c	2018-06-27 06:13:58.000000000 +0300
++++ linux-patch/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c	2018-11-30 09:51:02.000000000 +0200
+@@ -64,6 +64,8 @@
+ #include <linux/amlogic/hdmi_tx/hdmi_config.h>
+ #include <linux/i2c.h>
+ #include "hw/tvenc_conf.h"
++#include "hw/hdmi_tx_reg.h"
++#include "hw/mach_reg.h"
+ #ifdef CONFIG_INSTABOOT
+ #include <linux/amlogic/instaboot/instaboot.h>
+ #endif
+@@ -518,6 +520,13 @@ static int set_disp_mode_auto(void)
+ 	struct hdmi_format_para *para = NULL;
+ 	unsigned char mode[32];
+ 	enum hdmi_vic vic = HDMI_Unkown;
++	enum hdmi_color_depth stream_cur_cd;
++	char* pix_fmt[] = {"RGB","YUV422","YUV444","YUV420"};
++	char* eotf[] = {"SDR","HDR","HDR10","HLG"};
++	char* range[] = {"default","limited","full"};
++	char* colour_str[] = {"default", "SMPTE-C", "bt709", "xvYCC601","xvYCC709",
++		"sYCC601","opYCC601","opRGB","bt2020c","bt2020nc","P3 D65","P3 theater"};
++	
+ 	/* vic_ready got from IP */
+ 	enum hdmi_vic vic_ready = hdev->HWOp.GetState(
+ 		hdev, STAT_VIDEO_VIC, 0);
+@@ -526,11 +535,19 @@ static int set_disp_mode_auto(void)
+ 
+ 	/* get current vinfo */
+ 	info = hdmi_get_current_vinfo();
+-	hdmi_print(IMP, VID "get current mode: %s\n",
++	hdmi_print(IMP, VID "auto - get current mode: %s\n",
+ 		info ? info->name : "null");
+ 	if (info == NULL)
+ 		return -1;
+ 
++	/* save colourdepth of the stream */
++	stream_cur_cd = hdev->para->cd;
++	pr_info("hdmitx: stream colourdepth was %d in para 0x%08x (%s)\n",stream_cur_cd * 2, hdev->para, hdev->para->name);
++	if (hdev->cur_video_param != NULL){
++		pr_info("hdmitx: display colourdepth was %d in cur_param 0x%08x (VIC: %d)\n",hdev->cur_video_param->color_depth * 2,
++			hdev->cur_video_param,  hdev->cur_video_param->VIC);
++	}
++
+ 	info->fresh_tx_hdr_pkt = hdmitx_set_drm_pkt;
+ 	info->fresh_tx_vsif_pkt = hdmitx_set_vsif_pkt;
+ 	info->dv_info = &hdev->RXCap.dv_info;
+@@ -560,6 +577,7 @@ static int set_disp_mode_auto(void)
+ 		hdev->HWOp.CntlMisc(hdev, MISC_TMDS_PHY_OP, TMDS_PHY_DISABLE);
+ 		hdev->HWOp.CntlConfig(hdev, CONF_VIDEO_BLANK_OP, VIDEO_UNBLANK);
+ 		hdev->para = para = hdmi_get_fmt_name("invalid", fmt_attr);
++		para->cd = stream_cur_cd;
+ 		return -1;
+ 	} else {
+ 		memcpy(mode, info->name, strlen(info->name));
+@@ -577,36 +595,58 @@ static int set_disp_mode_auto(void)
+ 			}
+ 		}
+ 	}
+-	/* In the file hdmi_common/hdmi_parameters.c,
+-	 * the data array all_fmt_paras[] treat 2160p60hz and 2160p60hz420
+-	 * as two different modes, such Scrambler
+-	 * So if node "attr" contains 420, need append 420 to mode.
+-	 */
+-	if (strstr(fmt_attr, "420")) {
+-		if (!strstr(mode, "420"))
+-			strncat(mode, "420", 3);
+-	}
++
+ 	para = hdmi_get_fmt_name(mode, fmt_attr);
++	/* check display caps - warn but don't force - these can only be set by sysfs */
++	if (para->cs == COLORSPACE_YUV422 && !(hdev->RXCap.native_Mode && 0x10))
++		   pr_warn("Colourspace is set to Y422 but display does not support it");
++	/* only RGB is mandatory in HDMI1.4 */
++	if (para->cs == COLORSPACE_YUV444 && !(hdev->RXCap.native_Mode && 0x20))
++		   pr_warn("Colourspace is set to Y444 but display does not support it");
+ 	hdev->para = para;
++	pr_info("hdmitx: hdev->para now = para at 0x%08x\n",hdev->para);
++	/* going to use cur_video_param for the bitdepth we really want */
++	if (hdev->cur_video_param != NULL){
++		if (strstr(fmt_attr,"bit") != NULL){
++			hdev->cur_video_param->color_depth = para->cd;
++			pr_info("hdmitx: display colourdepth set by attr to %d in cur_param 0x%08x (VIC: %d)\n",hdev->cur_video_param->color_depth * 2,
++					hdev->cur_video_param,  hdev->cur_video_param->VIC);
++		} else {
++			if (stream_cur_cd == COLORDEPTH_24B)
++				hdev->cur_video_param->color_depth = COLORDEPTH_24B;
++			if (stream_cur_cd == COLORDEPTH_30B)
++				hdev->cur_video_param->color_depth = COLORDEPTH_30B;
++			pr_info("hdmitx: display colourdepth is %d in cur_param 0x%08x (VIC: %d)\n",hdev->cur_video_param->color_depth * 2,
++					hdev->cur_video_param,  hdev->cur_video_param->VIC);
++		}
++		if (hdev->cur_video_param->color_depth > COLORDEPTH_24B){
++			int dc_support = 0;
++			if (hdev->RXCap.ColorDeepSupport & 0x78 && hdev->para->cs != COLORSPACE_YUV420)
++				dc_support = 1;
++			else if ((hdev->RXCap.HF_IEEEOUI) &&
++					((hdev->RXCap.dc_30bit_420 && hdev->cur_video_param->color_depth == COLORDEPTH_30B) ||
++					 (hdev->RXCap.dc_36bit_420 && hdev->cur_video_param->color_depth == COLORDEPTH_36B) ||
++					 (hdev->RXCap.dc_48bit_420 && hdev->cur_video_param->color_depth == COLORDEPTH_48B)))
++				dc_support = 1;
++			if (! dc_support){
++				pr_warn("Bitdepth is set to %d bits but display does not support deep colour",
++						hdev->cur_video_param->color_depth * 2);
++				hdev->cur_video_param->color_depth = COLORDEPTH_24B;
++			}
++		}
++	}
++	/* only set full range if forced */
++	if (strstr(fmt_attr,"full") == NULL)
++		hdev->para->cr = COLORRANGE_LIM;
++
++	/* and recover the original bitstream bitdepth */
++	para->cd = stream_cur_cd;
++	pr_info("hdmitx: Stream colourdepth is %d in para 0x%08x (%s - VIC: %d)\n",stream_cur_cd * 2, hdev->para, hdev->para->name, hdev->para->vic);
+ 	/* msleep(500); */
+ 	vic = hdmitx_edid_get_VIC(hdev, mode, 1);
+-	if (strncmp(info->name, "2160p30hz", strlen("2160p30hz")) == 0) {
+-		vic = HDMI_4k2k_30;
+-	} else if (strncmp(info->name, "2160p25hz",
+-		strlen("2160p25hz")) == 0) {
+-		vic = HDMI_4k2k_25;
+-	} else if (strncmp(info->name, "2160p24hz",
+-		strlen("2160p24hz")) == 0) {
+-		vic = HDMI_4k2k_24;
+-	} else if (strncmp(info->name, "smpte24hz",
+-		strlen("smpte24hz")) == 0)
+-		vic = HDMI_4k2k_smpte_24;
+-	else {
+-	/* nothing */
+-	}
+ 	if (suspend_flag == 1)
+ 		vic_ready = HDMI_Unkown;
+-	if ((vic_ready != HDMI_Unkown) && (vic_ready == vic)) {
++	if ((vic_ready != HDMI_Unkown) && (vic_ready == vic) && (strstr(fmt_attr,"now") == NULL)) {
+ 		hdmi_print(IMP, SYS "[%s] ALREADY init VIC = %d\n",
+ 			__func__, vic);
+ 		if (hdev->RXCap.IEEEOUI == 0) {
+@@ -630,13 +670,18 @@ static int set_disp_mode_auto(void)
+ 	} else
+ 		hdmitx_pre_display_init();
+ 
++	/* now is one-shot but attrs are sticky */
++	if (strstr(fmt_attr,"now") != NULL){
++		memcpy(strstr(fmt_attr,"now"), " ", 3);
++	}
++
+ 	hdev->cur_VIC = HDMI_Unkown;
+ /* if vic is HDMI_Unkown, hdmitx_set_display will disable HDMI */
+ 	ret = hdmitx_set_display(hdev, vic);
+-	pr_info("%s %d %d\n", info->name, info->sync_duration_num,
++	hdmi_print(IMP, VID"vinfo: %s %d %d\n", info->name, info->sync_duration_num,
+ 		info->sync_duration_den);
+ 	recalc_vinfo_sync_duration(info, hdev->frac_rate_policy);
+-	pr_info("%s %d %d\n", info->name, info->sync_duration_num,
++	hdmi_print(IMP, VID"vinfo recalc: %s %d %d\n", info->name, info->sync_duration_num,
+ 		info->sync_duration_den);
+ 	if (ret >= 0) {
+ 		hdev->HWOp.Cntl(hdev, HDMITX_AVMUTE_CNTL, AVMUTE_CLEAR);
+@@ -663,8 +708,50 @@ static int set_disp_mode_auto(void)
+ 	hdmitx_set_audio(hdev, &(hdev->cur_audio_param), hdmi_ch);
+ 	hdev->output_blank_flag = 1;
+ 	hdev->ready = 1;
++	/* report hdmi video status */ 
++
++	hdmi_print(IMP, VID "VIC: %d (%d) %s\n",
++			(hdmitx_rd_reg(HDMITX_DWC_FC_AVIVID) > 0 ? hdmitx_rd_reg(HDMITX_DWC_FC_AVIVID) :
++			 hdmitx_rd_reg(HDMITX_DWC_FC_VSDPAYLOAD1)), hdev->cur_VIC, hdev->para->name);
++
++	hdmi_print(IMP, VID "Bit depth: %d-bit, Colour range RGB: %s, YCC: %s, Colourspace: %s\n",
++			(((hdmitx_rd_reg(HDMITX_DWC_TX_INVID0) & 0x6) >> 1) + 4 ) * 2,
++			range[(hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF2) & 0xc) >> 2],
++			range[((hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF3) & 4) >> 2) + 1],
++			pix_fmt[(hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF0) & 0x3)]);
++
++	if (((hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF1) & 0xc0) >> 6) < 0x3)
++		hdmi_print(IMP, VID "Colorimetry: %s\n",
++				colour_str[(hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF1) & 0xc0) >> 6]);
++	else
++		hdmi_print(IMP, VID "Colorimetry: %s\n",
++				colour_str[((hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF2) & 0x70) >> 4) + 3]);
++
++	if ((hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB00) & 3) == 0x02) {
++		hdmi_print(IMP, VID "HDR data: EOTF: %s\n", eotf[(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB00) & 7)]);
++		if (hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB02) > 0x0) {
++			hdmi_print(IMP, VID "Master display colours:\nPrimary one 0.%04d,0.%04d, two 0.%04d,0.%04d, three 0.%04d,0.%04d\nWhite 0.%04d,0.%04d, Luminance max/min: %d,0.%03d\n",
++					(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB02) | (hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB03) << 8)) * 2 / 10,
++					(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB04) | (hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB05) << 8)) * 2 / 10,
++					(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB06) | (hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB07) << 8)) * 2 / 10,
++					(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB08) | (hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB09) << 8)) * 2 / 10,
++					(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB10) | (hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB11) << 8)) * 2 / 10,
++					(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB12) | (hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB13) << 8)) * 2 / 10,
++					(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB14) | (hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB15) << 8)) * 2 / 10,
++					(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB16) | (hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB17) << 8)) * 2 / 10,
++					(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB18) | (hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB19) << 8)) / 10000,
++					(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB20) | (hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB21) << 8)));
++			hdmi_print(IMP, VID "Max content luminance: %d, Max frame average luminance: %d\n",
++					(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB22) | (hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB23) << 8)) / 10000,
++					(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB24) | (hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB25) << 8)) / 10000);
++		}
++		else hdmi_print(IMP, VID "No master display info\n");
++	}		
++		hdmi_print(IMP, VID "PLL clock: 0x%08x, Vid clock div 0x%08x\n",
++				hd_read_reg(P_HHI_HDMI_PLL_CNTL),
++				hd_read_reg(P_HHI_VID_PLL_CLK_DIV));
+ 	return ret;
+-}
++} /* set_disp_mode_auto */
+ 
+ static unsigned char is_dispmode_valid_for_hdmi(void)
+ {
+@@ -706,9 +793,12 @@ static ssize_t store_attr(struct device
+ 	struct device_attribute *attr, const char *buf, size_t count)
+ {
+ 	memcpy(fmt_attr, buf, sizeof(fmt_attr));
++	if (strstr(fmt_attr,"now"))
++			set_disp_mode_auto();
+ 	return count;
+ }
+ 
++
+ /*aud_mode attr*/
+ static ssize_t show_aud_mode(struct device *dev,
+ 	struct device_attribute *attr, char *buf)
+@@ -1181,15 +1271,24 @@ static ssize_t show_config(struct device
+ 	struct hdmitx_dev *hdev = &hdmitx_device;
+ 
+ 	pos += snprintf(buf+pos, PAGE_SIZE, "cur_VIC: %d\n", hdev->cur_VIC);
+-	if (hdev->cur_video_param)
+-		pos += snprintf(buf+pos, PAGE_SIZE,
+-			"cur_video_param->VIC=%d\n",
+-			hdev->cur_video_param->VIC);
+-	if (hdev->para) {
+-		pos += snprintf(buf+pos, PAGE_SIZE, "cd = %d\n",
+-			hdev->para->cd);
+-		pos += snprintf(buf+pos, PAGE_SIZE, "cs = %d\n",
+-			hdev->para->cs);
++	if (hdev->para){
++		struct hdmi_format_para *para;
++		para = hdev->para;
++
++		pos += snprintf(buf+pos, PAGE_SIZE, "VIC: %d %s\n",
++				hdmitx_device.cur_VIC, para->name);
++		char* pix_fmt[] = {"RGB","YUV422","YUV444","YUV420"};
++		char* eotf[] = {"SDR","HDR","HDR10","HLG"};
++		char* range[] = {"default","limited","full"};
++		pos += snprintf(buf + pos, PAGE_SIZE, "Colour depth: %d-bit\nColourspace: %s\nColour range: %s\nEOTF: %s\nYCC colour range: %s\n",
++				(((hdmitx_rd_reg(HDMITX_DWC_TX_INVID0) & 0x6) >> 1) + 4 ) * 2,
++				pix_fmt[(hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF0) & 0x3)],
++				range[(hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF2) & 0xc) >> 2],
++				eotf[(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB00) & 7)],
++				range[((hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF3) & 0xc) >> 2) + 1]);
++		pos += snprintf(buf + pos, PAGE_SIZE, "PLL clock: 0x%08x, Vid clock div 0x%08x\n",
++				hd_read_reg(P_HHI_HDMI_PLL_CNTL),
++				hd_read_reg(P_HHI_VID_PLL_CLK_DIV));
+ 	}
+ 
+ 	switch (hdev->tx_aud_cfg) {
+@@ -1343,23 +1442,32 @@ static ssize_t show_disp_cap(struct devi
  	const char *native_disp_mode =
  		hdmitx_edid_get_native_VIC(&hdmitx_device);
  	enum hdmi_vic vic;
@@ -949,1242 +955,9 @@ index 20467877856..6bc1f5f6f41 100644
 +				para = hdmi_get_fmt_paras(vic);
 +				if (! hdmitx_device.RXCap.HF_IEEEOUI &&
 +						para->tmds_clk > hdmitx_device.RXCap.Max_TMDS_Clock1 * 5000){
-+					pr_info("Mode %s (VIC %d) needs %dMHz clock, more than %dMHz",
-+							disp_mode_t[i], vic, para->tmds_clk / 1000, hdmitx_device.RXCap.Max_TMDS_Clock1 * 5);
-+				} else {
-+					pos += snprintf(buf+pos, PAGE_SIZE, "%s",
-+							disp_mode_t[i]);
-+					if (native_disp_mode && (strcmp(
-+									native_disp_mode,
-+									disp_mode_t[i]) == 0)) {
-+						pos += snprintf(buf+pos, PAGE_SIZE,
-+								"*\n");
-+					} else
-+						pos += snprintf(buf+pos, PAGE_SIZE, "\n");
-+				}
-+			}
- 		}
- 	}
- 	return pos;
-diff --git a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c
-index cafc3e7051c..e0249acbe97 100644
---- a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c
-+++ b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c
-@@ -663,6 +663,20 @@ int hdmitx_set_display(struct hdmitx_dev *hdev, enum hdmi_vic VideoCode)
- 			default:
- 				break;
- 			}
-+			if (param->color == COLORSPACE_YUV444 &&
-+					hdev->para->tmds_clk * ((int) param->color_depth) / ((int) COLORDEPTH_24B) >
-+					hdev->RXCap.Max_TMDS_Clock1 * 5000 &&
-+					! hdev->RXCap.HF_IEEEOUI){
-+				/* set 422 mode if sink can handle it */
-+				if (hdev->RXCap.native_Mode & 0x10){
-+					hdev->para->cs = COLORSPACE_YUV422;
-+					pr_info("Setting colourspace to YCC422");
-+				} else {
-+					pr_info("No bandwidth for YCC444 at %d, setting 8-bit", (int) param->color_depth);
-+					hdev->para->cs = COLORDEPTH_24B;
-+				}
-+			}
-+
- 			if (param->color == COLORSPACE_RGB444) {
- 				hdev->para->cs = hdev->cur_video_param->color;
- 				pr_info("hdmitx: rx edid only support RGB format\n");
-
-From 96a1498e88290e7c87f2ea6e99d5179a815b073a Mon Sep 17 00:00:00 2001
-From: Sam Nazarko <email@samnazarko.co.uk>
-Date: Sat, 15 Sep 2018 21:01:07 +0100
-Subject: [PATCH 04/17] drivers/amlogic/hdmitx: Fix null pointer deference when
- using null VIC mode, i.e. headless boot by moving print to param guard.
-
-[    8.902908] Unable to handle kernel NULL pointer dereference at virtual address 0000000c
-[    8.905513] pgd = ffffffc060232000
-[    8.909049] [0000000c] *pgd=0000000000000000
-[    8.913450] Internal error: Oops: 96000005 [#1] SMP
-[    8.918450] Modules linked in: 8021q btsdio bluetooth 6lowpan_iphc iptable_nat nf_conntrack_ipv4 nf_defrag_ipv4 nf_nat_ipv4 nf_nat nf_conntrack iptable_filter dhd cfg80211 cp210x dwc_otg wifi_dummy ir_lirc_codec(O) mali lirc_dev(O) meson_ir(O) rc_core(O) amlvideodri(O) videobuf_res(O) videobuf_core(O) videodev(O) media(O) ip_tables x_tables
-[    8.948555] CPU: 1 PID: 518 Comm: kodi.bin Tainted: G           O 3.14.29-119-osmc #1
-[    8.956487] task: ffffffc0606d4000 ti: ffffffc062334000 task.ti: ffffffc062334000
-[    8.964084] PC is at hdmitx_set_display+0x48c/0x4b0
-[    8.969080] LR is at hdmitx_set_display+0x238/0x4b0
-[    8.974082] pc : [<ffffffc001631904>] lr : [<ffffffc0016316b0>] pstate: 80000145
-[    8.981584] sp : ffffffc062337d20
-[    8.985035] x29: ffffffc062337d20 x28: ffffffc062334000
-[    8.990468] x27: ffffffc00108b000 x26: 0000000000000004
-[    8.995902] x25: 0000000000000182 x24: ffffffc0605d8c90
-[    9.001336] x23: ffffffc062337ec8 x22: 0000000000000001
-[    9.006769] x21: ffffffc001e49de0 x20: 0000000000000000
-[    9.012203] x19: 0000000000000029 x18: 000000000000000a
-[    9.017637] x17: 0000000000000000 x16: ffffffc0011a45b8
-[    9.023071] x15: 0000000000000002 x14: 0000000000000000
-[    9.028504] x13: ffffffc081dbd23f x12: ffffffc001dbd24e
-[    9.033938] x11: 000000000000039d x10: ffffffc062337ad0
-[    9.039372] x9 : ffffffc062337ad0 x8 : 20646e756f662073
-[    9.044806] x7 : 6d61726170203a6f x6 : ffffffc001dbd279
-[    9.050239] x5 : 000000000000039d x4 : 0000000000000007
-[    9.055673] x3 : 0000000000000000 x2 : 0000000000000007
-[    9.061107] x1 : 0000000000000006 x0 : 0000000000000000
-[    9.066542]
-               PC: 0xffffffc001631884:
-[    9.071802] 1884  940a0bbe b9400ac0 17ffffba 52800060 b9000ac0 17ffff36 b0001960 913cc000
-[    9.080081] 18a4  38614800 10000061 8b208820 d61f0000 d00028e2 d00028e1 91048042 91056021
-[    9.088361] 18c4  52800060 97fff3fa 17ffff28 d00028e1 52800060 9107c021 97fff3f5 17ffff69
-[    9.096641] 18e4  d00028e0 91064000 940a0ba4 f94ef6a0 52800081 b9003c01 b9400ac0 17ffff9d
-[    9.104921] 1904  b9400c02 d00028e0 91034000 d2800001 12800016 531f7842 940a0b98 17ffff31
-[    9.113201] 1924  d503201f a9bc7bfd 910003fd a90153f3 f90013f5 aa0003f5 aa1e03e0 2a0103f3
-[    9.121481] 1944  2a0203f4 d503201f 12800fc2 52800021 528000c0 7100267f 3900c3a2 3900c7a1
-[    9.129761] 1964  3900cba0 540002c0 52800800 52800065 52800184 f9416ea3 531c0e73 531c0e94
-[    9.138042]
-               LR: 0xffffffc001631630:
-[    9.143303] 1630  aa1403e1 6b02001f 1a829002 aa1503e0 97f7fad0 f9400a73 b4000133 aa1303e0
-[    9.151583] 1650  97f7dc34 52800202 aa1303e1 6b02001f 1a829002 910022a0 97f7fac6 52800023
-[    9.159863] 1670  910123a2 aa1503e1 52800000 3901a3a3 d63f02e0 2a1603e0 f9401bf7 a94153f3
-[    9.168143] 1690  a9425bf5 a8c77bfd d65f03c0 d503201f d00028e0 d2800001 91028000 940a0c34
-[    9.176423] 16b0  f94c72a0 b4001280 d2800002 b9400c03 d00028e0 d2800001 91034000 b9000c43
-[    9.184703] 16d0  f90c72bf b9400c42 531f7842 940a0c28 12800016 17ffffc0 911e62b3 91246677
-[    9.192983] 16f0  aa1703e0 97f7dc0b aa0003e2 d00028e1 aa1703e0 91044021 97f7dc2a 350001a0
-[    9.201263] 1710  91247677 aa1703e0 97f7dc02 aa0003e2 d00028e1 aa1703e0 91046021 97f7dc21
-[    9.209543]
-               SP: 0xffffffc062337ca0:
-[    9.214804] 7ca0  00000000 00000000 01e49de0 ffffffc0 00000001 00000000 62337ec8 ffffffc0
-[    9.223084] 7cc0  605d8c90 ffffffc0 00000182 00000000 00000004 00000000 0108b000 ffffffc0
-[    9.231364] 7ce0  62334000 ffffffc0 62337d20 ffffffc0 016316b0 ffffffc0 62337d20 ffffffc0
-[    9.239644] 7d00  01631904 ffffffc0 80000145 00000000 01dbd281 ffffffc0 74696e69 43495620
-[    9.247924] 7d20  62337d90 ffffffc0 0162c24c ffffffc0 00000001 00000000 6066b9c0 ffffffc0
-[    9.256204] 7d40  6066b9c0 ffffffc0 00000001 00000000 62337ec8 ffffffc0 60c96c00 ffffffc0
-[    9.264484] 7d60  62337d80 ffffffc0 018ba1ac ffffffc0 62337e40 ffffffc0 011a2d24 ffffffc0
-[    9.272764] 7d80  62337d90 ffffffc0 0162c264 ffffffc0 62337db0 ffffffc0 0149ceec ffffffc0
-[    9.281046]
-               X6: 0xffffffc001dbd1f9:
-[    9.286305] d1f8  00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
-[    9.294585] d218  00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
-[    9.302865] d238  00000001 00000000 30303020 32303330 36383230 5d314035 33326420 39202038
-[    9.311145] d258  3138322e 40363430 58205d31 30203a36 66666678 63666666 64313030 66316462
-[    9.319425] d278  310a3a39 36313336 5d3e3062 74737020 3a657461 30303820 34313030 200a0a35
-[    9.327705] d298  300a3123 6d610a63 6f732065 65637275 646f6d20 29312865 7473202c 6d616572
-[    9.335985] d2b8  726f6620 3d74616d 49570a31 31302044 3034322d 36663733 6f0a2065 6761746c
-[    9.344265] d2d8  31313d65 202c3035 7065656b 756f635f 313d746e 6874202c 68736572 3c3d646f
-[    9.352545] d2f8  20333132 3e353532 6c63202c 61735f6b 656c706d 3434373d 6761730a 6e692065
-[    9.360826]
-               X9: 0xffffffc062337a50:
-[    9.366086] 7a50  0000000c 00000000 62337c00 ffffffc0 96000005 00000000 60275500 ffffffc0
-[    9.374366] 7a70  606d4000 ffffffc0 61285a10 ffffffc0 62337ab0 ffffffc0 0108fe04 ffffffc0
-[    9.382646] 7a90  62337c00 ffffffc0 62334000 ffffffc0 60275500 ffffffc0 00000020 00000000
-[    9.390926] 7ab0  62337b20 ffffffc0 0108fed0 ffffffc0 0000000c 00000000 62337c00 ffffffc0
-[    9.399206] 7ad0  96000005 00000000 62337c00 ffffffc0 80000145 00000000 00000025 00000000
-[    9.407486] 7af0  00000182 00000000 00000004 00000000 0108b000 ffffffc0 62334000 ffffffc0
-[    9.415766] 7b10  00000029 00000000 01b4f0c8 00010000 62337b50 ffffffc0 01081240 ffffffc0
-[    9.424046] 7b30  01cfbb78 ffffffc0 96000005 00000000 0000000c 00000000 62337c00 ffffffc0
-[    9.432327]
-               X10: 0xffffffc062337a50:
-[    9.437674] 7a50  0000000c 00000000 62337c00 ffffffc0 96000005 00000000 60275500 ffffffc0
-[    9.445954] 7a70  606d4000 ffffffc0 61285a10 ffffffc0 62337ab0 ffffffc0 0108fe04 ffffffc0
-[    9.454234] 7a90  62337c00 ffffffc0 62334000 ffffffc0 60275500 ffffffc0 00000020 00000000
-[    9.462514] 7ab0  62337b20 ffffffc0 0108fed0 ffffffc0 0000000c 00000000 62337c00 ffffffc0
-[    9.470794] 7ad0  96000005 00000000 62337c00 ffffffc0 80000145 00000000 00000025 00000000
-[    9.479074] 7af0  00000182 00000000 00000004 00000000 0108b000 ffffffc0 62334000 ffffffc0
-[    9.487354] 7b10  00000029 00000000 01b4f0c8 00010000 62337b50 ffffffc0 01081240 ffffffc0
-[    9.495634] 7b30  01cfbb78 ffffffc0 96000005 00000000 0000000c 00000000 62337c00 ffffffc0
-[    9.503915]
-               X12: 0xffffffc001dbd1ce:
-[    9.509261] d1cc  00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
-[    9.517541] d1ec  00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
-[    9.525821] d20c  00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
-[    9.534101] d22c  00000000 00000000 00000000 00000001 00000000 30303020 32303330 30313430
-[    9.542381] d24c  5d314031 34326420 39202063 3330352e 40353139 58205d31 203a3231 66667830
-[    9.550661] d26c  66666666 31303063 31646264 0a3a6563 36313336 5d3e3062 74737020 3a657461
-[    9.558941] d28c  30303820 34313030 200a0a35 300a3123 6d610a63 6f732065 65637275 646f6d20
-[    9.567221] d2ac  29312865 7473202c 6d616572 726f6620 3d74616d 49570a31 31302044 3034322d
-[    9.575501] d2cc  36663733 6f0a2065 6761746c 31313d65 202c3035 7065656b 756f635f 313d746e
-[    9.583782]
-               X13: 0xffffffc081dbd1bf:
-[    9.589129] d1bc  ******** ******** ******** ******** ******** ******** ******** ********
-[    9.597409] d1dc  ******** ******** ******** ******** ******** ******** ******** ********
-[    9.605689] d1fc  ******** ******** ******** ******** ******** ******** ******** ********
-[    9.613969] d21c  ******** ******** ******** ******** ******** ******** ******** ********
-[    9.622249] d23c  ******** ******** ******** ******** ******** ******** ******** ********
-[    9.630529] d25c  ******** ******** ******** ******** ******** ******** ******** ********
-[    9.638809] d27c  ******** ******** ******** ******** ******** ******** ******** ********
-[    9.647089] d29c  ******** ******** ******** ******** ******** ******** ******** ********
-[    9.655369] d2bc  ******** ******** ******** ******** ******** ******** ******** ********
-[    9.663650]
-               X16: 0xffffffc0011a4538:
-[    9.668996] 4538  aa0003f3 540003a0 910103a3 f9403a84 aa1503e1 aa1603e2 aa1403e0 f81f8c64
-[    9.677276] 4558  97fffcd8 aa0003f5 b7f80060 f9401fa0 f9003a80 370800f3 37000133 aa1503e0
-[    9.685556] 4578  a94153f3 a9425bf5 a8c47bfd d65f03c0 91012280 941c5737 3607ff33 aa1403e0
-[    9.693836] 4598  940005d4 aa1503e0 a94153f3 a9425bf5 a8c47bfd d65f03c0 92800115 17fffff0
-[    9.702116] 45b8  a9bc7bfd 910003fd a90153f3 a9025bf5 aa0003f3 aa1e03e0 aa0103f5 aa0203f6
-[    9.710396] 45d8  d503201f 2a1303e0 940079d4 f27ef414 aa0003f3 540003a0 910103a3 f9403a84
-[    9.718676] 45f8  aa1503e1 aa1603e2 aa1403e0 f81f8c64 97fffd08 aa0003f5 b7f80060 f9401fa0
-[    9.726956] 4618  f9003a80 370800f3 37000133 aa1503e0 a94153f3 a9425bf5 a8c47bfd d65f03c0
-[    9.735238]
-               X21: 0xffffffc001e49d60:
-[    9.740584] 9d60  00000000 00000000 00000000 00000000 5b8d8000 00000000 00000000 00000000
-[    9.748864] 9d80  00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
-[    9.757144] 9da0  0001e000 ffffff80 0002a000 ffffff80 00000000 00000000 00000000 00000000
-[    9.765424] 9dc0  00000000 00000000 00000000 00000000 00000000 00000000 0001e000 ffffff80
-[    9.773704] 9de0  00000000 00000000 01e49de8 ffffffc0 01e49de8 ffffffc0 00000000 00000000
-[    9.781984] 9e00  00000000 00000000 01d0f380 ffffffc0 00000000 00000000 00000001 00000001
-[    9.790264] 9e20  00000000 00000000 0195eaa0 ffffffc0 01e49e30 ffffffc0 01e49e30 ffffffc0
-[    9.798544] 9e40  0f900000 00000020 00000000 00000000 0022d000 ffffffc0 00000000 00000000
-[    9.806825]
-               X23: 0xffffffc062337e48:
-[    9.812171] 7e48  00000011 00000000 62337e90 ffffffc0 011a460c ffffffc0 61836303 ffffffc0
-[    9.820451] 7e68  61836300 ffffffc0 ff93f970 00000000 00000001 00000000 000e0030 00000000
-[    9.828731] 7e88  00000011 00000000 00000000 00000000 0108422c ffffffc0 00000000 00000000
-[    9.837011] 7ea8  00000000 00000000 ffffffff ffffffff f6ee83d0 00000000 ffffffff ffffffff
-[    9.845291] 7ec8  00000000 00000000 00000011 00000000 ff93f970 00000000 00000001 00000000
-[    9.853571] 7ee8  00000000 00000000 ff93f950 00000000 ff93f968 00000000 00000011 00000000
-[    9.861851] 7f08  00000004 00000000 ff93f968 00000000 ff93f950 00000000 ff93f970 00000000
-[    9.870131] 7f28  00000000 00000000 00000000 00000000 ff93f938 00000000 00000000 00000000
-[    9.878412]
-               X24: 0xffffffc0605d8c10:
-[    9.883759] 8c10  00000000 00000000 00000000 00000000 605d8c18 ffffffc0 00000000 00000000
-[    9.892039] 8c30  000002f5 00000000 01cff570 ffffffc0 00000000 00000000 7829d688 ffffffc0
-[    9.900319] 8c50  00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
-[    9.908599] 8c70  00000000 00000000 00000000 00000000 00224690 ffffffc0 61836300 ffffffc0
-[    9.916879] 8c90  00000000 00000000 605d8c98 ffffffc0 605d8c98 ffffffc0 606d4000 ffffffc0
-[    9.925159] 8cb0  00000000 00000000 00000000 00000000 6066b560 ffffffc0 6066b560 ffffffc0
-[    9.933439] 8cd0  00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
-[    9.941719] 8cf0  00000000 00000000 00000000 00000000 605d8780 ffffffc0 00000000 00000000
-[    9.950000]
-               X27: 0xffffffc00108af80:
-[    9.955346] af80  d503201f d503201f d503201f d503201f d503201f d503201f d503201f d503201f
-[    9.963626] afa0  d503201f d503201f d503201f d503201f d503201f d503201f d503201f d503201f
-[    9.971906] afc0  d503201f d503201f d503201f d503201f d503201f d503201f d503201f d503201f
-[    9.980186] afe0  d503201f d503201f d503201f d503201f d503201f d503201f d503201f d503201f
-[    9.988466] b000  010a7680 ffffffc0 01097748 ffffffc0 010936f8 ffffffc0 011a4508 ffffffc0
-[    9.996746] b020  011a45b8 ffffffc0 011f7098 ffffffc0 011a1858 ffffffc0 010b93a0 ffffffc0
-[   10.005026] b040  011a2e88 ffffffc0 011b53e8 ffffffc0 011b4ff0 ffffffc0 011abec8 ffffffc0
-[   10.013306] b060  011a23c0 ffffffc0 010b93a0 ffffffc0 011b4df0 ffffffc0 011a2770 ffffffc0
-[   10.021587]
-               X28: 0xffffffc062333f80:
-[   10.026934] 3f80  00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
-[   10.035214] 3fa0  00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
-[   10.043494] 3fc0  00000000 00000000 00000000 00000000 f713e3f6 00000000 00070030 00000000
-[   10.051774] 3fe0  ffb9f9c4 00000000 000000a2 00000000 cae50bb0 dccdaf9f 367246d2 5db1a0f0
-[   10.060054] 4000  00400002 00000000 ffffffff ffffffff 606d4000 ffffffc0 01cfc350 ffffffc0
-[   10.068334] 4020  010a76b0 ffffffc0 00000000 00000000 00000000 00000000 00000000 00000000
-[   10.076614] 4040  00000000 00000000 00000000 00000000 00000001 00000001 57ac6e9d 00000000
-[   10.084894] 4060  3a79b253 163f5f1e 21c4a369 cc88e7f4 4aebc7d6 6ff8a96c 6029bb60 863dc7be
-[   10.093175]
-               X29: 0xffffffc062337ca0:
-[   10.098521] 7ca0  00000000 00000000 01e49de0 ffffffc0 00000001 00000000 62337ec8 ffffffc0
-[   10.106801] 7cc0  605d8c90 ffffffc0 00000182 00000000 00000004 00000000 0108b000 ffffffc0
-[   10.115081] 7ce0  62334000 ffffffc0 62337d20 ffffffc0 016316b0 ffffffc0 62337d20 ffffffc0
-[   10.123361] 7d00  01631904 ffffffc0 80000145 00000000 01dbd281 ffffffc0 74696e69 43495620
-[   10.131641] 7d20  62337d90 ffffffc0 0162c24c ffffffc0 00000001 00000000 6066b9c0 ffffffc0
-[   10.139921] 7d40  6066b9c0 ffffffc0 00000001 00000000 62337ec8 ffffffc0 60c96c00 ffffffc0
-[   10.148201] 7d60  62337d80 ffffffc0 018ba1ac ffffffc0 62337e40 ffffffc0 011a2d24 ffffffc0
-[   10.156481] 7d80  62337d90 ffffffc0 0162c264 ffffffc0 62337db0 ffffffc0 0149ceec ffffffc0
-
-[   10.166402] Process kodi.bin (pid: 518, stack limit = 0xffffffc062334058)
-[   10.173302] Stack: (0xffffffc062337d20 to 0xffffffc062338000)
-[   10.179169] 7d20: 62337d90 ffffffc0 0162c24c ffffffc0 00000001 00000000 6066b9c0 ffffffc0
-[   10.187449] 7d40: 6066b9c0 ffffffc0 00000001 00000000 62337ec8 ffffffc0 60c96c00 ffffffc0
-[   10.195729] 7d60: 62337d80 ffffffc0 018ba1ac ffffffc0 62337e40 ffffffc0 011a2d24 ffffffc0
-[   10.204009] 7d80: 62337d90 ffffffc0 0162c264 ffffffc0 62337db0 ffffffc0 0149ceec ffffffc0
-[   10.212289] 7da0: 00281210 ffffffc0 01d60218 ffffffc0 62337de0 ffffffc0 0121356c ffffffc0
-[   10.220569] 7dc0: 00000001 00000000 605d8c80 ffffffc0 6066b9c0 ffffffc0 605d8c80 ffffffc0
-[   10.228849] 7de0: 62337e10 ffffffc0 012179e8 ffffffc0 00000001 00000000 6066b9c0 ffffffc0
-[   10.237129] 7e00: fffffff2 ffffffff 00000011 00000000 62337e50 ffffffc0 011a3ad8 ffffffc0
-[   10.245409] 7e20: 61836300 ffffffc0 00000001 00000000 62334000 ffffffc0 ff93f970 00000000
-[   10.253689] 7e40: 62337ec8 ffffffc0 00000011 00000000 62337e90 ffffffc0 011a460c ffffffc0
-[   10.261969] 7e60: 61836303 ffffffc0 61836300 ffffffc0 ff93f970 00000000 00000001 00000000
-[   10.270248] 7e80: 000e0030 00000000 00000011 00000000 00000000 00000000 0108422c ffffffc0
-[   10.278529] 7ea0: 00000000 00000000 00000000 00000000 ffffffff ffffffff f6ee83d0 00000000
-[   10.286808] 7ec0: ffffffff ffffffff 00000000 00000000 00000011 00000000 ff93f970 00000000
-[   10.295088] 7ee0: 00000001 00000000 00000000 00000000 ff93f950 00000000 ff93f968 00000000
-[   10.303368] 7f00: 00000011 00000000 00000004 00000000 ff93f968 00000000 ff93f950 00000000
-[   10.311648] 7f20: ff93f970 00000000 00000000 00000000 00000000 00000000 ff93f938 00000000
-[   10.319928] 7f40: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
-[   10.328208] 7f60: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
-[   10.336488] 7f80: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
-[   10.344768] 7fa0: 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000
-[   10.353048] 7fc0: 00000000 00000000 00000000 00000000 f6ee83d0 00000000 000e0030 00000000
-[   10.361329] 7fe0: 00000011 00000000 00000004 00000000 e3cf7489 457c40ce dac1e836 19489f87
-[   10.369606] Call trace:
-[   10.372198] [<ffffffc001631904>] hdmitx_set_display+0x48c/0x4b0
-[   10.378233] [<ffffffc00162c248>] store_output_rgb+0x38/0x58
-[   10.383926] [<ffffffc00149cee8>] dev_attr_store+0x40/0x60
-[   10.389447] [<ffffffc001213568>] sysfs_kf_write+0x58/0x78
-[   10.394968] [<ffffffc0012179e4>] kernfs_fop_write+0xfc/0x160
-[   10.400746] [<ffffffc0011a3ad4>] vfs_write+0xac/0x1d8
-[   10.405919] [<ffffffc0011a4608>] SyS_write+0x50/0xb0
-[   10.411008] Code: 52800081 b9003c01 b9400ac0 17ffff9d (b9400c02)
-[   10.417264] ---[ end trace b132f2d03894b427 ]---
-
-Signed-off-by: Sam Nazarko <email@samnazarko.co.uk>
----
- drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c | 4 ++--
- 1 file changed, 2 insertions(+), 2 deletions(-)
-
-diff --git a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c
-index e0249acbe97..ad01272e6fb 100644
---- a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c
-+++ b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c
-@@ -631,9 +631,9 @@ int hdmitx_set_display(struct hdmitx_dev *hdev, enum hdmi_vic VideoCode)
- 	/* recover the bitdepth set in hdmi_tx_main */
- 	if (hdev->cur_video_param != NULL)
- 		param->color_depth = hdev->cur_video_param->color_depth;
--	hdev->cur_video_param = param;
--	pr_info("hdmitx: video: cur_param = param at 0x%08x colourdepth %d\n", hdev->cur_video_param, hdev->cur_video_param->color_depth * 2);
- 	if (param) {
-+		hdev->cur_video_param = param;
-+	        pr_info("hdmitx: video: cur_param = param at 0x%08x colourdepth %d\n", hdev->cur_video_param, hdev->cur_video_param->color_depth * 2);
- 		param->color = param->color_prefer;
- 		if (hdmi_output_rgb || is_philips_2009(&hdev->RXCap)) {
- 			param->color = COLORSPACE_RGB444;
-
-From 57030513f63816567d16adf593336462a03b9035 Mon Sep 17 00:00:00 2001
-From: Sam Nazarko <email@samnazarko.co.uk>
-Date: Sat, 15 Sep 2018 21:04:23 +0100
-Subject: [PATCH 05/17] vh265: fix SEI parsing (experimental)
-
-Signed-off-by: Sam Nazarko <email@samnazarko.co.uk>
----
- drivers/amlogic/amports/vh265.c | 4 ++--
- 1 file changed, 2 insertions(+), 2 deletions(-)
-
-diff --git a/drivers/amlogic/amports/vh265.c b/drivers/amlogic/amports/vh265.c
-index ec708ef6eca..61ae2bcb8c8 100644
---- a/drivers/amlogic/amports/vh265.c
-+++ b/drivers/amlogic/amports/vh265.c
-@@ -8350,7 +8350,7 @@ static int amvdec_h265_probe(struct platform_device *pdev)
- 
- 	if ((get_cpu_type() >= MESON_CPU_MAJOR_ID_GXTVBB) &&
- 		(parser_sei_enable & 0x100) == 0)
--		parser_sei_enable = 1;
-+		parser_sei_enable = 7;
- 	hevc->m_ins_flag = 0;
- 	hevc->init_flag = 0;
- 	hevc->uninit_list = 0;
-@@ -8562,7 +8562,7 @@ static int ammvdec_h265_probe(struct platform_device *pdev)
- #endif
- 	if ((get_cpu_type() >= MESON_CPU_MAJOR_ID_GXTVBB) &&
- 		(parser_sei_enable & 0x100) == 0)
--		parser_sei_enable = 1;
-+		parser_sei_enable = 7;
- 	hevc->m_ins_flag = 1;
- 	hevc->init_flag = 0;
- 	hevc->uninit_list = 0;
-
-From a6aa5008a197097faeea44507b27643bd30325c3 Mon Sep 17 00:00:00 2001
-From: Graham Horner <graham@hornercs.co.uk>
-Date: Sun, 16 Sep 2018 13:05:42 +0100
-Subject: [PATCH 06/17] Synchronise YCC quantisation range with RGB
-
----
- drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c  | 2 +-
- drivers/amlogic/hdmi/hdmi_tx_20/hw/hdmi_tx_hw.c | 2 +-
- 2 files changed, 2 insertions(+), 2 deletions(-)
-
-diff --git a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c
-index 6bc1f5f6f41..ed89381b017 100644
---- a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c
-+++ b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c
-@@ -1260,7 +1260,7 @@ static ssize_t show_config(struct device *dev,
- 		char* pix_fmt[] = {"RGB","YUV422","YUV444","YUV420"};
- 		char* eotf[] = {"SDR","HDR","HDR10","HLG"};
- 		char* range[] = {"default","limited","full"};
--		pos += snprintf(buf + pos, PAGE_SIZE, "Colour depth: %d-bit\nColourspace: %s\nColour range: %s\nEOTF: %s\nPQ colour range: %s\n",
-+		pos += snprintf(buf + pos, PAGE_SIZE, "Colour depth: %d-bit\nColourspace: %s\nColour range: %s\nEOTF: %s\nYCC colour range: %s\n",
- 				(((hdmitx_rd_reg(HDMITX_DWC_TX_INVID0) & 0x6) >> 1) + 4 ) * 2,
- 				pix_fmt[(hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF0) & 0x3)],
- 				range[(hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF2) & 0xc) >> 2],
-diff --git a/drivers/amlogic/hdmi/hdmi_tx_20/hw/hdmi_tx_hw.c b/drivers/amlogic/hdmi/hdmi_tx_20/hw/hdmi_tx_hw.c
-index f61fd0da4df..cde32803257 100644
---- a/drivers/amlogic/hdmi/hdmi_tx_20/hw/hdmi_tx_hw.c
-+++ b/drivers/amlogic/hdmi/hdmi_tx_20/hw/hdmi_tx_hw.c
-@@ -4488,7 +4488,7 @@ static void config_hdmi20_tx(enum hdmi_vic vic,
- 	}
- 
- 	data32  = 0;
--	data32 |= (((0 == COLORRANGE_FUL) ? 1 : 0) << 2);
-+	data32 |= (((hdev->para->cr == COLORRANGE_FUL) ? 1 : 0) << 2);
- 	data32 |= (0 << 0);
- 	hdmitx_wr_reg(HDMITX_DWC_FC_AVICONF3,   data32);
- 
-
-From baedb27368a59aa7852ae9789b9ecb88ab522148 Mon Sep 17 00:00:00 2001
-From: Graham Horner <graham@hornercs.co.uk>
-Date: Mon, 17 Sep 2018 15:26:07 +0100
-Subject: [PATCH 07/17] Fix to signal 24-bit PCM in stereo
-
----
- drivers/amlogic/hdmi/hdmi_tx_20/hw/hdmi_tx_hw.c | 5 ++++-
- 1 file changed, 4 insertions(+), 1 deletion(-)
-
-diff --git a/drivers/amlogic/hdmi/hdmi_tx_20/hw/hdmi_tx_hw.c b/drivers/amlogic/hdmi/hdmi_tx_20/hw/hdmi_tx_hw.c
-index cde32803257..ab7b6cdd270 100644
---- a/drivers/amlogic/hdmi/hdmi_tx_20/hw/hdmi_tx_hw.c
-+++ b/drivers/amlogic/hdmi/hdmi_tx_20/hw/hdmi_tx_hw.c
-@@ -2307,7 +2307,10 @@ static void set_aud_info_pkt(struct hdmitx_dev *hdev,
- 		hdmitx_set_reg_bits(HDMITX_DWC_FC_AUDICONF0,
- 			GET_OUTCHN_NO(hdev->aud_output_ch) - 1, 4, 3);
- 	hdmitx_set_reg_bits(HDMITX_DWC_FC_AUDICONF1, 0, 0, 3); /* SF */
--	hdmitx_set_reg_bits(HDMITX_DWC_FC_AUDICONF1, 0, 4, 2); /* SS */
-+	if (audio_param->channel_num < 2)
-+		hdmitx_set_reg_bits(HDMITX_DWC_FC_AUDICONF1, 3, 4, 2); /* SS */
-+	else
-+		hdmitx_set_reg_bits(HDMITX_DWC_FC_AUDICONF1, 0, 4, 2); /* SS */
- 	switch (audio_param->type) {
- 	case CT_MAT:
- 	case CT_DTS_HD_MA:
-
-From c1ec1a6ec533055b2c4933cc5883d9c81f912063 Mon Sep 17 00:00:00 2001
-From: Graham Horner <graham@hornercs.co.uk>
-Date: Wed, 26 Sep 2018 12:11:38 +0100
-Subject: [PATCH 08/17] Fix for deep colour when video is played at GUI
- resolution
-
----
- drivers/amlogic/amports/video.c               | 37 ++++++++-------
- .../amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c    |  4 +-
- .../amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c    | 38 +++++++++-------
- .../amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c   | 45 +++++++++++++------
- .../amlogic/hdmi/hdmi_tx_20/hw/hdmi_tx_hw.c   |  4 +-
- drivers/amlogic/hdmi/hdmi_tx_20/hw/hw_clk.c   | 32 ++++++-------
- 6 files changed, 96 insertions(+), 64 deletions(-)
-
-diff --git a/drivers/amlogic/amports/video.c b/drivers/amlogic/amports/video.c
-index ddbd722d58d..d96c5806221 100755
---- a/drivers/amlogic/amports/video.c
-+++ b/drivers/amlogic/amports/video.c
-@@ -3831,7 +3831,7 @@ static irqreturn_t vsync_isr(int irq, void *dev_id)
- #endif
- 	struct vframe_s *toggle_vf = NULL;
- 	int video1_off_req = 0;
--	struct hdmitx_dev *hdmitx_device;
-+	struct hdmitx_dev *hdev;
- 
- 	if (debug_flag & DEBUG_FLAG_VSYNC_DONONE)
- 		return IRQ_HANDLED;
-@@ -3872,9 +3872,9 @@ static irqreturn_t vsync_isr(int irq, void *dev_id)
- #endif
- 
- 	vf = video_vf_peek();
--   	hdmitx_device = get_hdmitx_device();
-+   	hdev = get_hdmitx_device();
- 	enum hdmi_color_depth cur_cd;
--	cur_cd = hdmitx_device->para->cd;
-+	cur_cd = hdev->para->cd;
- 	if ((vf) && ((vf->type & VIDTYPE_NO_VIDEO_ENABLE) == 0)) {
- 		int bitdepthY;
- 		enum hdmi_color_depth new_cd;
-@@ -3891,13 +3891,13 @@ static irqreturn_t vsync_isr(int irq, void *dev_id)
- 				new_cd = COLORDEPTH_24B;
- 		}
- 		if (new_cd != cur_cd){
--			hdmitx_device->para->cd = new_cd;
--			pr_info(" Colourdepth set from stream as %dB in para 0x%08x (%s)\n",(int) hdmitx_device->para->cd * 6, &hdmitx_device->para, hdmitx_device->para->name);
--			pr_info(" Colourdepth in stream changed to %d\n", hdmitx_device->para->cd * 2);
--			if (hdmitx_device->cur_video_param != NULL){
--				hdmitx_device->cur_video_param->color_depth = new_cd;
--				pr_info(" Colourdepth set from stream as %d in cur_param 0x%08x (VIC: %d)\n", hdmitx_device->cur_video_param->color_depth,
--						&hdmitx_device->cur_video_param, hdmitx_device->cur_video_param->VIC);
-+			video_property_changed = true;
-+			hdev->para->cd = new_cd;
-+			pr_info(" Colourdepth changed in stream to %dB in para 0x%08x (%s)\n",(int) hdev->para->cd * 6, hdev->para, hdev->para->name);
-+			if (hdev->cur_video_param != NULL){
-+				hdev->cur_video_param->color_depth = new_cd;
-+				pr_info(" Colourdepth set from stream as %d in cur_param 0x%08x (VIC: %d)\n", hdev->cur_video_param->color_depth,
-+						hdev->cur_video_param, hdev->cur_video_param->VIC);
- 			}
- 		}
- 		if ((old_vmode != new_vmode) || (debug_flag == 8)) {
-@@ -3905,19 +3905,22 @@ static irqreturn_t vsync_isr(int irq, void *dev_id)
- 			video_property_changed = true;
- 			pr_info(" detect vout mode change! was %d now %d\n",old_vmode,new_vmode);
- 			old_vmode = new_vmode;
--			dump_params(vf);
- 		}
-+		if (video_property_changed)
-+			dump_params(vf);
-+
- 	} else if (!vf && cur_cd != COLORDEPTH_24B) {
- 		struct vframe_provider_s *vfp = vf_get_provider(RECEIVER_NAME);
- 		if (!vfp){
- 			pr_info(" Frame provider: none\n");
--			hdmitx_device->para->cd = COLORDEPTH_24B; // assume 8-bit if not using hw accel
--			pr_info(" Colourdepth reset to %dB in para 0x%08x (%s)\n",(int) hdmitx_device->para->cd * 6, &hdmitx_device->para, hdmitx_device->para->name);
--			if (hdmitx_device->cur_video_param != NULL){
--				hdmitx_device->cur_video_param->color_depth = COLORDEPTH_24B;
--				pr_info(" Colourdepth reset from stream as %d in cur_param 0x%08x (VIC: %d)\n", hdmitx_device->cur_video_param->color_depth,
--						&hdmitx_device->cur_video_param, hdmitx_device->cur_video_param->VIC);
-+			hdev->para->cd = COLORDEPTH_24B; // assume 8-bit if not using hw accel
-+			pr_info(" Colourdepth reset to %dB in para 0x%08x (%s)\n",(int) hdev->para->cd * 6, hdev->para, hdev->para->name);
-+			if (hdev->cur_video_param != NULL){
-+				hdev->cur_video_param->color_depth = COLORDEPTH_24B;
-+				pr_info(" Colourdepth reset from stream as %d in cur_param 0x%08x (VIC: %d)\n", hdev->cur_video_param->color_depth,
-+						hdev->cur_video_param, hdev->cur_video_param->VIC);
- 			}
-+			video_property_changed = true;
- 		}
- 	}
- #ifdef CONFIG_AM_VIDEO_LOG
-diff --git a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c
-index 3613c54a305..4e362e524f5 100644
---- a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c
-+++ b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c
-@@ -2448,7 +2448,9 @@ int hdmitx_edid_dump(struct hdmitx_dev *hdmitx_device, char *buffer,
- 		(pRXCap->native_Mode & 0x30) >> 4, pRXCap->native_VIC);
- 
- 	pos += snprintf(buffer+pos, buffer_len-pos,
--		"ColorDeepSupport 0x%02x\n", pRXCap->ColorDeepSupport);
-+		"ColorDeepSupport 0x%02x 10/12/16/Y444 %d/%d/%d/%d\n",
-+		pRXCap->ColorDeepSupport, pRXCap->dc_30bit, pRXCap->dc_36bit,
-+		pRXCap->dc_48bit, pRXCap->dc_y444);
- 
- 	for (i = 0 ; i < pRXCap->VIC_count ; i++) {
- 		pos += snprintf(buffer+pos, buffer_len-pos, "%d ",
-diff --git a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c
-index ed89381b017..e68289fc2f3 100644
---- a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c
-+++ b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c
-@@ -530,6 +530,13 @@ static int set_disp_mode_auto(void)
- 
- 	memset(mode, 0, sizeof(mode));
- 
-+	/* get current vinfo */
-+	info = hdmi_get_current_vinfo();
-+	hdmi_print(IMP, VID "auto - get current mode: %s\n",
-+		info ? info->name : "null");
-+	if (info == NULL)
-+		return -1;
-+
- 	/* save colourdepth of the stream */
- 	stream_cur_cd = hdev->para->cd;
- 	pr_info("hdmitx: stream colourdepth was %d in para 0x%08x (%s)\n",stream_cur_cd * 2, hdev->para, hdev->para->name);
-@@ -538,13 +545,6 @@ static int set_disp_mode_auto(void)
- 			hdev->cur_video_param,  hdev->cur_video_param->VIC);
- 	}
- 
--	/* get current vinfo */
--	info = hdmi_get_current_vinfo();
--	hdmi_print(IMP, VID "auto - get current mode: %s\n",
--		info ? info->name : "null");
--	if (info == NULL)
--		return -1;
--
- 	info->fresh_tx_hdr_pkt = hdmitx_set_drm_pkt;
- 	info->fresh_tx_vsif_pkt = hdmitx_set_vsif_pkt;
- 	info->dv_info = &hdev->RXCap.dv_info;
-@@ -611,16 +611,21 @@ static int set_disp_mode_auto(void)
- 	if (hdev->cur_video_param != NULL){
- 		if (strstr(fmt_attr,"bit") != NULL){
- 			hdev->cur_video_param->color_depth = para->cd;
--		pr_info("hdmitx: display colourdepth set by attr to %d in cur_param 0x%08x (VIC: %d)\n",hdev->cur_video_param->color_depth * 2,
--				hdev->cur_video_param,  hdev->cur_video_param->VIC);
-+			pr_info("hdmitx: display colourdepth set by attr to %d in cur_param 0x%08x (VIC: %d)\n",hdev->cur_video_param->color_depth * 2,
-+					hdev->cur_video_param,  hdev->cur_video_param->VIC);
- 		} else {
--		pr_info("hdmitx: display colourdepth still %d in cur_param 0x%08x (VIC: %d)\n",hdev->cur_video_param->color_depth * 2,
--				hdev->cur_video_param,  hdev->cur_video_param->VIC);
-+			if (stream_cur_cd == COLORDEPTH_24B)
-+				hdev->cur_video_param->color_depth = COLORDEPTH_24B;
-+			pr_info("hdmitx: display colourdepth is %d in cur_param 0x%08x (VIC: %d)\n",hdev->cur_video_param->color_depth * 2,
-+					hdev->cur_video_param,  hdev->cur_video_param->VIC);
- 		}
- 		if (hdev->cur_video_param->color_depth > COLORDEPTH_24B && !(hdev->RXCap.ColorDeepSupport & 0x78))
- 			pr_warn("Bitdepth is set to %d bits but display does not support deep colour",
- 				hdev->cur_video_param->color_depth * 2);
- 	}
-+	/* only set full range if forced */
-+	if (strstr(fmt_attr,"full") == NULL)
-+		hdev->para->cr = COLORRANGE_LIM;
- 
- 	/* and recover the original bitstream bitdepth */
- 	para->cd = stream_cur_cd;
-@@ -697,9 +702,10 @@ static int set_disp_mode_auto(void)
- 			(hdmitx_rd_reg(HDMITX_DWC_FC_AVIVID) > 0 ? hdmitx_rd_reg(HDMITX_DWC_FC_AVIVID) :
- 			 hdmitx_rd_reg(HDMITX_DWC_FC_VSDPAYLOAD1)), hdev->cur_VIC, hdev->para->name);
- 
--	hdmi_print(IMP, VID "Bit depth: %d-bit, Colour range: %s, Colourspace: %s\n",
-+	hdmi_print(IMP, VID "Bit depth: %d-bit, Colour range RGB: %s, YCC: %s, Colourspace: %s\n",
- 			(((hdmitx_rd_reg(HDMITX_DWC_TX_INVID0) & 0x6) >> 1) + 4 ) * 2,
- 			range[(hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF2) & 0xc) >> 2],
-+			range[((hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF3) & 4) >> 2) + 1],
- 			pix_fmt[(hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF0) & 0x3)]);
- 
- 	if (((hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF1) & 0xc0) >> 6) < 0x3)
-@@ -710,8 +716,7 @@ static int set_disp_mode_auto(void)
- 				colour_str[((hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF2) & 0x70) >> 4) + 3]);
- 
- 	if ((hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB00) & 3) == 0x02) {
--		hdmi_print(IMP, VID "HDR data: EOTF: %s, Colour range: %s\n", eotf[(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB00) & 3)],
--				range[((hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF3) & 4) >> 2) + 1]);
-+		hdmi_print(IMP, VID "HDR data: EOTF: %s\n", eotf[(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB00) & 3)]);
- 		if (hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB02) > 0x0) {
- 			hdmi_print(IMP, VID "Master display colours:\nPrimary one 0.%04d,0.%04d, two 0.%04d,0.%04d, three 0.%04d,0.%04d\nWhite 0.%04d,0.%04d, Luminance max/min: %d,0.%03d\n",
- 					(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB02) | (hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB03) << 8)) * 2 / 10,
-@@ -1253,7 +1258,7 @@ static ssize_t show_config(struct device *dev,
- 	pos += snprintf(buf+pos, PAGE_SIZE, "cur_VIC: %d\n", hdev->cur_VIC);
- 	if (hdev->para){
- 		struct hdmi_format_para *para;
--	   	para = hdev->para;
-+		para = hdev->para;
- 
- 		pos += snprintf(buf+pos, PAGE_SIZE, "VIC: %d %s\n",
- 				hdmitx_device.cur_VIC, para->name);
-@@ -1266,6 +1271,9 @@ static ssize_t show_config(struct device *dev,
- 				range[(hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF2) & 0xc) >> 2],
- 				eotf[(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB00) & 3)],
- 				range[((hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF3) & 0xc) >> 2) + 1]);
-+		pos += snprintf(buf + pos, PAGE_SIZE, "PLL clock: 0x%08x, Vid clock div 0x%08x\n",
-+				hd_read_reg(P_HHI_HDMI_PLL_CNTL),
-+				hd_read_reg(P_HHI_VID_PLL_CLK_DIV));
- 	}
- 
- 	switch (hdev->tx_aud_cfg) {
-diff --git a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c
-index ad01272e6fb..eb6ddd2ca13 100644
---- a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c
-+++ b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c
-@@ -635,7 +635,8 @@ int hdmitx_set_display(struct hdmitx_dev *hdev, enum hdmi_vic VideoCode)
- 		hdev->cur_video_param = param;
- 	        pr_info("hdmitx: video: cur_param = param at 0x%08x colourdepth %d\n", hdev->cur_video_param, hdev->cur_video_param->color_depth * 2);
- 		param->color = param->color_prefer;
--		if (hdmi_output_rgb || is_philips_2009(&hdev->RXCap)) {
-+		if (hdmi_output_rgb || is_philips_2009(&hdev->RXCap) ||
-+			hdev->para->cs == COLORSPACE_RGB444) {
- 			param->color = COLORSPACE_RGB444;
- 		} else {
- 			/* HDMI CT 7-24 Pixel Encoding
-@@ -663,26 +664,44 @@ int hdmitx_set_display(struct hdmitx_dev *hdev, enum hdmi_vic VideoCode)
- 			default:
- 				break;
- 			}
--			if (param->color == COLORSPACE_YUV444 &&
--					hdev->para->tmds_clk * ((int) param->color_depth) / ((int) COLORDEPTH_24B) >
--					hdev->RXCap.Max_TMDS_Clock1 * 5000 &&
--					! hdev->RXCap.HF_IEEEOUI){
-+			pr_info("tmds_clk %d, scaled %d, MaxClock %d, HF_IEEEOUI %d\n",
-+					hdev->para->tmds_clk, hdev->para->tmds_clk * ((int) param->color_depth) / ((int) COLORDEPTH_24B),
-+					hdev->RXCap.Max_TMDS_Clock1 * 5000,
-+					hdev->RXCap.HF_IEEEOUI);
-+			if (param->color == COLORSPACE_YUV444 && param->color_depth > COLORDEPTH_24B){
- 				/* set 422 mode if sink can handle it */
- 				if (hdev->RXCap.native_Mode & 0x10){
--					hdev->para->cs = COLORSPACE_YUV422;
--					pr_info("Setting colourspace to YCC422");
-+					param->color = COLORSPACE_YUV422;
-+					pr_info("Setting colourspace to YCC422 for %d-bit\n", ((int) param->color_depth) * 2);
- 				} else {
--					pr_info("No bandwidth for YCC444 at %d, setting 8-bit", (int) param->color_depth);
--					hdev->para->cs = COLORDEPTH_24B;
-+					pr_info("No support for YCC422, setting 8-bit\n");
-+					param->color_depth = COLORDEPTH_24B;
- 				}
- 			}
-+		}
- 
--			if (param->color == COLORSPACE_RGB444) {
--				hdev->para->cs = hdev->cur_video_param->color;
--				pr_info("hdmitx: rx edid only support RGB format\n");
-+		if (param->color == COLORSPACE_RGB444) {
-+			if (param->color_depth > COLORDEPTH_24B){
-+				if (! hdmi_output_rgb){
-+					/* set 422 mode if sink can handle it */
-+					if (hdev->RXCap.native_Mode & 0x10){
-+						param->color = COLORSPACE_YUV422;
-+						pr_info("Setting colourspace to YCC422 for %d-bit\n", ((int) param->color_depth) * 2);
-+					} else if ((param->color_depth == COLORDEPTH_30B && ! hdev->RXCap.dc_30bit) ||
-+							(param->color_depth == COLORDEPTH_36B && ! hdev->RXCap.dc_36bit)) {
-+						pr_info("No support for RGB deep colour, setting 8-bit\n");
-+						param->color = COLORDEPTH_24B;
-+					} else
-+						pr_info("Colourdepth for RGB is %d-bit\n", ((int) param->color_depth) * 2);
-+				} else {
-+					pr_info("Setting 8-bit colourdepth for RGB\n");
-+					param->color_depth = COLORDEPTH_24B;
-+				}
- 			}
--
- 		}
-+
-+		hdev->para->cs = param->color;
-+
- 		if (hdev->HWOp.SetDispMode(hdev) >= 0) {
- 			/* HDMI CT 7-33 DVI Sink, no HDMI VSDB nor any
- 			 * other VSDB, No GB or DI expected
-diff -Naurp linux/drivers/amlogic/hdmi/hdmi_tx_20/hw/hdmi_tx_hw.c linux-patch/drivers/amlogic/hdmi/hdmi_tx_20/hw/hdmi_tx_hw.c
---- linux/drivers/amlogic/hdmi/hdmi_tx_20/hw/hdmi_tx_hw.c	2018-11-29 18:21:27.000000000 +0200
-+++ linux-patch/drivers/amlogic/hdmi/hdmi_tx_20/hw/hdmi_tx_hw.c	2018-11-29 18:26:22.000000000 +0200
-@@ -3838,14 +3838,14 @@ static int hdmitx_hdmi_dvi_config(struct
- 	} else {
- 
- 		/* set ycc indicator */
--		if (hdmi_output_rgb) {
-+		/*if (hdmi_output_rgb) {
- 			hdmitx_csc_config(TX_INPUT_COLOR_FORMAT,
- 				COLORSPACE_RGB444, TX_COLOR_DEPTH);
- 			hdmitx_set_reg_bits(HDMITX_DWC_FC_INVIDCONF, 0, 3, 1);
- 		} else if (hdev->para->cs == COLORSPACE_YUV420)
- 			hdmitx_set_reg_bits(HDMITX_DWC_FC_AVICONF0, 3, 0, 2);
- 		else
--			hdmitx_set_reg_bits(HDMITX_DWC_FC_AVICONF0, 2, 0, 2);
-+			hdmitx_set_reg_bits(HDMITX_DWC_FC_AVICONF0, 2, 0, 2);*/
- 		/* set hdmi flag */
- 		hdmitx_set_reg_bits(HDMITX_DWC_FC_INVIDCONF, 1, 3, 1);
- 	}
-diff --git a/drivers/amlogic/hdmi/hdmi_tx_20/hw/hw_clk.c b/drivers/amlogic/hdmi/hdmi_tx_20/hw/hw_clk.c
-index 5f033197755..6d46959745a 100644
---- a/drivers/amlogic/hdmi/hdmi_tx_20/hw/hw_clk.c
-+++ b/drivers/amlogic/hdmi/hdmi_tx_20/hw/hw_clk.c
-@@ -61,7 +61,7 @@ static void set_gxb_hpll_clk_out(unsigned clk)
- 		hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x00000e55);
- 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0x0, 28, 1);
- 		WAIT_FOR_PLL_LOCKED(P_HHI_HDMI_PLL_CNTL);
--		pr_info("HPLL: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
-+		pr_info("HPLL: 0x%08x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
- 		if (frac_rate)
- 			hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL2, 0x4a05, 0, 16);
- 		else
-@@ -76,7 +76,7 @@ static void set_gxb_hpll_clk_out(unsigned clk)
- 		hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x00000e55);
- 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0x0, 28, 1);
- 		WAIT_FOR_PLL_LOCKED(P_HHI_HDMI_PLL_CNTL);
--		pr_info("HPLL: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
-+		pr_info("HPLL: 0x%08x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
- 		if (frac_rate)
- 			hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL2, 0x4800, 0, 16);
- 		else
-@@ -91,7 +91,7 @@ static void set_gxb_hpll_clk_out(unsigned clk)
- 		hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x00000e55);
- 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0x0, 28, 1);
- 		WAIT_FOR_PLL_LOCKED(P_HHI_HDMI_PLL_CNTL);
--		pr_info("HPLL: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
-+		pr_info("HPLL: 0x%08x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
- 		if (frac_rate)
- 			hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL2, 0x4b84, 0, 16);
- 		else
-@@ -106,7 +106,7 @@ static void set_gxb_hpll_clk_out(unsigned clk)
- 		hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x00000e55);
- 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0x4, 28, 3);
- 		WAIT_FOR_PLL_LOCKED(P_HHI_HDMI_PLL_CNTL);
--		pr_info("HPLL: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
-+		pr_info("HPLL: 0x%08x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
- 		if (frac_rate)
- 			hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL2, 0x4443, 0, 16);
- 		else
-@@ -120,7 +120,7 @@ static void set_gxb_hpll_clk_out(unsigned clk)
- 		hd_write_reg(P_HHI_HDMI_PLL_CNTL5, 0x71486980);
- 		hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x00000e55);
- 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0x4, 28, 3);
--		pr_info("HPLL: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
-+		pr_info("HPLL: 0x%08x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
- 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL2, 0x4300, 0, 16);
- 		break;
- 	case 3243240:
-@@ -131,7 +131,7 @@ static void set_gxb_hpll_clk_out(unsigned clk)
- 		hd_write_reg(P_HHI_HDMI_PLL_CNTL5, 0x71486980);
- 		hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x00000e55);
- 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0x4, 28, 3);
--		pr_info("HPLL: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
-+		pr_info("HPLL: 0x%08x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
- 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL2, 0x4300, 0, 16);
- 		if (frac_rate)
- 			hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL2, 0x4800, 0, 16);
-@@ -147,7 +147,7 @@ static void set_gxb_hpll_clk_out(unsigned clk)
- 		hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x00000e55);
- 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0x4, 28, 3);
- 		WAIT_FOR_PLL_LOCKED(P_HHI_HDMI_PLL_CNTL);
--		pr_info("HPLL: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
-+		pr_info("HPLL: 0x%08x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
- 		if (frac_rate)
- 			hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL2, 0x4d03, 0, 16);
- 		else
-@@ -162,7 +162,7 @@ static void set_gxb_hpll_clk_out(unsigned clk)
- 		hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x00000e55);
- 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0x0, 28, 1);
- 		WAIT_FOR_PLL_LOCKED(P_HHI_HDMI_PLL_CNTL);
--		pr_info("HPLL: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
-+		pr_info("HPLL: 0x%08x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
- 		if (frac_rate)
- 			hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL2, 0x0, 0, 16);
- 		else
-@@ -189,7 +189,7 @@ static void set_gxtvbb_hpll_clk_out(unsigned clk)
- 		hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x00002e55);
- 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0x0, 28, 1);
- 		WAIT_FOR_PLL_LOCKED(P_HHI_HDMI_PLL_CNTL);
--		pr_info("HPLL: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
-+		pr_info("HPLL: 0x%08x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
- 		break;
- 	case 5405400:
- 		hd_write_reg(P_HHI_HDMI_PLL_CNTL, 0x58000270);
-@@ -203,7 +203,7 @@ static void set_gxtvbb_hpll_clk_out(unsigned clk)
- 		hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x00002e55);
- 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0x0, 28, 1);
- 		WAIT_FOR_PLL_LOCKED(P_HHI_HDMI_PLL_CNTL);
--		pr_info("HPLL: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
-+		pr_info("HPLL: 0x%08x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
- 		break;
- 	case 4455000:
- 		hd_write_reg(P_HHI_HDMI_PLL_CNTL, 0x5800025c);
-@@ -217,7 +217,7 @@ static void set_gxtvbb_hpll_clk_out(unsigned clk)
- 		hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x00002e55);
- 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0x0, 28, 1);
- 		WAIT_FOR_PLL_LOCKED(P_HHI_HDMI_PLL_CNTL);
--		pr_info("HPLL: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
-+		pr_info("HPLL: 0x%08x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
- 		break;
- 	case 3712500:
- 		hd_write_reg(P_HHI_HDMI_PLL_CNTL, 0x5800024d);
-@@ -231,7 +231,7 @@ static void set_gxtvbb_hpll_clk_out(unsigned clk)
- 		hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x00002e55);
- 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0x4, 28, 3);
- 		WAIT_FOR_PLL_LOCKED(P_HHI_HDMI_PLL_CNTL);
--		pr_info("HPLL: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
-+		pr_info("HPLL: 0x%08x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
- 		break;
- 	case 3450000:
- 		hd_write_reg(P_HHI_HDMI_PLL_CNTL, 0x58000247);
-@@ -241,7 +241,7 @@ static void set_gxtvbb_hpll_clk_out(unsigned clk)
- 		hd_write_reg(P_HHI_HDMI_PLL_CNTL5, 0x71486980);
- 		hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x00002e55);
- 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0x4, 28, 3);
--		pr_info("HPLL: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
-+		pr_info("HPLL: 0x%08x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
- 		break;
- 	case 3243240:
- 		hd_write_reg(P_HHI_HDMI_PLL_CNTL, 0x58000243);
-@@ -254,7 +254,7 @@ static void set_gxtvbb_hpll_clk_out(unsigned clk)
- 		hd_write_reg(P_HHI_HDMI_PLL_CNTL5, 0x71486980);
- 		hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x00002e55);
- 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0x4, 28, 3);
--		pr_info("HPLL: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
-+		pr_info("HPLL: 0x%08x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
- 		break;
- 	case 2970000:
- 		hd_write_reg(P_HHI_HDMI_PLL_CNTL, 0x5800023d);
-@@ -268,7 +268,7 @@ static void set_gxtvbb_hpll_clk_out(unsigned clk)
- 		hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x00002e55);
- 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0x4, 28, 3);
- 		WAIT_FOR_PLL_LOCKED(P_HHI_HDMI_PLL_CNTL);
--		pr_info("HPLL: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
-+		pr_info("HPLL: 0x%08x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
- 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL2, 0x4e00, 0, 16);
- 		break;
- 	case 4324320:
-@@ -284,7 +284,7 @@ static void set_gxtvbb_hpll_clk_out(unsigned clk)
- 		hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x00002e55);
- 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0x0, 28, 1);
- 		WAIT_FOR_PLL_LOCKED(P_HHI_HDMI_PLL_CNTL);
--		pr_info("HPLL: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
-+		pr_info("HPLL: 0x%08x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
- 		break;
- 	default:
- 		pr_info("error hpll clk: %d\n", clk);
-
-From eb6eaa696404ea9add070c11f72392d4a366b2fe Mon Sep 17 00:00:00 2001
-From: Sam Nazarko <email@samnazarko.co.uk>
-Date: Wed, 26 Sep 2018 16:26:09 +0100
-Subject: [PATCH 09/17] hdmi_tx: Fix missing include for P_HHI_HDMI_PLL and
- CNTLP_HHI_VID_PLL_CLK_DIV
-
-Signed-off-by: Sam Nazarko <email@samnazarko.co.uk>
----
- drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c | 1 +
- 1 file changed, 1 insertion(+)
-
-diff --git a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c
-index e68289fc2f3..e433f989225 100644
---- a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c
-+++ b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c
-@@ -63,6 +63,7 @@
- #include <linux/i2c.h>
- #include "hw/tvenc_conf.h"
- #include "hw/hdmi_tx_reg.h"
-+#include "hw/mach_reg.h"
- #ifdef CONFIG_INSTABOOT
- #include <linux/amlogic/instaboot/instaboot.h>
- #endif
-
-From 9c59ff3a8d458c06fe58d2d8a62206386c64ef77 Mon Sep 17 00:00:00 2001
-From: Graham Horner <graham@hornercs.co.uk>
-Date: Wed, 24 Oct 2018 11:10:10 +0100
-Subject: [PATCH 10/17] Set bitdepth according to display caps, improve EDID
- parse and add to HDR meta dump
-
----
- drivers/amlogic/display/vout/vout_serve.c     | 11 ++++++++
- .../amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c    |  3 +++
- .../amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c    | 12 +++++----
- .../amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c   | 27 ++++++-------------
- 4 files changed, 29 insertions(+), 24 deletions(-)
-
-diff --git a/drivers/amlogic/display/vout/vout_serve.c b/drivers/amlogic/display/vout/vout_serve.c
-index 6254ed99176..85bba1331af 100644
---- a/drivers/amlogic/display/vout/vout_serve.c
-+++ b/drivers/amlogic/display/vout/vout_serve.c
-@@ -392,6 +392,17 @@ static ssize_t vout_attr_vinfo_show(struct class *class,
- 		info->sync_duration_num, info->sync_duration_den,
- 		info->screen_real_width, info->screen_real_height,
- 		info->video_clk, info->viu_color_fmt);
-+	len += sprintf(buf+len, "hdr info:\n"
-+		"    hdr_support           0x%08x\n"
-+		"    lumi_max              %d\n"
-+		"    lumi_avg              %d\n"
-+		"    lumi_min              %d\n"
-+		"    sink_flag             %s\n\n",
-+		info->hdr_info.hdr_support,
-+		info->hdr_info.lumi_max,
-+		info->hdr_info.lumi_avg,
-+		info->hdr_info.lumi_min,
-+		info->hdr_info.sink_flag ? "panel" : "hdmi out");
- 	len += sprintf(buf+len, "hdr master display info:\n"
- 		"    present_flag          %d\n"
- 		"    features              0x%x\n"
-diff --git a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c
-index 4e362e524f5..1993e602e16 100644
---- a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c
-+++ b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c
-@@ -1406,6 +1406,9 @@ static int hdmitx_edid_block_parse(struct hdmitx_dev *hdmitx_device,
- 				(unsigned long)BlockBuf[offset+5];
- 			pRXCap->Max_TMDS_Clock1 =
- 				(unsigned long)BlockBuf[offset+6];
-+			/* clock cannot be less than 75MHz */
-+			if (pRXCap->Max_TMDS_Clock1 < 15)
-+				pRXCap->Max_TMDS_Clock1 = 15;
- 			if (count > 7) {
- 				tmp = BlockBuf[offset+7];
- 				idx = offset + 8;
-diff --git a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c
-index e433f989225..cc4fecf14c0 100644
---- a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c
-+++ b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c
-@@ -615,14 +615,15 @@ static int set_disp_mode_auto(void)
- 			pr_info("hdmitx: display colourdepth set by attr to %d in cur_param 0x%08x (VIC: %d)\n",hdev->cur_video_param->color_depth * 2,
- 					hdev->cur_video_param,  hdev->cur_video_param->VIC);
- 		} else {
--			if (stream_cur_cd == COLORDEPTH_24B)
--				hdev->cur_video_param->color_depth = COLORDEPTH_24B;
-+			hdev->cur_video_param->color_depth = COLORDEPTH_30B;
- 			pr_info("hdmitx: display colourdepth is %d in cur_param 0x%08x (VIC: %d)\n",hdev->cur_video_param->color_depth * 2,
- 					hdev->cur_video_param,  hdev->cur_video_param->VIC);
- 		}
--		if (hdev->cur_video_param->color_depth > COLORDEPTH_24B && !(hdev->RXCap.ColorDeepSupport & 0x78))
-+		if (hdev->cur_video_param->color_depth > COLORDEPTH_24B && !(hdev->RXCap.ColorDeepSupport & 0x78)){
- 			pr_warn("Bitdepth is set to %d bits but display does not support deep colour",
- 				hdev->cur_video_param->color_depth * 2);
-+			hdev->cur_video_param->color_depth = COLORDEPTH_24B;
-+		}
- 	}
- 	/* only set full range if forced */
- 	if (strstr(fmt_attr,"full") == NULL)
-@@ -717,7 +718,7 @@ static int set_disp_mode_auto(void)
- 				colour_str[((hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF2) & 0x70) >> 4) + 3]);
- 
- 	if ((hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB00) & 3) == 0x02) {
--		hdmi_print(IMP, VID "HDR data: EOTF: %s\n", eotf[(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB00) & 3)]);
-+		hdmi_print(IMP, VID "HDR data: EOTF: %s\n", eotf[(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB00) & 7)]);
- 		if (hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB02) > 0x0) {
- 			hdmi_print(IMP, VID "Master display colours:\nPrimary one 0.%04d,0.%04d, two 0.%04d,0.%04d, three 0.%04d,0.%04d\nWhite 0.%04d,0.%04d, Luminance max/min: %d,0.%03d\n",
- 					(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB02) | (hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB03) << 8)) * 2 / 10,
-@@ -1270,7 +1271,7 @@ static ssize_t show_config(struct device *dev,
- 				(((hdmitx_rd_reg(HDMITX_DWC_TX_INVID0) & 0x6) >> 1) + 4 ) * 2,
- 				pix_fmt[(hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF0) & 0x3)],
- 				range[(hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF2) & 0xc) >> 2],
--				eotf[(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB00) & 3)],
-+				eotf[(hdmitx_rd_reg(HDMITX_DWC_FC_DRM_PB00) & 7)],
- 				range[((hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF3) & 0xc) >> 2) + 1]);
- 		pos += snprintf(buf + pos, PAGE_SIZE, "PLL clock: 0x%08x, Vid clock div 0x%08x\n",
- 				hd_read_reg(P_HHI_HDMI_PLL_CNTL),
-@@ -1439,6 +1440,7 @@ static ssize_t show_disp_cap(struct device *dev,
- 				/* sanity check */
- 				para = hdmi_get_fmt_paras(vic);
- 				if (! hdmitx_device.RXCap.HF_IEEEOUI &&
-+						hdmitx_device.RXCap.Max_TMDS_Clock1 >= 15 &&
- 						para->tmds_clk > hdmitx_device.RXCap.Max_TMDS_Clock1 * 5000){
- 					pr_info("Mode %s (VIC %d) needs %dMHz clock, more than %dMHz",
- 							disp_mode_t[i], vic, para->tmds_clk / 1000, hdmitx_device.RXCap.Max_TMDS_Clock1 * 5);
-diff --git a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c
-index eb6ddd2ca13..bc7b10a29ad 100644
---- a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c
-+++ b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c
-@@ -668,7 +668,11 @@ int hdmitx_set_display(struct hdmitx_dev *hdev, enum hdmi_vic VideoCode)
- 					hdev->para->tmds_clk, hdev->para->tmds_clk * ((int) param->color_depth) / ((int) COLORDEPTH_24B),
- 					hdev->RXCap.Max_TMDS_Clock1 * 5000,
- 					hdev->RXCap.HF_IEEEOUI);
--			if (param->color == COLORSPACE_YUV444 && param->color_depth > COLORDEPTH_24B){
-+			if (param->color == COLORSPACE_YUV444 &&
-+					hdev->para->tmds_clk * ((int) param->color_depth) / ((int) COLORDEPTH_24B) >
-+					hdev->RXCap.Max_TMDS_Clock1 * 5000 &&
-+					! hdev->RXCap.HF_IEEEOUI){
-+
- 				/* set 422 mode if sink can handle it */
- 				if (hdev->RXCap.native_Mode & 0x10){
- 					param->color = COLORSPACE_YUV422;
-@@ -678,25 +682,10 @@ int hdmitx_set_display(struct hdmitx_dev *hdev, enum hdmi_vic VideoCode)
- 					param->color_depth = COLORDEPTH_24B;
- 				}
- 			}
--		}
- 
--		if (param->color == COLORSPACE_RGB444) {
--			if (param->color_depth > COLORDEPTH_24B){
--				if (! hdmi_output_rgb){
--					/* set 422 mode if sink can handle it */
--					if (hdev->RXCap.native_Mode & 0x10){
--						param->color = COLORSPACE_YUV422;
--						pr_info("Setting colourspace to YCC422 for %d-bit\n", ((int) param->color_depth) * 2);
--					} else if ((param->color_depth == COLORDEPTH_30B && ! hdev->RXCap.dc_30bit) ||
--							(param->color_depth == COLORDEPTH_36B && ! hdev->RXCap.dc_36bit)) {
--						pr_info("No support for RGB deep colour, setting 8-bit\n");
--						param->color = COLORDEPTH_24B;
--					} else
--						pr_info("Colourdepth for RGB is %d-bit\n", ((int) param->color_depth) * 2);
--				} else {
--					pr_info("Setting 8-bit colourdepth for RGB\n");
--					param->color_depth = COLORDEPTH_24B;
--				}
-+			if (param->color == COLORSPACE_RGB444) {
-+				param->color = hdev->cur_video_param->color;
-+				pr_info("hdmitx: rx edid only support RGB format\n");
- 			}
- 		}
- 
-
-From e9d0146c035084dec6b4c36bfdee9f3c545c2249 Mon Sep 17 00:00:00 2001
-From: Sam Nazarko <email@samnazarko.co.uk>
-Date: Sun, 28 Oct 2018 19:21:32 +0000
-Subject: [PATCH 11/17] hdmitx: set TMDS clock from monitor
-
-Signed-off-by: Sam Nazarko <email@samnazarko.co.uk>
----
- .../amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c    | 37 +++++++++++++++----
- .../amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c    |  1 -
- 2 files changed, 30 insertions(+), 8 deletions(-)
-
-diff --git a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c
-index 1993e602e16..84a585f63c6 100644
---- a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c
-+++ b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c
-@@ -155,6 +155,18 @@ static int Edid_find_name_block(unsigned char *data)
- 		ret = 1;
- 	return ret;
- }
-+static int Edid_find_range_block(unsigned char *data)
-+{
-+	int ret = 0;
-+	int i;
-+	for (i = 0; i < 3; i++) {
-+		if (data[i])
-+			return ret;
-+	}
-+	if (data[3] == 0xfd)
-+		ret = 1;
-+	return ret;
-+}
- 
- static void Edid_ReceiverProductNameParse(struct rx_cap *pRxCap,
- 	unsigned char *data)
-@@ -1402,13 +1414,14 @@ static int hdmitx_edid_block_parse(struct hdmitx_dev *hdmitx_device,
- 				pRXCap->IEEEOUI = 0x000c03;
- 			else
- 				goto case_hf;
--			pRXCap->ColorDeepSupport =
--				(unsigned long)BlockBuf[offset+5];
--			pRXCap->Max_TMDS_Clock1 =
--				(unsigned long)BlockBuf[offset+6];
--			/* clock cannot be less than 75MHz */
--			if (pRXCap->Max_TMDS_Clock1 < 15)
--				pRXCap->Max_TMDS_Clock1 = 15;
-+			if (count > 5){
-+				pRXCap->ColorDeepSupport =
-+					(unsigned long)BlockBuf[offset+5];
-+				pRXCap->Max_TMDS_Clock1 =
-+					(unsigned long)BlockBuf[offset+6];
-+			}
-+			else
-+				pRXCap->Max_TMDS_Clock1 = 0;
- 			if (count > 7) {
- 				tmp = BlockBuf[offset+7];
- 				idx = offset + 8;
-@@ -1832,6 +1845,7 @@ int hdmitx_edid_parse(struct hdmitx_dev *hdmitx_device)
- 	unsigned char BlockCount;
- 	unsigned char *EDID_buf;
- 	int i, j, ret_val;
-+	int maxPixelClock = 0;
- 	int idx[4];
- 	struct rx_cap *pRXCap = &(hdmitx_device->RXCap);
- 	struct vinfo_s *info = NULL;
-@@ -1881,6 +1895,9 @@ int hdmitx_edid_parse(struct hdmitx_dev *hdmitx_device)
- 		if (Edid_find_name_block(&EDID_buf[idx[i]]))
- 			Edid_ReceiverProductNameParse(&hdmitx_device->RXCap,
- 				&EDID_buf[idx[i]+5]);
-+
-+		if (Edid_find_range_block(&EDID_buf[idx[i]]))
-+			maxPixelClock = EDID_buf[idx[i+9]];
- 	}
- 
- 	Edid_ManufactureDateParse(&hdmitx_device->RXCap, &EDID_buf[16]);
-@@ -2049,6 +2066,12 @@ int hdmitx_edid_parse(struct hdmitx_dev *hdmitx_device)
- 				info->hdr_info.hdr_support);
- 		}
- 	}
-+
-+	if (pRXCap->Max_TMDS_Clock1 < 15){
-+		hdmi_print(IMP, EDID "Setting maxTMDSclock from range block\n");
-+		pRXCap->Max_TMDS_Clock1 = maxPixelClock * 2;
-+	}
-+
- 	return 0;
- 
- }
-diff --git a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c
-index cc4fecf14c0..1358b554e44 100644
---- a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c
-+++ b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c
-@@ -1440,7 +1440,6 @@ static ssize_t show_disp_cap(struct device *dev,
- 				/* sanity check */
- 				para = hdmi_get_fmt_paras(vic);
- 				if (! hdmitx_device.RXCap.HF_IEEEOUI &&
--						hdmitx_device.RXCap.Max_TMDS_Clock1 >= 15 &&
- 						para->tmds_clk > hdmitx_device.RXCap.Max_TMDS_Clock1 * 5000){
- 					pr_info("Mode %s (VIC %d) needs %dMHz clock, more than %dMHz",
- 							disp_mode_t[i], vic, para->tmds_clk / 1000, hdmitx_device.RXCap.Max_TMDS_Clock1 * 5);
-
-From 6f49a80447eaaeb3f1f76f061f7b2a219482b57d Mon Sep 17 00:00:00 2001
-From: Sam Nazarko <email@samnazarko.co.uk>
-Date: Sun, 28 Oct 2018 19:25:34 +0000
-Subject: [PATCH 12/17] hdmi_tx: fix typo in evaluating max pix clock
-
-Signed-off-by: Sam Nazarko <email@samnazarko.co.uk>
----
- drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
-
-diff --git a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c
-index 84a585f63c6..1636e09e790 100644
---- a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c
-+++ b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c
-@@ -1897,7 +1897,7 @@ int hdmitx_edid_parse(struct hdmitx_dev *hdmitx_device)
- 				&EDID_buf[idx[i]+5]);
- 
- 		if (Edid_find_range_block(&EDID_buf[idx[i]]))
--			maxPixelClock = EDID_buf[idx[i+9]];
-+			maxPixelClock = EDID_buf[idx[i]+9];
- 	}
- 
- 	Edid_ManufactureDateParse(&hdmitx_device->RXCap, &EDID_buf[16]);
-
-From 18224ea490ffb1c65e9a78af50b3481f75d9efbc Mon Sep 17 00:00:00 2001
-From: Graham Horner <graham@hornercs.co.uk>
-Date: Sat, 10 Nov 2018 14:27:14 +0000
-Subject: [PATCH 13/17] Improved filtering for unsupported video modes;
- corrected colorimetry signalling for SDR10bit
-
----
- .../hdmi/hdmi_common/hdmi_parameters.c        |  7 +-
- .../amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c    |  2 +-
- .../amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c    | 70 ++++++++++++-------
- .../amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c   | 51 ++++++++------
- .../amlogic/hdmi/hdmi_tx_20/hw/hdmi_tx_hw.c   | 22 ------
- .../linux/amlogic/hdmi_tx/hdmi_info_global.h  |  1 +
- 6 files changed, 77 insertions(+), 76 deletions(-)
-
-diff --git a/drivers/amlogic/hdmi/hdmi_common/hdmi_parameters.c b/drivers/amlogic/hdmi/hdmi_common/hdmi_parameters.c
-index de5ede2868d..7b0ca548ba4 100755
---- a/drivers/amlogic/hdmi/hdmi_common/hdmi_parameters.c
-+++ b/drivers/amlogic/hdmi/hdmi_common/hdmi_parameters.c
-@@ -1224,10 +1224,9 @@ struct hdmi_format_para *hdmi_get_fmt_name(char const *name, char const *attr)
- 		case HDMI_3840x2160p60_64x27:
- 			break;
- 		default:
--			/* fall back to something which must be supported */
--			pr_err("Y420 mode illegal at that resolution - falling back to RGB,8bit");
--			para->cs = COLORSPACE_RGB444;
--			para->cd = COLORDEPTH_24B;
-+			/* fall back to something which is hdmi legal */
-+			pr_info("YUV420 mode illegal at that resolution - setting YUV444");
-+			para->cs = COLORSPACE_YUV444;
- 			break;
- 		}
- 	}
-diff --git a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c
-index 1636e09e790..37a28692bd1 100644
---- a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c
-+++ b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c
-@@ -1452,7 +1452,7 @@ static int hdmitx_edid_block_parse(struct hdmitx_dev *hdmitx_device,
- 			if ((BlockBuf[offset] == 0xd8) &&
- 				(BlockBuf[offset+1] == 0x5d) &&
- 				(BlockBuf[offset+2] == 0xc4))
--				pRXCap->HF_IEEEOUI = 0xd85dc4;
-+				pRXCap->HF_IEEEOUI = 0xc45dd8;
- 			pRXCap->Max_TMDS_Clock2 = BlockBuf[offset+4];
- 			pRXCap->scdc_present =
- 				!!(BlockBuf[offset+5] & (1 << 7));
-diff --git a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c
-index 1358b554e44..40081e962cb 100644
---- a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c
-+++ b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c
-@@ -593,11 +593,6 @@ static int set_disp_mode_auto(void)
- 			}
- 		}
- 	}
--	/* In the file hdmi_common/hdmi_parameters.c,
--	 * the data array all_fmt_paras[] treat 2160p60hz and 2160p60hz420
--	 * as two different modes, such Scrambler
--	 * So if node "attr" contains 420, need append 420 to mode.
--	 */
- 
- 	para = hdmi_get_fmt_name(mode, fmt_attr);
- 	/* check display caps - warn but don't force - these can only be set by sysfs */
-@@ -619,10 +614,20 @@ static int set_disp_mode_auto(void)
- 			pr_info("hdmitx: display colourdepth is %d in cur_param 0x%08x (VIC: %d)\n",hdev->cur_video_param->color_depth * 2,
- 					hdev->cur_video_param,  hdev->cur_video_param->VIC);
- 		}
--		if (hdev->cur_video_param->color_depth > COLORDEPTH_24B && !(hdev->RXCap.ColorDeepSupport & 0x78)){
--			pr_warn("Bitdepth is set to %d bits but display does not support deep colour",
--				hdev->cur_video_param->color_depth * 2);
--			hdev->cur_video_param->color_depth = COLORDEPTH_24B;
-+		if (hdev->cur_video_param->color_depth > COLORDEPTH_24B){
-+			int dc_support = 0;
-+			if (hdev->RXCap.ColorDeepSupport & 0x78 && hdev->para->cs != COLORSPACE_YUV420)
-+				dc_support = 1;
-+			else if ((hdev->RXCap.HF_IEEEOUI) &&
-+					((hdev->RXCap.dc_30bit_420 && hdev->cur_video_param->color_depth == COLORDEPTH_30B) ||
-+					 (hdev->RXCap.dc_36bit_420 && hdev->cur_video_param->color_depth == COLORDEPTH_36B) ||
-+					 (hdev->RXCap.dc_48bit_420 && hdev->cur_video_param->color_depth == COLORDEPTH_48B)))
-+				dc_support = 1;
-+			if (! dc_support){
-+				pr_warn("Bitdepth is set to %d bits but display does not support deep colour",
-+						hdev->cur_video_param->color_depth * 2);
-+				hdev->cur_video_param->color_depth = COLORDEPTH_24B;
-+			}
- 		}
- 	}
- 	/* only set full range if forced */
-@@ -737,6 +742,9 @@ static int set_disp_mode_auto(void)
- 		}
- 		else hdmi_print(IMP, VID "No master display info\n");
- 	}		
-+		hdmi_print(IMP, VID "PLL clock: 0x%08x, Vid clock div 0x%08x\n",
-+				hd_read_reg(P_HHI_HDMI_PLL_CNTL),
-+				hd_read_reg(P_HHI_VID_PLL_CLK_DIV));
- 	return ret;
- } /* set_disp_mode_auto */
- 
-@@ -1441,19 +1449,19 @@ static ssize_t show_disp_cap(struct device *dev,
- 				para = hdmi_get_fmt_paras(vic);
- 				if (! hdmitx_device.RXCap.HF_IEEEOUI &&
- 						para->tmds_clk > hdmitx_device.RXCap.Max_TMDS_Clock1 * 5000){
--					pr_info("Mode %s (VIC %d) needs %dMHz clock, more than %dMHz",
 +					pr_warn("Mode %s (VIC %d) needs %dMHz clock, at 444,8-bit - more than %dMHz",
- 							disp_mode_t[i], vic, para->tmds_clk / 1000, hdmitx_device.RXCap.Max_TMDS_Clock1 * 5);
--				} else {
--					pos += snprintf(buf+pos, PAGE_SIZE, "%s",
--							disp_mode_t[i]);
--					if (native_disp_mode && (strcmp(
--									native_disp_mode,
--									disp_mode_t[i]) == 0)) {
--						pos += snprintf(buf+pos, PAGE_SIZE,
--								"*\n");
--					} else
--						pos += snprintf(buf+pos, PAGE_SIZE, "\n");
- 				}
++							disp_mode_t[i], vic, para->tmds_clk / 1000, hdmitx_device.RXCap.Max_TMDS_Clock1 * 5);
++				}
 +				pos += snprintf(buf+pos, PAGE_SIZE, "%s",
 +						disp_mode_t[i]);
 +				if (native_disp_mode && (strcmp(
@@ -2195,10 +968,11 @@ index 1358b554e44..40081e962cb 100644
 +				} else
 +					pos += snprintf(buf+pos, PAGE_SIZE, "\n");
 +
- 			}
++			}
  		}
  	}
-@@ -2352,6 +2360,22 @@ static int hdmitx_notify_callback_v(struct notifier_block *block,
+ 	return pos;
+@@ -2281,6 +2389,22 @@ static int hdmitx_notify_callback_v(stru
  	if (get_cur_vout_index() != 1)
  		return 0;
  
@@ -2221,7 +995,7 @@ index 1358b554e44..40081e962cb 100644
  	if (cmd != VOUT_EVENT_MODE_CHANGE)
  		return 0;
  
-@@ -2360,12 +2384,6 @@ static int hdmitx_notify_callback_v(struct notifier_block *block,
+@@ -2289,12 +2413,6 @@ static int hdmitx_notify_callback_v(stru
  	/* vic_ready got from IP */
  	vic_ready = hdmitx_device.HWOp.GetState(&hdmitx_device,
  		STAT_VIDEO_VIC, 0);
@@ -2234,27 +1008,29 @@ index 1358b554e44..40081e962cb 100644
  
  	vic_now = hdmitx_edid_get_VIC(&hdmitx_device, info->name, 1);
  	if (hdmitx_device.vic_count == 0) {
-diff --git a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c
-index bc7b10a29ad..5db9ba8e5be 100644
---- a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c
-+++ b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c
-@@ -627,13 +627,13 @@ int hdmitx_set_display(struct hdmitx_dev *hdev, enum hdmi_vic VideoCode)
+diff -Naurp linux/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c linux-patch/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c
+--- linux/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c	2018-06-27 06:13:58.000000000 +0300
++++ linux-patch/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c	2018-11-30 09:51:02.000000000 +0200
+@@ -627,10 +627,16 @@ int hdmitx_set_display(struct hdmitx_dev
  	}
  
  	param = hdmi_get_video_param(VideoCode);
--	pr_info("hdmitx: video: params found at 0x%08x\n", param);
+-	hdev->cur_video_param = param;
 +	hdmi_print(IMP, SYS "params found at 0x%08x\n", param);
- 	/* recover the bitdepth set in hdmi_tx_main */
- 	if (hdev->cur_video_param != NULL)
- 		param->color_depth = hdev->cur_video_param->color_depth;
++	/* recover the bitdepth set in hdmi_tx_main */
++	if (hdev->cur_video_param != NULL)
++		param->color_depth = hdev->cur_video_param->color_depth;
  	if (param) {
- 		hdev->cur_video_param = param;
--	        pr_info("hdmitx: video: cur_param = param at 0x%08x colourdepth %d\n", hdev->cur_video_param, hdev->cur_video_param->color_depth * 2);
++		hdev->cur_video_param = param;
 +	        hdmi_print(IMP, SYS "cur_param = param at 0x%08x colourdepth %d\n", hdev->cur_video_param, hdev->cur_video_param->color_depth * 2);
  		param->color = param->color_prefer;
- 		if (hdmi_output_rgb || is_philips_2009(&hdev->RXCap) ||
- 			hdev->para->cs == COLORSPACE_RGB444) {
-@@ -644,12 +644,14 @@ int hdmitx_set_display(struct hdmitx_dev *hdev, enum hdmi_vic VideoCode)
+-		if (hdmi_output_rgb || is_philips_2009(&hdev->RXCap)) {
++		if (hdmi_output_rgb || is_philips_2009(&hdev->RXCap) ||
++			hdev->para->cs == COLORSPACE_RGB444) {
+ 			param->color = COLORSPACE_RGB444;
+ 		} else {
+ 			/* HDMI CT 7-24 Pixel Encoding
+@@ -638,17 +644,29 @@ int hdmitx_set_display(struct hdmitx_dev
  			 */
  			switch (hdev->RXCap.native_Mode & 0x30) {
  			case 0x20:/*bit5==1, then support YCBCR444 + RGB*/
@@ -2270,29 +1046,33 @@ index bc7b10a29ad..5db9ba8e5be 100644
  			default:
  				param->color = COLORSPACE_RGB444;
  			}
-@@ -664,31 +666,34 @@ int hdmitx_set_display(struct hdmitx_dev *hdev, enum hdmi_vic VideoCode)
+-			/* For Y420 modes */
+ 			switch (VideoCode) {
++			/* Try to stop 50hz/60hz 10bit YUV444 from happening */
++			case HDMI_3840x2160p50_16x9:
++			case HDMI_3840x2160p60_16x9:
++			case HDMI_4096x2160p50_256x135:
++			case HDMI_4096x2160p60_256x135:
++				if (param->color_depth > COLORDEPTH_24B){
++					param->color = COLORSPACE_YUV422;
++					pr_info("Setting colourspace to YCC422 for %d-bit\n", ((int) param->color_depth) * 2);
++				}
++				break;
++			/* For Y420 modes */
+ 			case HDMI_3840x2160p50_16x9_Y420:
+ 			case HDMI_3840x2160p60_16x9_Y420:
+ 			case HDMI_4096x2160p50_256x135_Y420:
+@@ -658,12 +676,36 @@ int hdmitx_set_display(struct hdmitx_dev
  			default:
  				break;
  			}
--			pr_info("tmds_clk %d, scaled %d, MaxClock %d, HF_IEEEOUI %d\n",
--					hdev->para->tmds_clk, hdev->para->tmds_clk * ((int) param->color_depth) / ((int) COLORDEPTH_24B),
+-			if (param->color == COLORSPACE_RGB444) {
+-				hdev->para->cs = hdev->cur_video_param->color;
+-				pr_info("hdmitx: rx edid only support RGB format\n");
 +			hdmi_print(IMP, VID "pixel freq %d, tmds clock %d, MaxClock1 %d, HF_IEEEOUI 0x%06x, MaxClock2 %d\n",
 +					hdev->para->tmds_clk, hdev->para->tmds_clk * ((int) param->color_depth) / 
 +					((int) COLORDEPTH_24B) / (param->color == COLORSPACE_YUV420 ? 2 : 1),
- 					hdev->RXCap.Max_TMDS_Clock1 * 5000,
--					hdev->RXCap.HF_IEEEOUI);
--			if (param->color == COLORSPACE_YUV444 &&
--					hdev->para->tmds_clk * ((int) param->color_depth) / ((int) COLORDEPTH_24B) >
--					hdev->RXCap.Max_TMDS_Clock1 * 5000 &&
--					! hdev->RXCap.HF_IEEEOUI){
--
--				/* set 422 mode if sink can handle it */
--				if (hdev->RXCap.native_Mode & 0x10){
--					param->color = COLORSPACE_YUV422;
--					pr_info("Setting colourspace to YCC422 for %d-bit\n", ((int) param->color_depth) * 2);
--				} else {
--					pr_info("No support for YCC422, setting 8-bit\n");
--					param->color_depth = COLORDEPTH_24B;
++					hdev->RXCap.Max_TMDS_Clock1 * 5000,
 +					hdev->RXCap.HF_IEEEOUI, hdev->RXCap.HF_IEEEOUI ? hdev->RXCap.Max_TMDS_Clock2 * 5000 : 0);
 +			if (param->color == COLORSPACE_YUV444){
 +				int max_tmds_clock = hdev->RXCap.Max_TMDS_Clock1 * 5000;
@@ -2308,28 +1088,100 @@ index bc7b10a29ad..5db9ba8e5be 100644
 +						pr_info("No support for YCC422, setting 8-bit\n");
 +						param->color_depth = COLORDEPTH_24B;
 +					}
- 				}
++				}
  			}
--
--			if (param->color == COLORSPACE_RGB444) {
--				param->color = hdev->cur_video_param->color;
--				pr_info("hdmitx: rx edid only support RGB format\n");
--			}
- 		}
++		}
  
 +/*		if (param->color == COLORSPACE_RGB444) {
 +			hdev->cur_video_param->color = param->color;
 +			hdmi_print(IMP, VID "hdmitx: rx edid only support RGB format\n");
-+		}
+ 		}
 +*/
- 		hdev->para->cs = param->color;
- 
++		hdev->para->cs = param->color;
++
  		if (hdev->HWOp.SetDispMode(hdev) >= 0) {
-diff --git a/drivers/amlogic/hdmi/hdmi_tx_20/hw/hdmi_tx_hw.c b/drivers/amlogic/hdmi/hdmi_tx_20/hw/hdmi_tx_hw.c
-index 727ad9b8469..acdaeffcee8 100644
---- a/drivers/amlogic/hdmi/hdmi_tx_20/hw/hdmi_tx_hw.c
-+++ b/drivers/amlogic/hdmi/hdmi_tx_20/hw/hdmi_tx_hw.c
-@@ -4104,28 +4104,6 @@ void hdmitx_set_avi_colorimetry(struct hdmi_format_para *para)
+ 			/* HDMI CT 7-33 DVI Sink, no HDMI VSDB nor any
+ 			 * other VSDB, No GB or DI expected
+diff -Naurp linux/drivers/amlogic/hdmi/hdmi_tx_20/hw/hdmi_tx_hw.c linux-patch/drivers/amlogic/hdmi/hdmi_tx_20/hw/hdmi_tx_hw.c
+--- linux/drivers/amlogic/hdmi/hdmi_tx_20/hw/hdmi_tx_hw.c	2018-11-30 09:45:45.000000000 +0200
++++ linux-patch/drivers/amlogic/hdmi/hdmi_tx_20/hw/hdmi_tx_hw.c	2018-11-30 09:51:02.000000000 +0200
+@@ -1863,7 +1863,7 @@ static int hdmitx_set_dispmode(struct hd
+ 	case HDMI_4096x2160p50_256x135:
+ 	case HDMI_4096x2160p60_256x135:
+ 		if ((hdev->para->cs == COLORSPACE_YUV420)
+-			&& (hdev->para->cd == COLORDEPTH_24B))
++			&& (hdev->cur_video_param->color_depth == COLORDEPTH_24B))
+ 			hdev->para->tmds_clk_div40 = 0;
+ 		else
+ 			hdev->para->tmds_clk_div40 = 1;
+@@ -1874,7 +1874,7 @@ static int hdmitx_set_dispmode(struct hd
+ 	case HDMI_4096x2160p60_256x135_Y420:
+ 	case HDMI_3840x2160p50_64x27_Y420:
+ 	case HDMI_3840x2160p60_64x27_Y420:
+-		if (hdev->para->cd == COLORDEPTH_24B)
++		if (hdev->cur_video_param->color_depth == COLORDEPTH_24B)
+ 			hdev->para->tmds_clk_div40 = 0;
+ 		else
+ 			hdev->para->tmds_clk_div40 = 1;
+@@ -1886,7 +1886,7 @@ static int hdmitx_set_dispmode(struct hd
+ 	case HDMI_3840x2160p30_16x9:
+ 	case HDMI_3840x2160p30_64x27:
+ 		if ((hdev->para->cs == COLORSPACE_YUV422)
+-			|| (hdev->para->cd == COLORDEPTH_24B))
++			|| (hdev->cur_video_param->color_depth == COLORDEPTH_24B))
+ 			hdev->para->tmds_clk_div40 = 0;
+ 		else
+ 			hdev->para->tmds_clk_div40 = 1;
+@@ -1898,19 +1898,6 @@ static int hdmitx_set_dispmode(struct hd
+ 	set_tmds_clk_div40(hdev->para->tmds_clk_div40);
+ 	scdc_config(hdev);
+ 
+-	if (color_depth_f == 24)
+-		hdev->cur_video_param->color_depth = COLORDEPTH_24B;
+-	else if (color_depth_f == 30)
+-		hdev->cur_video_param->color_depth = COLORDEPTH_30B;
+-	else if (color_depth_f == 36)
+-		hdev->cur_video_param->color_depth = COLORDEPTH_36B;
+-	else if (color_depth_f == 48)
+-		hdev->cur_video_param->color_depth = COLORDEPTH_48B;
+-	hdmi_print(INF, SYS "set mode VIC %d (cd%d,cs%d,pm%d,vd%d,%x)\n",
+-		hdev->cur_video_param->VIC, color_depth_f, COLORSPACE_f,
+-		power_mode, power_off_vdac_flag, serial_reg_val);
+-	if (COLORSPACE_f != 0)
+-		hdev->cur_video_param->color = COLORSPACE_f;
+ 	hdmitx_set_pll(hdev);
+ 	/*hdmitx_set_phy(hdev);*/
+ 	if (hdev->flag_3dfp)
+@@ -2321,7 +2308,10 @@ static void set_aud_info_pkt(struct hdmi
+ 		hdmitx_set_reg_bits(HDMITX_DWC_FC_AUDICONF0,
+ 			GET_OUTCHN_NO(hdev->aud_output_ch) - 1, 4, 3);
+ 	hdmitx_set_reg_bits(HDMITX_DWC_FC_AUDICONF1, 0, 0, 3); /* SF */
+-	hdmitx_set_reg_bits(HDMITX_DWC_FC_AUDICONF1, 0, 4, 2); /* SS */
++	if (audio_param->channel_num < 2)
++		hdmitx_set_reg_bits(HDMITX_DWC_FC_AUDICONF1, 3, 4, 2); /* SS */
++	else
++		hdmitx_set_reg_bits(HDMITX_DWC_FC_AUDICONF1, 0, 4, 2); /* SS */
+ 	switch (audio_param->type) {
+ 	case CT_MAT:
+ 		hdmi_print(INF, AUD "Audio Type: MAT(MLP)\n");
+@@ -3848,14 +3838,14 @@ static int hdmitx_hdmi_dvi_config(struct
+ 	} else {
+ 
+ 		/* set ycc indicator */
+-		if (hdmi_output_rgb) {
++		/*if (hdmi_output_rgb) {
+ 			hdmitx_csc_config(TX_INPUT_COLOR_FORMAT,
+ 				COLORSPACE_RGB444, TX_COLOR_DEPTH);
+ 			hdmitx_set_reg_bits(HDMITX_DWC_FC_INVIDCONF, 0, 3, 1);
+ 		} else if (hdev->para->cs == COLORSPACE_YUV420)
+ 			hdmitx_set_reg_bits(HDMITX_DWC_FC_AVICONF0, 3, 0, 2);
+ 		else
+-			hdmitx_set_reg_bits(HDMITX_DWC_FC_AVICONF0, 2, 0, 2);
++			hdmitx_set_reg_bits(HDMITX_DWC_FC_AVICONF0, 2, 0, 2);*/
+ 		/* set hdmi flag */
+ 		hdmitx_set_reg_bits(HDMITX_DWC_FC_INVIDCONF, 1, 3, 1);
+ 	}
+@@ -4167,28 +4157,6 @@ void hdmitx_set_avi_colorimetry(struct h
  		hdmitx_set_reg_bits(HDMITX_DWC_FC_AVICONF1, 1, 6, 2);
  		hdmitx_set_reg_bits(HDMITX_DWC_FC_AVICONF2, 0, 4, 3);
  		break;
@@ -2358,10 +1210,211 @@ index 727ad9b8469..acdaeffcee8 100644
  	default:
  		/* C1C0 709 */
  		hdmitx_set_reg_bits(HDMITX_DWC_FC_AVICONF1, 2, 6, 2);
-diff --git a/include/linux/amlogic/hdmi_tx/hdmi_info_global.h b/include/linux/amlogic/hdmi_tx/hdmi_info_global.h
-index d8d7ed63f1f..d93de7f042a 100644
---- a/include/linux/amlogic/hdmi_tx/hdmi_info_global.h
-+++ b/include/linux/amlogic/hdmi_tx/hdmi_info_global.h
+@@ -4572,14 +4540,17 @@ static void config_hdmi20_tx(enum hdmi_v
+ 	hdmitx_set_reg_bits(HDMITX_DWC_FC_AVICONF1, 0x8, 0, 4);
+ 
+ 	hdmitx_set_avi_colorimetry(para);
+-	if (hdev->hdr_src_feature)
++	if (hdev->hdr_src_feature){
+ 		hdev->HWOp.CntlConfig(hdev, CONF_AVI_BT2020, SET_AVI_BT2020);
++		pr_info("hdmitx: hw set BT2020");
++	}
+ 
+ 	data32  = 0;
+-	data32 |= (((0 == COLORRANGE_FUL) ? 1 : 0) << 2);
++	data32 |= (((hdev->para->cr == COLORRANGE_FUL) ? 1 : 0) << 2);
+ 	data32 |= (0 << 0);
+ 	hdmitx_wr_reg(HDMITX_DWC_FC_AVICONF3,   data32);
+ 
++	hdmitx_set_reg_bits(HDMITX_DWC_FC_AVICONF2, hdev->para->cr + 1, 2, 2);
+ 	hdmitx_wr_reg(HDMITX_DWC_FC_AVIVID, (para->vic & HDMITX_VIC_MASK));
+ 
+ 	/* write Audio Infoframe packet configuration */
+@@ -5008,7 +4979,7 @@ static void hdmitx_set_hw(struct hdmitx_
+ 
+ 	pr_info("%s[%d] set VIC = %d\n", __func__, __LINE__, para->vic);
+ 	config_hdmi20_tx(vic, hdev,
+-			hdev->para->cd,
++			hdev->cur_video_param->color_depth,
+ 			TX_INPUT_COLOR_FORMAT,
+ 			hdev->para->cs);
+ 	return;
+diff -Naurp linux/drivers/amlogic/hdmi/hdmi_tx_20/hw/hw_clk.c linux-patch/drivers/amlogic/hdmi/hdmi_tx_20/hw/hw_clk.c
+--- linux/drivers/amlogic/hdmi/hdmi_tx_20/hw/hw_clk.c	2018-06-27 06:13:58.000000000 +0300
++++ linux-patch/drivers/amlogic/hdmi/hdmi_tx_20/hw/hw_clk.c	2018-11-30 09:51:02.000000000 +0200
+@@ -61,7 +61,7 @@ static void set_gxb_hpll_clk_out(unsigne
+ 		hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x00000e55);
+ 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0x0, 28, 1);
+ 		WAIT_FOR_PLL_LOCKED(P_HHI_HDMI_PLL_CNTL);
+-		pr_info("HPLL: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
++		pr_info("HPLL: 0x%08x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
+ 		if (frac_rate)
+ 			hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL2, 0x4a05, 0, 16);
+ 		else
+@@ -76,7 +76,7 @@ static void set_gxb_hpll_clk_out(unsigne
+ 		hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x00000e55);
+ 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0x0, 28, 1);
+ 		WAIT_FOR_PLL_LOCKED(P_HHI_HDMI_PLL_CNTL);
+-		pr_info("HPLL: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
++		pr_info("HPLL: 0x%08x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
+ 		if (frac_rate)
+ 			hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL2, 0x4800, 0, 16);
+ 		else
+@@ -91,7 +91,7 @@ static void set_gxb_hpll_clk_out(unsigne
+ 		hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x00000e55);
+ 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0x0, 28, 1);
+ 		WAIT_FOR_PLL_LOCKED(P_HHI_HDMI_PLL_CNTL);
+-		pr_info("HPLL: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
++		pr_info("HPLL: 0x%08x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
+ 		if (frac_rate)
+ 			hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL2, 0x4b84, 0, 16);
+ 		else
+@@ -106,7 +106,7 @@ static void set_gxb_hpll_clk_out(unsigne
+ 		hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x00000e55);
+ 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0x4, 28, 3);
+ 		WAIT_FOR_PLL_LOCKED(P_HHI_HDMI_PLL_CNTL);
+-		pr_info("HPLL: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
++		pr_info("HPLL: 0x%08x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
+ 		if (frac_rate)
+ 			hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL2, 0x4443, 0, 16);
+ 		else
+@@ -120,7 +120,7 @@ static void set_gxb_hpll_clk_out(unsigne
+ 		hd_write_reg(P_HHI_HDMI_PLL_CNTL5, 0x71486980);
+ 		hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x00000e55);
+ 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0x4, 28, 3);
+-		pr_info("HPLL: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
++		pr_info("HPLL: 0x%08x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
+ 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL2, 0x4300, 0, 16);
+ 		break;
+ 	case 3243240:
+@@ -131,7 +131,7 @@ static void set_gxb_hpll_clk_out(unsigne
+ 		hd_write_reg(P_HHI_HDMI_PLL_CNTL5, 0x71486980);
+ 		hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x00000e55);
+ 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0x4, 28, 3);
+-		pr_info("HPLL: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
++		pr_info("HPLL: 0x%08x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
+ 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL2, 0x4300, 0, 16);
+ 		if (frac_rate)
+ 			hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL2, 0x4800, 0, 16);
+@@ -147,7 +147,7 @@ static void set_gxb_hpll_clk_out(unsigne
+ 		hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x00000e55);
+ 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0x4, 28, 3);
+ 		WAIT_FOR_PLL_LOCKED(P_HHI_HDMI_PLL_CNTL);
+-		pr_info("HPLL: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
++		pr_info("HPLL: 0x%08x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
+ 		if (frac_rate)
+ 			hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL2, 0x4d03, 0, 16);
+ 		else
+@@ -162,7 +162,7 @@ static void set_gxb_hpll_clk_out(unsigne
+ 		hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x00000e55);
+ 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0x0, 28, 1);
+ 		WAIT_FOR_PLL_LOCKED(P_HHI_HDMI_PLL_CNTL);
+-		pr_info("HPLL: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
++		pr_info("HPLL: 0x%08x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
+ 		if (frac_rate)
+ 			hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL2, 0x0, 0, 16);
+ 		else
+@@ -189,7 +189,7 @@ static void set_gxtvbb_hpll_clk_out(unsi
+ 		hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x00002e55);
+ 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0x0, 28, 1);
+ 		WAIT_FOR_PLL_LOCKED(P_HHI_HDMI_PLL_CNTL);
+-		pr_info("HPLL: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
++		pr_info("HPLL: 0x%08x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
+ 		break;
+ 	case 5405400:
+ 		hd_write_reg(P_HHI_HDMI_PLL_CNTL, 0x58000270);
+@@ -203,7 +203,7 @@ static void set_gxtvbb_hpll_clk_out(unsi
+ 		hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x00002e55);
+ 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0x0, 28, 1);
+ 		WAIT_FOR_PLL_LOCKED(P_HHI_HDMI_PLL_CNTL);
+-		pr_info("HPLL: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
++		pr_info("HPLL: 0x%08x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
+ 		break;
+ 	case 4455000:
+ 		hd_write_reg(P_HHI_HDMI_PLL_CNTL, 0x5800025c);
+@@ -217,7 +217,7 @@ static void set_gxtvbb_hpll_clk_out(unsi
+ 		hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x00002e55);
+ 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0x0, 28, 1);
+ 		WAIT_FOR_PLL_LOCKED(P_HHI_HDMI_PLL_CNTL);
+-		pr_info("HPLL: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
++		pr_info("HPLL: 0x%08x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
+ 		break;
+ 	case 3712500:
+ 		hd_write_reg(P_HHI_HDMI_PLL_CNTL, 0x5800024d);
+@@ -231,7 +231,7 @@ static void set_gxtvbb_hpll_clk_out(unsi
+ 		hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x00002e55);
+ 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0x4, 28, 3);
+ 		WAIT_FOR_PLL_LOCKED(P_HHI_HDMI_PLL_CNTL);
+-		pr_info("HPLL: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
++		pr_info("HPLL: 0x%08x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
+ 		break;
+ 	case 3450000:
+ 		hd_write_reg(P_HHI_HDMI_PLL_CNTL, 0x58000247);
+@@ -241,7 +241,7 @@ static void set_gxtvbb_hpll_clk_out(unsi
+ 		hd_write_reg(P_HHI_HDMI_PLL_CNTL5, 0x71486980);
+ 		hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x00002e55);
+ 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0x4, 28, 3);
+-		pr_info("HPLL: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
++		pr_info("HPLL: 0x%08x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
+ 		break;
+ 	case 3243240:
+ 		hd_write_reg(P_HHI_HDMI_PLL_CNTL, 0x58000243);
+@@ -254,7 +254,7 @@ static void set_gxtvbb_hpll_clk_out(unsi
+ 		hd_write_reg(P_HHI_HDMI_PLL_CNTL5, 0x71486980);
+ 		hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x00002e55);
+ 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0x4, 28, 3);
+-		pr_info("HPLL: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
++		pr_info("HPLL: 0x%08x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
+ 		break;
+ 	case 2970000:
+ 		hd_write_reg(P_HHI_HDMI_PLL_CNTL, 0x5800023d);
+@@ -268,7 +268,7 @@ static void set_gxtvbb_hpll_clk_out(unsi
+ 		hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x00002e55);
+ 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0x4, 28, 3);
+ 		WAIT_FOR_PLL_LOCKED(P_HHI_HDMI_PLL_CNTL);
+-		pr_info("HPLL: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
++		pr_info("HPLL: 0x%08x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
+ 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL2, 0x4e00, 0, 16);
+ 		break;
+ 	case 4324320:
+@@ -284,7 +284,7 @@ static void set_gxtvbb_hpll_clk_out(unsi
+ 		hd_write_reg(P_HHI_HDMI_PLL_CNTL6, 0x00002e55);
+ 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL, 0x0, 28, 1);
+ 		WAIT_FOR_PLL_LOCKED(P_HHI_HDMI_PLL_CNTL);
+-		pr_info("HPLL: 0x%x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
++		pr_info("HPLL: 0x%08x\n", hd_read_reg(P_HHI_HDMI_PLL_CNTL));
+ 		break;
+ 	default:
+ 		pr_info("error hpll clk: %d\n", clk);
+@@ -849,10 +849,15 @@ void hdmitx_set_clk(struct hdmitx_dev *h
+ {
+ 	enum hdmi_vic vic = hdev->cur_VIC;
+ 	struct hdmi_format_para *para = NULL;
++	enum hdmi_color_depth cd;
++	if (hdev->cur_video_param->color_depth && hdev->cur_video_param->color_depth > 0)
++		cd = hdev->cur_video_param->color_depth;
++	else
++		cd = hdev->para->cd;
+ 
+ 	frac_rate = hdev->frac_rate_policy;
+ 	pr_info("hdmitx: set clk: VIC = %d  cd = %d  frac_rate = %d\n", vic,
+-		hdev->para->cd, frac_rate);
++		cd, frac_rate);
+ 	para = hdmi_get_fmt_paras(vic);
+ 	if (para && (para->name) && likely_frac_rate_mode(para->name))
+ 		;
+@@ -866,7 +871,7 @@ void hdmitx_set_clk(struct hdmitx_dev *h
+ 		return;
+ 	}
+ 	if (hdev->para->cs != COLORSPACE_YUV422)
+-		hdmitx_set_clk_(vic, hdev->para->cd);
++		hdmitx_set_clk_(vic, cd);
+ 	else
+ 		hdmitx_set_clk_(vic, COLORDEPTH_24B);
+ }
+diff -Naurp linux/include/linux/amlogic/hdmi_tx/hdmi_info_global.h linux-patch/include/linux/amlogic/hdmi_tx/hdmi_info_global.h
+--- linux/include/linux/amlogic/hdmi_tx/hdmi_info_global.h	2018-06-27 06:13:58.000000000 +0300
++++ linux-patch/include/linux/amlogic/hdmi_tx/hdmi_info_global.h	2018-11-30 09:51:02.000000000 +0200
 @@ -69,6 +69,7 @@ enum hdmi_barinfo {
  
  enum hdmi_colorimetry {
@@ -2370,159 +1423,3 @@ index d8d7ed63f1f..d93de7f042a 100644
  };
  
  enum hdmi_slacing {
-
-From 7fc3c36a7f35c909d78113bf8be116dd98159eac Mon Sep 17 00:00:00 2001
-From: cdu13a <cdu13a@gmail.com>
-Date: Sun, 4 Nov 2018 06:16:52 -0500
-Subject: [PATCH 14/17] amlogic/hdmi: Try to make bad EDID good enough
-
----
- .../amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c    | 22 +++++++++++++++++--
- 1 file changed, 20 insertions(+), 2 deletions(-)
-
-diff --git a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c
-index 37a28692bd1..e6c6c9221ba 100644
---- a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c
-+++ b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_edid.c
-@@ -2066,11 +2066,29 @@ int hdmitx_edid_parse(struct hdmitx_dev *hdmitx_device)
- 				info->hdr_info.hdr_support);
- 		}
- 	}
--
-+	/* Set maxTMDSclock1 from range block if it doesn't seem to be set right */
- 	if (pRXCap->Max_TMDS_Clock1 < 15){
--		hdmi_print(IMP, EDID "Setting maxTMDSclock from range block\n");
-+		hdmi_print(IMP, EDID "Setting maxTMDSclock1 from range block\n");
- 		pRXCap->Max_TMDS_Clock1 = maxPixelClock * 2;
- 	}
-+	/* Make sure we have a usable maxTMDSclock1 */
-+	if (pRXCap->Max_TMDS_Clock1 < 15){
-+		pRXCap->Max_TMDS_Clock1 = 35;
-+		hdmi_print(IMP, EDID "No Valid maxTMDSclock1 Setting to 175Mhz\n");
-+	}
-+	/* If we have a high clock but no HF-VSDB it's probably HDMI 2, so fake a HF-VSDB */
-+	if (maxPixelClock > 34 && ! pRXCap->Max_TMDS_Clock2 && ! pRXCap->HF_IEEEOUI){
-+		hdmi_print(IMP, EDID "High clock, no HF-VSDB block, Is it missing?\n");
-+		hdmi_print(IMP, EDID "Faking HF-VSDB block\n");
-+		pRXCap->HF_IEEEOUI = 0xd85dc4;
-+		pRXCap->Max_TMDS_Clock2 = maxPixelClock * 2;
-+		pRXCap->scdc_present = 1;
-+		pRXCap->scdc_rr_capable = 0;
-+		pRXCap->lte_340mcsc_scramble = 0;
-+		pRXCap->dc_30bit_420 = 0;
-+		pRXCap->dc_36bit_420 = 0;
-+		pRXCap->dc_48bit_420 = 0;
-+	}
- 
- 	return 0;
- 
-
-From d72b5c8c3d0ce57099822915bdb96263a8463983 Mon Sep 17 00:00:00 2001
-From: cdu13a <cdu13a@gmail.com>
-Date: Wed, 7 Nov 2018 02:18:17 -0500
-Subject: [PATCH 15/17] Stop auto cs/cd switching from taking us out of spec
-
----
- drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c  |  5 ++++-
- drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c | 12 +++++++++++-
- 2 files changed, 15 insertions(+), 2 deletions(-)
-
-diff --git a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c
-index 40081e962cb..c9d3a996326 100644
---- a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c
-+++ b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_main.c
-@@ -610,7 +610,10 @@ static int set_disp_mode_auto(void)
- 			pr_info("hdmitx: display colourdepth set by attr to %d in cur_param 0x%08x (VIC: %d)\n",hdev->cur_video_param->color_depth * 2,
- 					hdev->cur_video_param,  hdev->cur_video_param->VIC);
- 		} else {
--			hdev->cur_video_param->color_depth = COLORDEPTH_30B;
-+			if (stream_cur_cd == COLORDEPTH_24B)
-+				hdev->cur_video_param->color_depth = COLORDEPTH_24B;
-+			if (stream_cur_cd == COLORDEPTH_30B)
-+				hdev->cur_video_param->color_depth = COLORDEPTH_30B;
- 			pr_info("hdmitx: display colourdepth is %d in cur_param 0x%08x (VIC: %d)\n",hdev->cur_video_param->color_depth * 2,
- 					hdev->cur_video_param,  hdev->cur_video_param->VIC);
- 		}
-diff --git a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c
-index 5db9ba8e5be..912c1400020 100644
---- a/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c
-+++ b/drivers/amlogic/hdmi/hdmi_tx_20/hdmi_tx_video.c
-@@ -655,8 +655,18 @@ int hdmitx_set_display(struct hdmitx_dev *hdev, enum hdmi_vic VideoCode)
- 			default:
- 				param->color = COLORSPACE_RGB444;
- 			}
--			/* For Y420 modes */
- 			switch (VideoCode) {
-+			/* Try to stop 50hz/60hz 10bit YUV444 from happening */
-+			case HDMI_3840x2160p50_16x9:
-+			case HDMI_3840x2160p60_16x9:
-+			case HDMI_4096x2160p50_256x135:
-+			case HDMI_4096x2160p60_256x135:
-+				if (param->color_depth > COLORDEPTH_24B){
-+					param->color = COLORSPACE_YUV422;
-+					pr_info("Setting colourspace to YCC422 for %d-bit\n", ((int) param->color_depth) * 2);
-+				}
-+				break;
-+			/* For Y420 modes */
- 			case HDMI_3840x2160p50_16x9_Y420:
- 			case HDMI_3840x2160p60_16x9_Y420:
- 			case HDMI_4096x2160p50_256x135_Y420:
-
-From a3476c36e1a1f23764a0e663595759f4493945c9 Mon Sep 17 00:00:00 2001
-From: cdu13a <cdu13a@gmail.com>
-Date: Wed, 7 Nov 2018 07:53:00 -0500
-Subject: [PATCH 16/17] Fix file permissions
-
----
- drivers/amlogic/amports/video.c                    | 0
- drivers/amlogic/hdmi/hdmi_common/hdmi_parameters.c | 0
- 2 files changed, 0 insertions(+), 0 deletions(-)
- mode change 100755 => 100644 drivers/amlogic/amports/video.c
- mode change 100755 => 100644 drivers/amlogic/hdmi/hdmi_common/hdmi_parameters.c
-
-diff --git a/drivers/amlogic/amports/video.c b/drivers/amlogic/amports/video.c
-old mode 100755
-new mode 100644
-diff --git a/drivers/amlogic/hdmi/hdmi_common/hdmi_parameters.c b/drivers/amlogic/hdmi/hdmi_common/hdmi_parameters.c
-old mode 100755
-new mode 100644
-
-From 56c26c0db25edda15320366f739f116143c6a683 Mon Sep 17 00:00:00 2001
-From: cdu13a <cdu13a@gmail.com>
-Date: Thu, 8 Nov 2018 06:23:53 -0500
-Subject: [PATCH 17/17] Lower tmds_clk and pixel_freq for 4k60/50 420 modes
-
----
- drivers/amlogic/hdmi/hdmi_common/hdmi_parameters.c | 10 +++++-----
- 1 file changed, 5 insertions(+), 5 deletions(-)
-
-diff --git a/drivers/amlogic/hdmi/hdmi_common/hdmi_parameters.c b/drivers/amlogic/hdmi/hdmi_common/hdmi_parameters.c
-index 7b0ca548ba4..34cb2fcf3ca 100644
---- a/drivers/amlogic/hdmi/hdmi_common/hdmi_parameters.c
-+++ b/drivers/amlogic/hdmi/hdmi_common/hdmi_parameters.c
-@@ -880,9 +880,9 @@ static struct hdmi_format_para fmt_para_3840x2160p50_16x9_y420 = {
- 	.progress_mode = 1,
- 	.scrambler_en = 0,
- 	.tmds_clk_div40 = 0,
--	.tmds_clk = 594000,
-+	.tmds_clk = 297000,
- 	.timing = {
--		.pixel_freq = 594000,
-+		.pixel_freq = 297000,
- 		.h_freq = 112500,
- 		.v_freq = 50000,
- 		.vsync_polarity = 1,
-@@ -942,10 +942,10 @@ static struct hdmi_format_para fmt_para_3840x2160p60_16x9_y420 = {
- 	.progress_mode = 1,
- 	.scrambler_en = 0,
- 	.tmds_clk_div40 = 0,
--	.tmds_clk = 594000,
-+	.tmds_clk = 297000,
- 	.timing = {
--		.pixel_freq = 594000,
--		.frac_freq = 593407,
-+		.pixel_freq = 297000,
-+		.frac_freq = 296703,
- 		.h_freq = 135000,
- 		.v_freq = 60000,
- 		.vsync_polarity = 1,
