@@ -1,0 +1,14 @@
+diff -Naurp linux/drivers/amlogic/amports/video.c linux-patch/drivers/amlogic/amports/video.c
+--- linux/drivers/amlogic/amports/video.c	2018-11-30 09:51:02.000000000 +0200
++++ linux-patch/drivers/amlogic/amports/video.c	2018-11-30 10:11:30.000000000 +0200
+@@ -3913,8 +3913,8 @@ static irqreturn_t vsync_isr(int irq, vo
+ 			pr_info(" detect vout mode change! was %d now %d\n",old_vmode,new_vmode);
+ 			old_vmode = new_vmode;
+ 		}
+-		if (video_property_changed)
+-			dump_params(vf);
++		/*if (video_property_changed)
++			dump_params(vf);*/
+ 
+ 	} else if (!vf && cur_cd != COLORDEPTH_24B) {
+ 		struct vframe_provider_s *vfp = vf_get_provider(RECEIVER_NAME);
