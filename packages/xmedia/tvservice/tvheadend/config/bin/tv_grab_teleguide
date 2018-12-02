@@ -1,10 +1,9 @@
 #!/bin/sh
-################################################################################
-#      This file is part of Alex@ELEC - http://www.alexelec.in.ua
-#      Copyright (C) 2011-present Alexandr Zuyev (alex@alexelec.in.ua)
-################################################################################
 
-XMLTV_LOCATION_WEB="https://download2.teleguide.info/download/new3/xmltv.xml.gz"
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (C) 2011-present Alex@ELEC (http://alexelec.in.ua)
+
+XMLTV_LOCATION_WEB="http://download.teleguide.info/download/new3/xmltv.xml.gz"
 
 XMLTV_DIR="/storage/.config/tvheadend/xmltv.data"
 XMLTV_FILE_GZ="$XMLTV_DIR/xmltv.xml.gz"
@@ -34,12 +33,12 @@ done
 
 if [ -n "$dflag" ]
 then
-  echo "teleguide.info grabber"
+  echo "Teleguide.Info grabber"
 fi
 
 if [ -n "$vflag" ]
 then
-  echo "2.0"
+  echo "3.0"
 fi
 
 if [ -n "$cflag" ]

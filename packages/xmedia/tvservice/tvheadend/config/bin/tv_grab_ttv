@@ -1,23 +1,27 @@
 #!/bin/sh
-################################################################################
-#      This file is part of Alex@ELEC - http://www.alexelec.in.ua
-#      Copyright (C) 2011-present Alexandr Zuyev (alex@alexelec.in.ua)
-################################################################################
+
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (C) 2011-present Alex@ELEC (http://alexelec.in.ua)
 
 XMLTV_LOCATION_WEB="http://api.torrent-tv.ru/ttv.xmltv.xml.gz"
-
 XMLTV_DIR="/storage/.config/tvheadend/xmltv.data"
 XMLTV_FILE_GZ="$XMLTV_DIR/ttv.xmltv.xml.gz"
+SERVICE_DIR="/storage/.cache/services"
 
 ################################### --MAIN-- #####################################
 
 if [ $# -lt 1 ]; then
   . /etc/profile
 
+  # get EPG
   mkdir -p $XMLTV_DIR
   curl -s --connect-timeout 5 --max-time 20 -R -z "$XMLTV_FILE_GZ" -o "$XMLTV_FILE_GZ" "$XMLTV_LOCATION_WEB"
   [ ! -e "$XMLTV_FILE_GZ" ] && exit 1
   zcat "$XMLTV_FILE_GZ"
+
+  # update TTV playlist
+  [ -f $SERVICE_DIR/acerun.conf ] && . $SERVICE_DIR/acerun.conf
+  [ "$ACETTV_UPD" == "1" ] && /usr/bin/ttvget-live nologo > /dev/null 2>&1
   exit 0
 fi
 
@@ -34,12 +38,12 @@ done
 
 if [ -n "$dflag" ]
 then
-  echo "torrent-tv.ru grabber"
+  echo "Torrent-TV.ru grabber"
 fi
 
 if [ -n "$vflag" ]
 then
-  echo "2.0"
+  echo "3.0"
 fi
 
 if [ -n "$cflag" ]
