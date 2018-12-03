@@ -6,9 +6,17 @@
 SERVICE_DIR="/storage/.cache/services"
 LOG_TVH="/var/log/tvheadend.log"
 LOG_TVH_OLD="/var/log/tvheadend.log.old"
-TVH_HOME="/storage/.config/tvheadend"
+TVH_VERSION="/storage/.config/tvheadend-4.3"
 
-. $SERVICE_DIR/tvheadend.conf
+if [ -f "$TVH_VERSION" ]; then
+  TVH_BIN="tvheadend"
+  TVH_HOME="/storage/.config/tvheadend"
+else
+  TVH_BIN="tvheadend42"
+  TVH_HOME="/storage/.config/tvheadend42"
+fi
+
+[ -f "$SERVICE_DIR/tvheadend.conf" ] && . $SERVICE_DIR/tvheadend.conf
 
 if [ "$TVH_DEBUG" == "1" ]; then
   [ -f "$LOG_TVH" ] && mv -f $LOG_TVH $LOG_TVH_OLD
@@ -32,4 +40,4 @@ if [ "$TVH_FEINIT" == "1" ] ; then
   done
 fi
 
-echo "TVH_ARGS=\"$TVHEADEND_ARG\"" > /run/libreelec/tvh.conf
+exec /usr/bin/$TVH_BIN $TVHEADEND_ARG

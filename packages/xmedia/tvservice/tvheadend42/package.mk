@@ -68,7 +68,4 @@ post_makeinstall_target() {
 # config
   mkdir -p $INSTALL/usr/config/tvheadend42
     cp -a $PKG_DIR/config/* $INSTALL/usr/config/tvheadend42
-# TTV IPTV networks
-  mkdir -p $INSTALL/usr/share/tvheadend42
-    cp -a $PKG_DIR/networks $INSTALL/usr/share/tvheadend42
 }
