@@ -2,20 +2,17 @@
 # Copyright (C) 2011-present Alex@ELEC (http://alexelec.in.ua)
 
 PKG_NAME="tvheadend"
-PKG_VERSION="79ea2a4"
-TVH_VERSION_NUMBER=
+PKG_VERSION="39b74cb"
 PKG_LICENSE="GPL"
 PKG_SITE="http://www.tvheadend.org"
 PKG_URL=""
 PKG_DEPENDS_TARGET="toolchain avahi curl dvb-apps libdvbcsa libiconv openssl pngquant:host Python2:host yasm"
-PKG_SECTION="xmedia/tvservice"
 PKG_LONGDESC="Tvheadend: a TV streaming server for Linux supporting DVB-S, DVB-S2, DVB-C, DVB-T, ATSC, IPTV, and Analog video (V4L) as input sources."
 PKG_TOOLCHAIN="configure"
 
 #colors
-  RED="\033[0;31m"
-  YELLOW="\033[1;33m"
-  ENDCOLOR="\033[0m"
+YELLOW="\033[1;33m"
+ENDCOLOR="\033[0m"
 
 unpack() {
   git clone -b 'master' https://github.com/tvheadend/tvheadend.git $PKG_BUILD
@@ -23,7 +20,7 @@ unpack() {
   git reset --hard $PKG_VERSION
   TVH_VERSION_NUMBER=`git describe --match "v*" | sed 's/-g.*$//'`
   echo "-----------------------------------------------------------"
-  echo -e $RED"****** Tvheadend version:"$ENDCOLOR $YELLOW"$TVH_VERSION_NUMBER"$ENDCOLOR $RED"******"$ENDCOLOR
+  echo -e $YELLOW"****** Tvheadend version: $TVH_VERSION_NUMBER ******"$ENDCOLOR
   echo "-----------------------------------------------------------"
   cd $ROOT
 }
