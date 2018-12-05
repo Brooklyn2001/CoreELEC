@@ -1,0 +1,32 @@
+diff -Naurp tvheadend42/src/subscriptions.c tvheadend42-patch/src/subscriptions.c
+--- tvheadend42/src/subscriptions.c	2018-12-05 17:30:11.000000000 +0200
++++ tvheadend42-patch/src/subscriptions.c	2018-12-05 20:43:16.000000000 +0200
+@@ -374,7 +374,7 @@ subscription_reschedule(void)
+       /* Already got a service */
+ 
+       if(subgetstate(s) != SUBSCRIPTION_BAD_SERVICE)
+-	continue; /* And it is not bad, so we're happy */
++	    continue; /* And it is not bad, so we're happy */
+ 
+       tvhwarn(LS_SUBSCRIPTION, "%04X: service instance is bad, reason: %s",
+               shortid(s), streaming_code2txt(s->ths_testing_error));
+@@ -394,6 +394,19 @@ subscription_reschedule(void)
+         s->ths_service = si->si_s;
+ 
+       s->ths_last_error = 0;
++
++      if(s->ths_testing_error == SM_CODE_NO_INPUT) {
++        if (s->ths_channel)
++          tvhinfo(LS_SUBSCRIPTION, "%04X: restarting channel %s",
++                  shortid(s), channel_get_name(s->ths_channel));
++        else
++          tvhinfo(LS_SUBSCRIPTION, "%04X: restarting service %s",
++                  shortid(s), s->ths_service->s_nicename);
++        s->ths_testing_error = 0;
++        s->ths_current_instance = NULL;
++        service_instance_list_clear(&s->ths_instances);
++        continue;
++      }
+     }
+ 
+     error = s->ths_testing_error;
