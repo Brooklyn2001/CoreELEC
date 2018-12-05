@@ -1,0 +1,13 @@
+diff -Naurp pvr.iptvsimple/CMakeLists.txt pvr.iptvsimple-patch/CMakeLists.txt
+--- pvr.iptvsimple/CMakeLists.txt	2018-11-04 09:24:56.000000000 +0200
++++ pvr.iptvsimple-patch/CMakeLists.txt	2018-11-19 10:29:33.000000000 +0200
+@@ -29,6 +29,9 @@ set(IPTV_SOURCES src/client.cpp
+ set(IPTV_HEADERS src/client.h
+                  src/PVRIptvData.h)
+ 
++addon_version(pvr.iptvsimple IPTV)
++add_definitions(-DIPTV_VERSION=${IPTV_VERSION})
++
+ build_addon(pvr.iptvsimple IPTV DEPLIBS)
+ 
+ include(CPack)

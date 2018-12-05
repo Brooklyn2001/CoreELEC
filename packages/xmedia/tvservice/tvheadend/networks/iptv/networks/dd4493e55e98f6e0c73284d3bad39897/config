@@ -1,11 +1,11 @@
 {
 	"url": "file:///storage/ttv-m3u/TVH-TTV.m3u",
 	"channel_number": 1000,
-	"refetch_period": 360,
+	"refetch_period": 180,
 	"ssl_peer_verify": false,
 	"tsid_zero": false,
 	"remove_args": "ticket",
-	"ignore_path": 9,
+	"ignore_path": 1,
 	"scan_create": false,
 	"service_sid": 1,
 	"priority": 1,

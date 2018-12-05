@@ -23,3 +23,4 @@ PKG_LONGDESC="OEM: Metapackage for various OEM packages"
 # tv services
   PKG_DEPENDS_TARGET="$PKG_DEPENDS_TARGET oscam"
   PKG_DEPENDS_TARGET="$PKG_DEPENDS_TARGET tvheadend"
+  PKG_DEPENDS_TARGET="$PKG_DEPENDS_TARGET tvheadend42"
