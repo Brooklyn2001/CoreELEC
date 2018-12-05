@@ -20,5 +20,7 @@ if [ -f "$FFMPEG_CH_FILE" ]; then
   [ -n "$OPT_RESULT" ] && OPT_FFMPEG=$OPT_RESULT
 fi
 
-[ "$URLCH_INFO" == "yes" ] && echo "*** Start TTV stream: [$CH_NAME] - [$URL] ***" >&2
+echo "*** Start TTV stream: [$CH_NAME] - [$URL] ***" >&2
+[ "$CH_INFO" == "yes" ] && /usr/bin/ffmpeg -i "$URL" >&2
+
 /usr/bin/ffmpeg -v $LOG_LEVEL -i "$URL" -c copy $OPT_FFMPEG -f mpegts pipe:1
