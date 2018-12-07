@@ -1,20 +1,11 @@
 diff -Naurp CoreELEC-settings/src/resources/lib/modules/services.py CoreELEC-settings-patch/src/resources/lib/modules/services.py
 --- CoreELEC-settings/src/resources/lib/modules/services.py	2018-12-06 16:31:57.000000000 +0200
 +++ CoreELEC-settings-patch/src/resources/lib/modules/services.py	2018-12-06 16:40:26.000000000 +0200
-@@ -11,7 +11,7 @@ import xbmcgui
- import xbmcaddon
- 
- 
--__scriptid__ = 'service.libreelec.settings'
-+__scriptid__ = 'service.coreelec.settings'
- __addon__ = xbmcaddon.Addon(id=__scriptid__)
- _ = __addon__.getLocalizedString
- 
 @@ -645,7 +645,7 @@ class services:
              xbmcDialog = xbmcgui.Dialog()
              newpwd = xbmcDialog.input(_(746))
              if newpwd:
--                if newpwd == "libreelec":
+-                if newpwd == "coreelec":
 +                if newpwd == "mcpc":
                      self.oe.execute('cp -fp /usr/cache/shadow /storage/.cache/shadow')
                      readout3 = "Retype password"
