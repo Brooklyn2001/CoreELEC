@@ -1,16 +1,7 @@
-diff -Naurp tvheadend42/src/subscriptions.c tvheadend42-patch/src/subscriptions.c
---- tvheadend42/src/subscriptions.c	2018-12-05 17:30:11.000000000 +0200
-+++ tvheadend42-patch/src/subscriptions.c	2018-12-06 10:09:28.000000000 +0200
-@@ -374,7 +374,7 @@ subscription_reschedule(void)
-       /* Already got a service */
- 
-       if(subgetstate(s) != SUBSCRIPTION_BAD_SERVICE)
--	continue; /* And it is not bad, so we're happy */
-+	    continue; /* And it is not bad, so we're happy */
- 
-       tvhwarn(LS_SUBSCRIPTION, "%04X: service instance is bad, reason: %s",
-               shortid(s), streaming_code2txt(s->ths_testing_error));
-@@ -394,6 +394,26 @@ subscription_reschedule(void)
+diff -Naurp tvheadend-2591563/src/subscriptions.c tvheadend-2591563-patch/src/subscriptions.c
+--- tvheadend-2591563/src/subscriptions.c	2018-12-07 09:09:42.000000000 +0200
++++ tvheadend-2591563-patch/src/subscriptions.c	2018-12-07 09:54:43.000000000 +0200
+@@ -403,6 +403,26 @@ subscription_reschedule(void)
          s->ths_service = si->si_s;
  
        s->ths_last_error = 0;
@@ -19,10 +10,10 @@ diff -Naurp tvheadend42/src/subscriptions.c tvheadend42-patch/src/subscriptions.
 +      if(s->ths_testing_error == SM_CODE_NO_INPUT) {
 +        source_info_t si_tmp;
 +        s->ths_service->s_setsourceinfo(s->ths_service, &si_tmp);
-+        if(strcmp(si_tmp.si_network, "Torrent-TV") == 0) {
++        if(strstr(si_tmp.si_network, "IPTV") != NULL) {
 +          if (s->ths_channel)
 +            tvhinfo(LS_SUBSCRIPTION, "*** %04X: restarting Torrent-TV channel \"%s\" ***",
-+                  shortid(s), channel_get_name(s->ths_channel));
++                  shortid(s), channel_get_name(s->ths_channel, channel_blank_name));
 +          else
 +            tvhinfo(LS_SUBSCRIPTION, "*** %04X: restarting Torrent-TV service \"%s\" ***",
 +                  shortid(s), s->ths_service->s_nicename);

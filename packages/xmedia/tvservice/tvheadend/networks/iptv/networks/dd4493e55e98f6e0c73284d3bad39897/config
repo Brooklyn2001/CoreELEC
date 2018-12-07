@@ -14,7 +14,7 @@
 	"max_bandwidth": 0,
 	"max_timeout": 15,
 	"remove_scrambled": true,
-	"networkname": "Torrent-TV",
+	"networkname": "IPTV-TTV",
 	"pnetworkname": "TTV",
 	"nid": 0,
 	"autodiscovery": 0,
