@@ -31,6 +31,7 @@ makeinstall_target() {
     cp ttvget-live.src.x $INSTALL/usr/bin/ttvget-live
     cp ttvget-direct.src.x $INSTALL/usr/bin/ttvget-direct
     cp ttvstream.src.x $INSTALL/usr/bin/ttvstream
+      ln -sf ttvstream $INSTALL/usr/bin/ttvstream-direct
     cp ttv-logo.src.x $INSTALL/usr/bin/ttv-logo 2>/dev/null || true
     cp ttv-xmltv.src.x $INSTALL/usr/bin/ttv-xmltv 2>/dev/null || true
   mkdir -p $INSTALL/usr/config/acestream
