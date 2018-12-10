@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (C) 2009-2016 Stephan Raue (stephan@openelec.tv)
 # Copyright (C) 2017-present Team LibreELEC (https://libreelec.tv)
+# Copyright (C) 2011-present Alex@ELEC (http://alexelec.in.ua)
 
 PKG_NAME="kodi"
 PKG_VERSION="c6107e5"
@@ -267,6 +268,7 @@ post_makeinstall_target() {
       ln -sf cputemp $INSTALL/usr/bin/gputemp
     cp $PKG_DIR/scripts/setwakeup.sh $INSTALL/usr/bin
     cp $PKG_DIR/scripts/kodi-remote $INSTALL/usr/bin
+    cp $PKG_DIR/scripts/kbd_layout.py $INSTALL/usr/bin
 
   mkdir -p $INSTALL/usr/share/kodi/addons
     cp -R $PKG_DIR/config/os.openelec.tv $INSTALL/usr/share/kodi/addons
