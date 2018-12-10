@@ -5,7 +5,7 @@ diff -Naurp kodi-c6107e5/system/keymaps/keyboard.xml kodi-c6107e5-patch/system/k
        <k mod="ctrl,shift">ReloadKeymaps</k>
        <d mod="ctrl,shift">ToggleDebug</d>
        <r mod="ctrl,shift">ToggleDirtyRegionVisualization</r>
-+      <space mod="ctrl">RunScript(/usr/bin/kbd_layout.py)</space>
++      <escape mod="ctrl">RunScript(/usr/bin/kbd_layout.py)</escape>
      </keyboard>
    </global>
    <LoginScreen>
