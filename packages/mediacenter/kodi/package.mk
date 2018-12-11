@@ -4,8 +4,8 @@
 # Copyright (C) 2011-present Alex@ELEC (http://alexelec.in.ua)
 
 PKG_NAME="kodi"
-PKG_VERSION="c6107e5"
-PKG_SHA256="24a5fd6f907995a9c4005d9aef5d386dc6f237d2da2f4bb0e08c4eba28c62d81"
+PKG_VERSION="10edcdb"
+PKG_SHA256="a1c43ca2e8160d22a8fca68df6307495c0312d1a47e34f202fdfe719237b6594"
 PKG_ARCH="any"
 PKG_LICENSE="GPL"
 PKG_SITE="http://www.kodi.tv"
