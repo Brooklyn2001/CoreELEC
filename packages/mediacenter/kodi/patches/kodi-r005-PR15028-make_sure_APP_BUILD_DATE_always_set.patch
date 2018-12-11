@@ -1,0 +1,22 @@
+From 5fdfb8ee3ec869ae84936c14720e91372406a425 Mon Sep 17 00:00:00 2001
+From: wsnipex <wsnipex@a1.net>
+Date: Mon, 10 Dec 2018 12:00:22 +0100
+Subject: [PATCH] [cmake] make sure APP_BUILD_DATE is always set
+
+---
+ cmake/scripts/common/Macros.cmake | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/cmake/scripts/common/Macros.cmake b/cmake/scripts/common/Macros.cmake
+index 8f457ad8de61..ff871973a39c 100644
+--- a/cmake/scripts/common/Macros.cmake
++++ b/cmake/scripts/common/Macros.cmake
+@@ -623,6 +623,8 @@ function(core_find_git_rev stamp)
+   # allow manual setting GIT_VERSION
+   if(GIT_VERSION)
+     set(${stamp} ${GIT_VERSION} PARENT_SCOPE)
++    string(TIMESTAMP APP_BUILD_DATE "%Y%m%d" UTC)
++    set(APP_BUILD_DATE ${APP_BUILD_DATE} PARENT_SCOPE)
+   else()
+     find_package(Git)
+     if(GIT_FOUND AND EXISTS ${CMAKE_SOURCE_DIR}/.git)

@@ -1,0 +1,112 @@
+diff -Naurp CoreELEC-settings/src/resources/bin/ace-get.sh CoreELEC-settings-patch/src/resources/bin/ace-get.sh
+--- CoreELEC-settings/src/resources/bin/ace-get.sh	2018-12-08 08:12:08.000000000 +0200
++++ CoreELEC-settings-patch/src/resources/bin/ace-get.sh	2018-12-08 08:16:24.000000000 +0200
+@@ -1,8 +1,7 @@
+ #!/bin/sh
+-################################################################################
+-#      This file is part of Alex@ELEC - http://www.alexelec.in.ua
+-#      Copyright (C) 2011-present Alexandr Zuyev (alex@alexelec.in.ua)
+-################################################################################
++
++# SPDX-License-Identifier: GPL-2.0-or-later
++# Copyright (C) 2011-present Alex@ELEC (http://alexelec.in.ua)
+ 
+ URL_LAST="https://raw.githubusercontent.com/AlexELEC/acestream-aml/master/latest"
+ URL_MAIN="https://github.com/AlexELEC/acestream-aml/releases/download"
+diff -Naurp CoreELEC-settings/src/resources/bin/logos.sh CoreELEC-settings-patch/src/resources/bin/logos.sh
+--- CoreELEC-settings/src/resources/bin/logos.sh	2018-12-08 08:12:09.000000000 +0200
++++ CoreELEC-settings-patch/src/resources/bin/logos.sh	2018-12-08 08:16:32.000000000 +0200
+@@ -1,14 +1,15 @@
+ #!/bin/sh
+-################################################################################
+-#      This file is part of Alex@ELEC - http://www.alexelec.in.ua
+-#      Copyright (C) 2011-present Alexandr Zuyev (alex@alexelec.in.ua)
+-################################################################################
++
++# SPDX-License-Identifier: GPL-2.0-or-later
++# Copyright (C) 2011-present Alex@ELEC (http://alexelec.in.ua)
+ 
+ . /storage/.cache/services/logos.conf
+-. /tmp/tvh-url.logos
+ 
+ LOGOS_DIR="/storage/picons/tvh"
+ RNAME_DIR="/storage/picons/rename"
++
++TVH_URL="http://127.0.0.1:9981"
++[ -f /tmp/tvh-url.logos ] && . /tmp/tvh-url.logos
+ TVH_CH_COUNT=`curl -s $TVH_URL'/api/channel/grid?start=0&limit=1' | jq -r '.total'`
+ TVH_CH_COUNT=`expr $TVH_CH_COUNT - 1`
+ 
+@@ -39,19 +40,22 @@ if [ "$1" == "unpack" ] ; then
+   echo "Unpack logos completed."
+ 
+ # Create logos list file
+-elif [ "$1" == "list" ] ; then
++elif [ "$1" == "list" ]; then
+   rm -f $SOURCE_FILE_NAMES
+   touch $SOURCE_FILE_NAMES
+ 
+   # reading channels from TVH
+   for channel in `seq 0 $TVH_CH_COUNT`; do
+       ch_name=`curl -s $TVH_URL'/api/channel/grid?start='$channel'&limit=1' | jq -r '.entries | .[] | .name' | sed 's/\// /; s/|//; s/://; s/  / /g; s/ test$//i; s/[ \t]*$//'`
+-      if [ -z "$ch_name" ]; then
++      ch_icon=`curl -s $TVH_URL'/api/channel/grid?start='$channel'&limit=1' | jq -r '.entries | .[] | .icon'  | awk -F\: '{print $1}'`
++      if [ -z "$ch_name" -o "$ch_icon" != "picon" ]; then
+           continue
+       else
+-          IS_CHANNEL=$(find $SOURCE_DIR_LOGOS -iname "$ch_name.png")
+-          IS_CHANNEL_LIST=$(grep "$IS_CHANNEL" $SOURCE_FILE_NAMES)
+-          [ "$IS_CHANNEL" != "" -a "$IS_CHANNEL_LIST" == "" ] && echo "$IS_CHANNEL" >> $SOURCE_FILE_NAMES
++          IS_FILE=`find "$SOURCE_DIR_LOGOS" -iname "$ch_name.png" | grep -m1 .`
++          if [ -n "$IS_FILE" ]; then
++              IS_FILE_LIST=`grep -i -m1 -x "$IS_FILE" $SOURCE_FILE_NAMES`
++              [ -z "$IS_FILE_LIST" ] && echo "$IS_FILE" >> $SOURCE_FILE_NAMES
++          fi
+       fi
+   done
+ 
+@@ -85,7 +89,8 @@ elif [ "$1" == "misslist" ] ; then
+   # reading channels from TVH
+   for channel in `seq 0 $TVH_CH_COUNT`; do
+       ch_name=`curl -s $TVH_URL'/api/channel/grid?start='$channel'&limit=1' | jq -r '.entries | .[] | .name' | sed 's/\// /; s/|//; s/://; s/  / /g; s/ test$//i; s/[ \t]*$//'`
+-      if [ -z "$ch_name" ]; then
++      ch_icon=`curl -s $TVH_URL'/api/channel/grid?start='$channel'&limit=1' | jq -r '.entries | .[] | .icon'  | awk -F\: '{print $1}'`
++      if [ -z "$ch_name" -o "$ch_icon" != "picon" ]; then
+           continue
+       else
+           lcase_name=$(echo "$ch_name" | tr 'A-Z' 'a-z' | sed 's/\// /')
+@@ -114,7 +119,8 @@ elif [ "$1" == "missing" ] ; then
+       # reading channels from TVH
+       for channel in `seq 0 $TVH_CH_COUNT`; do
+           ch_name=`curl -s $TVH_URL'/api/channel/grid?start='$channel'&limit=1' | jq -r '.entries | .[] | .name' | sed 's/\// /; s/|//; s/://; s/  / /g; s/ test$//i; s/[ \t]*$//'`
+-          if [ -z "$ch_name" ]; then
++          ch_icon=`curl -s $TVH_URL'/api/channel/grid?start='$channel'&limit=1' | jq -r '.entries | .[] | .icon'  | awk -F\: '{print $1}'`
++          if [ -z "$ch_name" -o "$ch_icon" != "picon" ]; then
+               continue
+           else
+               lcase_name=$(echo "$ch_name" | tr 'A-Z' 'a-z' | sed 's/\// /')
+@@ -153,7 +159,8 @@ elif [ "$1" == "missing" ] ; then
+   rm -f $RENAME_FILE
+   for channel in `seq 0 $TVH_CH_COUNT`; do
+       ch_name=`curl -s $TVH_URL'/api/channel/grid?start='$channel'&limit=1' | jq -r '.entries | .[] | .name' | sed 's/\// /; s/|//; s/://; s/  / /g; s/ test$//i; s/[ \t]*$//'`
+-      if [ -z "$ch_name" ]; then
++      ch_icon=`curl -s $TVH_URL'/api/channel/grid?start='$channel'&limit=1' | jq -r '.entries | .[] | .icon'  | awk -F\: '{print $1}'`
++      if [ -z "$ch_name" -o "$ch_icon" != "picon" ]; then
+           continue
+       else
+           ch_service=`curl -s $TVH_URL'/api/channel/grid?start='$channel'&limit=1' | jq -r '.entries | .[] | .icon' | sed 's/^picon:\/\///; s/\.png$//;'`
+diff -Naurp CoreELEC-settings/src/resources/bin/tvh-status.sh CoreELEC-settings-patch/src/resources/bin/tvh-status.sh
+--- CoreELEC-settings/src/resources/bin/tvh-status.sh	2018-12-08 08:12:08.000000000 +0200
++++ CoreELEC-settings-patch/src/resources/bin/tvh-status.sh	2018-12-08 08:16:17.000000000 +0200
+@@ -1,8 +1,7 @@
+ #!/bin/sh
+-################################################################################
+-#      This file is part of Alex@ELEC - http://www.alexelec.ru
+-#      Copyright (C) 2011-present Alexandr Zuyev (alex@alexelec.ru)
+-################################################################################
++
++# SPDX-License-Identifier: GPL-2.0-or-later
++# Copyright (C) 2011-present Alex@ELEC (http://alexelec.in.ua)
+ 
+ LOCAL_TVH_CFG="/storage/.cache/services/tvheadend.conf"
+ EXT_TVH_CFG="/storage/.kodi/userdata/addon_data/pvr.hts/settings.xml"

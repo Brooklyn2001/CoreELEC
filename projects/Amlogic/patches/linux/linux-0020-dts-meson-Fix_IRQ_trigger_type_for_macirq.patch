@@ -1,0 +1,155 @@
+From acb30e2e3f557d1179e50f28e467122085044599 Mon Sep 17 00:00:00 2001
+From: cdu13a <cdu13a@gmail.com>
+Date: Wed, 5 Dec 2018 15:31:22 -0500
+Subject: [PATCH] arm64: dts: meson: Fix IRQ trigger type for macirq
+
+Backport from mainline.
+
+The wrong IRQ trigger type for the macirq was causing the connection
+speed to drop.
+
+http://lists.infradead.org/pipermail/linux-amlogic/2018-December/009325.html
+http://lists.infradead.org/pipermail/linux-amlogic/2018-December/009324.html
+---
+ arch/arm64/boot/dts/amlogic/gxbb_p200.dts                 | 2 +-
+ arch/arm64/boot/dts/amlogic/gxbb_p200_1G_wetek_hub.dts    | 2 +-
+ arch/arm64/boot/dts/amlogic/gxbb_p200_2G.dts              | 2 +-
+ arch/arm64/boot/dts/amlogic/gxbb_p200_2G_wetek_play_2.dts | 2 +-
+ arch/arm64/boot/dts/amlogic/gxbb_p200_iptv.dts            | 2 +-
+ arch/arm64/boot/dts/amlogic/gxl_p230_2g.dts               | 2 +-
+ arch/arm64/boot/dts/amlogic/gxm_q200_2g.dts               | 2 +-
+ arch/arm64/boot/dts/amlogic/gxtvbb_p310.dts               | 2 +-
+ arch/arm64/boot/dts/amlogic/gxtvbb_t966_skt.dts           | 2 +-
+ arch/arm64/boot/dts/meson64_odroidc2.dts                  | 2 +-
+ 10 files changed, 10 insertions(+), 10 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/amlogic/gxbb_p200.dts b/arch/arm64/boot/dts/amlogic/gxbb_p200.dts
+index ea97c01085d..5e862bceb73 100644
+--- a/arch/arm64/boot/dts/amlogic/gxbb_p200.dts
++++ b/arch/arm64/boot/dts/amlogic/gxbb_p200.dts
+@@ -198,7 +198,7 @@
+                 compatible = "amlogic, gxbb-rgmii-dwmac";
+                 reg = <0x0 0xc9410000 0x0 0x10000
+                 0x0 0xc8834540 0x0 0x8>;
+-                interrupts = <0 8 1>;
++                interrupts = <0 8 4>;
+                 phy-mode= "rgmii";
+                 pinctrl-names = "eth_pins";
+                 pinctrl-0 = <&eth_pins>;
+diff --git a/arch/arm64/boot/dts/amlogic/gxbb_p200_1G_wetek_hub.dts b/arch/arm64/boot/dts/amlogic/gxbb_p200_1G_wetek_hub.dts
+index 554153d31d5..e1358fdb5f8 100644
+--- a/arch/arm64/boot/dts/amlogic/gxbb_p200_1G_wetek_hub.dts
++++ b/arch/arm64/boot/dts/amlogic/gxbb_p200_1G_wetek_hub.dts
+@@ -198,7 +198,7 @@
+                 compatible = "amlogic, gxbb-rgmii-dwmac";
+                 reg = <0x0 0xc9410000 0x0 0x10000
+                 0x0 0xc8834540 0x0 0x8>;
+-                interrupts = <0 8 1>;
++                interrupts = <0 8 4>;
+                 phy-mode= "rgmii";
+                 pinctrl-names = "eth_pins";
+                 pinctrl-0 = <&eth_pins>;
+diff --git a/arch/arm64/boot/dts/amlogic/gxbb_p200_2G.dts b/arch/arm64/boot/dts/amlogic/gxbb_p200_2G.dts
+index 033654d3b0e..71c5c76112f 100644
+--- a/arch/arm64/boot/dts/amlogic/gxbb_p200_2G.dts
++++ b/arch/arm64/boot/dts/amlogic/gxbb_p200_2G.dts
+@@ -198,7 +198,7 @@
+                 compatible = "amlogic, gxbb-rgmii-dwmac";
+                 reg = <0x0 0xc9410000 0x0 0x10000
+                 0x0 0xc8834540 0x0 0x8>;
+-                interrupts = <0 8 1>;
++                interrupts = <0 8 4>;
+                 phy-mode= "rgmii";
+                 pinctrl-names = "eth_pins";
+                 pinctrl-0 = <&eth_pins>;
+diff --git a/arch/arm64/boot/dts/amlogic/gxbb_p200_2G_wetek_play_2.dts b/arch/arm64/boot/dts/amlogic/gxbb_p200_2G_wetek_play_2.dts
+index 8ca95883dbf..f5b8b01d56e 100644
+--- a/arch/arm64/boot/dts/amlogic/gxbb_p200_2G_wetek_play_2.dts
++++ b/arch/arm64/boot/dts/amlogic/gxbb_p200_2G_wetek_play_2.dts
+@@ -198,7 +198,7 @@
+                 compatible = "amlogic, gxbb-rgmii-dwmac";
+                 reg = <0x0 0xc9410000 0x0 0x10000
+                 0x0 0xc8834540 0x0 0x8>;
+-                interrupts = <0 8 1>;
++                interrupts = <0 8 4>;
+                 phy-mode= "rgmii";
+                 pinctrl-names = "eth_pins";
+                 pinctrl-0 = <&eth_pins>;
+diff --git a/arch/arm64/boot/dts/amlogic/gxbb_p200_iptv.dts b/arch/arm64/boot/dts/amlogic/gxbb_p200_iptv.dts
+index f6fc038d2da..5d51fb3583b 100644
+--- a/arch/arm64/boot/dts/amlogic/gxbb_p200_iptv.dts
++++ b/arch/arm64/boot/dts/amlogic/gxbb_p200_iptv.dts
+@@ -197,7 +197,7 @@
+                 compatible = "amlogic, gxbb-rgmii-dwmac";
+                 reg = <0x0 0xc9410000 0x0 0x10000
+                 0x0 0xc8834540 0x0 0x8>;
+-                interrupts = <0 8 1>;
++                interrupts = <0 8 4>;
+                 phy-mode= "rgmii";
+                 pinctrl-names = "eth_pins";
+                 pinctrl-0 = <&eth_pins>;
+diff --git a/arch/arm64/boot/dts/amlogic/gxl_p230_2g.dts b/arch/arm64/boot/dts/amlogic/gxl_p230_2g.dts
+index e11b48b68eb..32a274318c6 100644
+--- a/arch/arm64/boot/dts/amlogic/gxl_p230_2g.dts
++++ b/arch/arm64/boot/dts/amlogic/gxl_p230_2g.dts
+@@ -212,7 +212,7 @@
+ 			reg = <0x0 0xc9410000 0x0 0x10000
+ 			0x0 0xc8834540 0x0 0x8
+ 			0x0 0xc8834558 0x0 0xc>;
+-			interrupts = <0 8 1>;
++			interrupts = <0 8 4>;
+ 			phy-mode= "rgmii";
+ 			pinctrl-names = "external_eth_pins";
+ 			pinctrl-0 = <&external_eth_pins>;
+diff --git a/arch/arm64/boot/dts/amlogic/gxm_q200_2g.dts b/arch/arm64/boot/dts/amlogic/gxm_q200_2g.dts
+index 8acb76bbc97..c8680844621 100644
+--- a/arch/arm64/boot/dts/amlogic/gxm_q200_2g.dts
++++ b/arch/arm64/boot/dts/amlogic/gxm_q200_2g.dts
+@@ -213,7 +213,7 @@
+ 			reg = <0x0 0xc9410000 0x0 0x10000
+ 			0x0 0xc8834540 0x0 0x8
+ 			0x0 0xc8834558 0x0 0xc>;
+-			interrupts = <0 8 1>;
++			interrupts = <0 8 4>;
+ 			phy-mode= "rgmii";
+ 			pinctrl-names = "external_eth_pins";
+ 			pinctrl-0 = <&external_eth_pins>;
+diff --git a/arch/arm64/boot/dts/amlogic/gxtvbb_p310.dts b/arch/arm64/boot/dts/amlogic/gxtvbb_p310.dts
+index 835b0b5976d..239255135f9 100644
+--- a/arch/arm64/boot/dts/amlogic/gxtvbb_p310.dts
++++ b/arch/arm64/boot/dts/amlogic/gxtvbb_p310.dts
+@@ -1074,7 +1074,7 @@
+                 compatible = "amlogic, gxbb-rgmii-dwmac";
+                 reg = <0x0 0xc9410000 0x0 0x10000
+                 0x0 0xc8834540 0x0 0x8>;
+-                interrupts = <0 8 1>;
++                interrupts = <0 8 4>;
+                 phy-mode= "rgmii";
+                 pinctrl-names = "eth_pins";
+                 pinctrl-0 = <&eth_pins>;
+diff --git a/arch/arm64/boot/dts/amlogic/gxtvbb_t966_skt.dts b/arch/arm64/boot/dts/amlogic/gxtvbb_t966_skt.dts
+index 32d7f3cd5dc..ef31d969b23 100644
+--- a/arch/arm64/boot/dts/amlogic/gxtvbb_t966_skt.dts
++++ b/arch/arm64/boot/dts/amlogic/gxtvbb_t966_skt.dts
+@@ -936,7 +936,7 @@
+                 compatible = "amlogic, gxbb-rgmii-dwmac";
+                 reg = <0x0 0xc9410000 0x0 0x10000
+                 0x0 0xc8834540 0x0 0x8>;
+-                interrupts = <0 8 1>;
++                interrupts = <0 8 4>;
+                 phy-mode= "rgmii";
+                 pinctrl-names = "eth_pins";
+                 pinctrl-0 = <&eth_pins>;
+diff --git a/arch/arm64/boot/dts/meson64_odroidc2.dts b/arch/arm64/boot/dts/meson64_odroidc2.dts
+index 8edcb3ce376..5f4b7e06f92 100644
+--- a/arch/arm64/boot/dts/meson64_odroidc2.dts
++++ b/arch/arm64/boot/dts/meson64_odroidc2.dts
+@@ -179,7 +179,7 @@
+                 compatible = "amlogic, gxbb-rgmii-dwmac";
+                 reg = <0x0 0xc9410000 0x0 0x10000
+                 0x0 0xc8834540 0x0 0x8>;
+-                interrupts = <0 8 1>;
++                interrupts = <0 8 4>;
+                 phy-mode= "rgmii";
+                 pinctrl-names = "eth_pins";
+                 pinctrl-0 = <&eth_pins>;

@@ -17,8 +17,8 @@ NOX_DIR="/storage/.config/noxbit"
 NOX_FILE="$NOX_DIR/ttv-m3u/noxbit.m3u"
 
 ACE_DIR="/storage/.config/acestream"
-JSON_FILE="$ACE_DIR/ttv-m3u/acelive.json"
-JSON_FILE_GZ="$JSON_FILE.gz"
+JSON_FILE_GZ="$ACE_DIR/ttv-m3u/acelive.json.gz"
+UPDATE_STATUS="$ACE_DIR/ttv-m3u/update.status"
 LOGO_LIST="$ACE_DIR/ttv-logo.list"
 FAV_LIST="$ACE_DIR/Trash-favorite.list"
 TMP_LIST="/tmp/tmp-acettv.list"
@@ -95,7 +95,7 @@ ace_run () {
 
   STAT_NEW=`stat $JSON_FILE_GZ | grep 'Modify:'`
   if [ "$STAT_OLD" == "$STAT_NEW" ]; then
-    if [ -f "$ACE_M3U" ]; then
+    if [ -f "$ACE_M3U" -a -f "$UPDATE_STATUS" ]; then
       if [ "$1" == "next" ]; then
         RUN_STATUS="AceStream: You already actual playlist."
         return
@@ -106,18 +106,16 @@ ace_run () {
     fi
   fi
 
-  gunzip -c "$JSON_FILE_GZ" > "$JSON_FILE"
-
   case "$TRANSLATE" in
     Trash-TTV)
-      /usr/bin/jq -r '.|= sort_by(.cat,.name)|.[]|select(.source=="ttv.json")|select(.name!=null)|select(.cat!=null) | .cat + " # " + .name + " # " + .fname' $JSON_FILE > $TMP_LIST
+      /usr/bin/zcat $JSON_FILE_GZ | /usr/bin/jq -r '.|= sort_by(.cat,.name)|.[]|select(.source=="ttv.json")|select(.name!=null)|select(.cat!=null) | .cat + " # " + .name + " # " + .fname' > $TMP_LIST
     ;;
     Trash-Ace)
-      /usr/bin/jq -r '.|= sort_by(.cat,.name)|.[]|select(.source=="as.json")|select(.provkey=="ace")|select(.name!=null)|select(.cat!=null) | .cat + " # " + .name + " # " + .fname' $JSON_FILE > $TMP_LIST
+      /usr/bin/zcat $JSON_FILE_GZ | /usr/bin/jq -r '.|= sort_by(.cat,.name)|.[]|select(.source=="as.json")|select(.provkey=="ace")|select(.name!=null)|select(.cat!=null) | .cat + " # " + .name + " # " + .fname' > $TMP_LIST
     ;;
     Trash-All)
-      /usr/bin/jq -r '.|= sort_by(.cat,.name)|.[]|select(.source=="ttv.json")|select(.name!=null)|select(.cat!=null) | .cat + " # " + .name + " # " + .fname' $JSON_FILE > $TMP_LIST
-      /usr/bin/jq -r '.|= sort_by(.cat,.name)|.[]|select(.source=="as.json")|select(.provkey=="ace")|select(.name!=null)|select(.cat!=null) | .cat + " # " + .name + " # " + .fname' $JSON_FILE >> $TMP_LIST
+      /usr/bin/zcat $JSON_FILE_GZ | /usr/bin/jq -r '.|= sort_by(.cat,.name)|.[]|select(.source=="ttv.json")|select(.name!=null)|select(.cat!=null) | .cat + " # " + .name + " # " + .fname' > $TMP_LIST
+      /usr/bin/zcat $JSON_FILE_GZ | /usr/bin/jq -r '.|= sort_by(.cat,.name)|.[]|select(.source=="as.json")|select(.provkey=="ace")|select(.name!=null)|select(.cat!=null) | .cat + " # " + .name + " # " + .fname' >> $TMP_LIST
     ;;
   esac
 
@@ -173,7 +171,7 @@ ace_run () {
   fi
 
   if [ "$CAT_ALLFON" == 1 ]; then
-    /usr/bin/jq -r '.|= sort_by(.cat,.name)|.[]|select(.source=="allfon.json")|select(.name!=null)|select(.cat!=null) | .cat + " # " + .name + " # " + .fname + " # " + .cid' $JSON_FILE >> $TMP_LIST
+    /usr/bin/zcat $JSON_FILE_GZ | /usr/bin/jq -r '.|= sort_by(.cat,.name)|.[]|select(.source=="allfon.json")|select(.name!=null)|select(.cat!=null) | .cat + " # " + .name + " # " + .fname + " # " + .cid' >> $TMP_LIST
   fi
   sed '/^$/d' -i $TMP_LIST
 
@@ -286,7 +284,7 @@ ace_run () {
   fi
 
   rm -fr $PART_DIR
-
+  echo "TTV $STAT_NEW" > $UPDATE_STATUS
   [ "$1" == "next" ] && RUN_STATUS="Done! Playlist created."
 }
 

@@ -9,7 +9,8 @@ TTV_API_URL="http://1ttvxbmc.top/v3"
 TTV_CH_LIST_FILE="/tmp/channels.ttv"
 TTV_CAT_LIST_FILE="/tmp/categories.ttv"
 TTV_M3U_FILE="$M3U_DIR/SITE-TTV.m3u"
-TVH_TTV_M3U_FILE="$M3U_DIR/SITE-TVH-TTV.m3u"
+TVH_M3U="$M3U_DIR/SITE-TVH-TTV.m3u"
+TVH_LST="$M3U_DIR/SITE-TVH-TTV.list"
 
 ACE_DIR="/storage/.config/acestream"
 FAV_LIST="$ACE_DIR/Site-favorite.list"
@@ -48,6 +49,10 @@ cat $INFILE |
 
       echo "#EXTINF:-1 group-title=\"$CH_CAT\" tvg-logo=\"$CH_LOGO\",$CH_NAME" >> $INFILE.m3u
       echo "http://${URL_IP}:6878/ace/getstream?id=${CH_CID}&.mp4" >> $INFILE.m3u
+
+      echo "#EXTINF:-1 group-title=\"$CH_CAT\" tvg-logo=\"$CH_LOGO\",$CH_NAME" >> $INFILE.tvh
+      echo "pipe://ttvstream-direct $CH_NAME" >> $INFILE.tvh
+      echo "$CH_NAME # http://${URL_IP}:6878/ace/getstream?id=${CH_CID}&.mp4" >> $INFILE.lst
   done
   rm -f $INFILE
 }
@@ -103,7 +108,9 @@ rm -f $TTV_CAT_LIST_FILE
 
 # favorite channel start
   if [ ! -f "${FAV_LIST}.sample" ]; then
-    cat $TTV_CH_LIST_FILE | awk -F\# '{print $1,"#",$2}' | sed 's/[ \t]*$//g' > ${FAV_LIST}.sample
+    cat $TTV_CH_LIST_FILE | awk -F\# '{print $1,"#",$2}' | sed 's/[ \t]*$//g' > ${FAV_LIST}.nosort
+    sort ${FAV_LIST}.nosort > ${FAV_LIST}.sample
+    rm -f ${FAV_LIST}.nosort
   fi
 
   if [ -f "$FAV_LIST" ]; then
@@ -172,17 +179,23 @@ while true; do
   [ $(ls /tmp/ttv/$patern 2>/dev/null | wc -l) -lt 1 ] && break
 done
 
-PART_FILES=`ls $PART_DIR/*.m3u 2>/dev/null`
-if [ "$PART_FILES" != "" ]; then
+PART_ACE=`ls $PART_DIR/*.m3u 2>/dev/null`
+if [ "$PART_ACE" != "" ]; then
   echo '#EXTM3U' > $TTV_M3U_FILE
-  cat $PART_FILES >> $TTV_M3U_FILE
+  cat $PART_ACE >> $TTV_M3U_FILE
 
-  # Tvheadend playlist
-  if [ -f "$SERVICE_DIR/tvheadend.conf" ]; then
-      cp -f $TTV_M3U_FILE $TVH_TTV_M3U_FILE
-      sed 's|^http://|pipe://ttvstream http://|g' -i $TVH_TTV_M3U_FILE
-  fi
+  # Add External playlist
   [ -f "$M3U_DIR/add_playlist.m3u" ] && cat $M3U_DIR/add_playlist.m3u >> $TTV_M3U_FILE
+
+  PART_TVH=`ls $PART_DIR/*.tvh 2>/dev/null`
+  rm -f $TVH_LST
+  if [ "$PART_TVH" != "" ]; then
+      echo '#EXTM3U' > $TVH_M3U
+      cat $PART_TVH >> $TVH_M3U
+
+      PART_LST=`ls $PART_DIR/*.lst 2>/dev/null`
+      [ "$PART_LST" != "" ] && cat $PART_LST >> $TVH_LST
+  fi
   echo "Done! Playlist created."
 else
   echo "Error create playlist files!"

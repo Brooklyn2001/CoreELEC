@@ -289,7 +289,7 @@ diff -Naurp CoreELEC-settings-238e0c2/src/defaults.py CoreELEC-settings-238e0c2-
 +    'D_TTV_SOFT'     : 'AceStream',
 +    'D_TRANSLATE'    : 'Trash-TTV',
 +    'D_ACETTV_UPD'   : '0',
-+    'TTV_DEL_LIST'   : "rm -fr /storage/.config/acestream/ttv-m3u/*",
++    'TTV_DEL_LIST'   : "rm -f /storage/.config/acestream/ttv-m3u/update.status",
 +    'TTV_RUN_LIST'   : "/usr/bin/ttvget-live",
 +    }
 +
