@@ -1,0 +1,409 @@
+From 03f89a8aa6c1b3f69f693cbf2ed8d300f4fc1c67 Mon Sep 17 00:00:00 2001
+From: Ray <1458889+Raybuntu@users.noreply.github.com>
+Date: Tue, 11 Dec 2018 11:50:10 +0100
+Subject: [PATCH] Fix macirq for the other AML dts
+
+---
+ arch/arm64/boot/dts/amlogic/gxbb_p201.dts       | 2 +-
+ arch/arm64/boot/dts/amlogic/gxl_p212_1g.dts     | 2 +-
+ arch/arm64/boot/dts/amlogic/gxl_p212_1g_AB.dts  | 2 +-
+ arch/arm64/boot/dts/amlogic/gxl_p212_2g.dts     | 2 +-
+ arch/arm64/boot/dts/amlogic/gxl_p212_2g_AB.dts  | 2 +-
+ arch/arm64/boot/dts/amlogic/gxl_p230_2g.dts     | 2 +-
+ arch/arm64/boot/dts/amlogic/gxl_p231_1g.dts     | 2 +-
+ arch/arm64/boot/dts/amlogic/gxl_p231_2g.dts     | 2 +-
+ arch/arm64/boot/dts/amlogic/gxl_p281_1g.dts     | 2 +-
+ arch/arm64/boot/dts/amlogic/gxl_skt.dts         | 2 +-
+ arch/arm64/boot/dts/amlogic/gxm_q200_2g.dts     | 2 +-
+ arch/arm64/boot/dts/amlogic/gxm_q201_1g.dts     | 2 +-
+ arch/arm64/boot/dts/amlogic/gxm_q201_2g.dts     | 2 +-
+ arch/arm64/boot/dts/amlogic/gxm_skt.dts         | 2 +-
+ arch/arm64/boot/dts/amlogic/gxtvbb_9023_skt.dts | 2 +-
+ arch/arm64/boot/dts/amlogic/gxtvbb_p300.dts     | 2 +-
+ arch/arm64/boot/dts/amlogic/gxtvbb_p301.dts     | 2 +-
+ arch/arm64/boot/dts/amlogic/gxtvbb_p311.dts     | 2 +-
+ arch/arm64/boot/dts/amlogic/gxtvbb_skt.dts      | 2 +-
+ arch/arm64/boot/dts/amlogic/txl_p320.dts        | 2 +-
+ arch/arm64/boot/dts/amlogic/txl_p321.dts        | 2 +-
+ arch/arm64/boot/dts/amlogic/txl_p321_512m.dts   | 2 +-
+ arch/arm64/boot/dts/amlogic/txl_p321_v2.dts     | 2 +-
+ arch/arm64/boot/dts/amlogic/txl_p341.dts        | 2 +-
+ arch/arm64/boot/dts/amlogic/txl_skt.dts         | 2 +-
+ arch/arm64/boot/dts/amlogic/txl_t950_skt.dts    | 4 ++--
+ arch/arm64/boot/dts/amlogic/txl_t960_p346.dts   | 2 +-
+ arch/arm64/boot/dts/amlogic/txl_t960_skt.dts    | 2 +-
+ 28 files changed, 29 insertions(+), 29 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/amlogic/gxbb_p201.dts b/arch/arm64/boot/dts/amlogic/gxbb_p201.dts
+index 0ef44c1bfe4..1cde651e996 100644
+--- a/arch/arm64/boot/dts/amlogic/gxbb_p201.dts
++++ b/arch/arm64/boot/dts/amlogic/gxbb_p201.dts
+@@ -192,7 +192,7 @@
+                 compatible = "amlogic, gxbb-rmii-dwmac";
+                 reg = <0x0 0xc9410000 0x0 0x10000
+                 0x0 0xc8834540 0x0 0x8>;
+-                interrupts = <0 8 1>;
++                interrupts = <0 8 4>;
+                 phy-mode= "rmii";
+                 pinctrl-names = "eth_pins";
+                 pinctrl-0 = <&eth_pins>;
+diff --git a/arch/arm64/boot/dts/amlogic/gxl_p212_1g.dts b/arch/arm64/boot/dts/amlogic/gxl_p212_1g.dts
+index 225bc8dabf9..8459991f2f4 100644
+--- a/arch/arm64/boot/dts/amlogic/gxl_p212_1g.dts
++++ b/arch/arm64/boot/dts/amlogic/gxl_p212_1g.dts
+@@ -211,7 +211,7 @@
+ 						reg = <0x0 0xc9410000 0x0 0x10000
+ 						0x0 0xc8834540 0x0 0x8
+ 						0x0 0xc8834558 0x0 0xc>;
+-			interrupts = <0 8 1
++			interrupts = <0 8 4
+ 						  0 9 1>;
+ 						phy-mode= "rmii";
+ 						pinctrl-names = "internal_eth_pins";
+diff --git a/arch/arm64/boot/dts/amlogic/gxl_p212_1g_AB.dts b/arch/arm64/boot/dts/amlogic/gxl_p212_1g_AB.dts
+index 4b08523fbad..f2fec95a4c8 100644
+--- a/arch/arm64/boot/dts/amlogic/gxl_p212_1g_AB.dts
++++ b/arch/arm64/boot/dts/amlogic/gxl_p212_1g_AB.dts
+@@ -205,7 +205,7 @@
+ 						reg = <0x0 0xc9410000 0x0 0x10000
+ 						0x0 0xc8834540 0x0 0x8
+ 						0x0 0xc8834558 0x0 0xc>;
+-			interrupts = <0 8 1
++			interrupts = <0 8 4
+ 						  0 9 1>;
+ 						phy-mode= "rmii";
+ 						pinctrl-names = "internal_eth_pins";
+diff --git a/arch/arm64/boot/dts/amlogic/gxl_p212_2g.dts b/arch/arm64/boot/dts/amlogic/gxl_p212_2g.dts
+index a18c24fe79f..c2cf7b8a44f 100644
+--- a/arch/arm64/boot/dts/amlogic/gxl_p212_2g.dts
++++ b/arch/arm64/boot/dts/amlogic/gxl_p212_2g.dts
+@@ -212,7 +212,7 @@
+ 			reg = <0x0 0xc9410000 0x0 0x10000
+ 			0x0 0xc8834540 0x0 0x8
+ 			0x0 0xc8834558 0x0 0xc>;
+-			interrupts = <0 8 1
++			interrupts = <0 8 4
+ 						  0 9 1>;
+ 			phy-mode= "rmii";
+ 			pinctrl-names = "internal_eth_pins";
+diff --git a/arch/arm64/boot/dts/amlogic/gxl_p212_2g_AB.dts b/arch/arm64/boot/dts/amlogic/gxl_p212_2g_AB.dts
+index 66a79a5136f..8e069afb310 100644
+--- a/arch/arm64/boot/dts/amlogic/gxl_p212_2g_AB.dts
++++ b/arch/arm64/boot/dts/amlogic/gxl_p212_2g_AB.dts
+@@ -205,7 +205,7 @@
+ 			reg = <0x0 0xc9410000 0x0 0x10000
+ 			0x0 0xc8834540 0x0 0x8
+ 			0x0 0xc8834558 0x0 0xc>;
+-			interrupts = <0 8 1
++			interrupts = <0 8 4
+ 						  0 9 1>;
+ 			phy-mode= "rmii";
+ 			pinctrl-names = "internal_eth_pins";
+diff --git a/arch/arm64/boot/dts/amlogic/gxl_p230_2g.dts b/arch/arm64/boot/dts/amlogic/gxl_p230_2g.dts
+index 32a274318c6..fd29de5099a 100644
+--- a/arch/arm64/boot/dts/amlogic/gxl_p230_2g.dts
++++ b/arch/arm64/boot/dts/amlogic/gxl_p230_2g.dts
+@@ -234,7 +234,7 @@
+ 			reg = <0x0 0xc9410000 0x0 0x10000
+ 			0x0 0xc8834540 0x0 0x8
+ 			0x0 0xc8834558 0x0 0xc>;
+-			interrupts = <0 8 1
++			interrupts = <0 8 4
+ 						  0 9 1>;
+ 			phy-mode= "rmii";
+ 			pinctrl-names = "internal_eth_pins";
+diff --git a/arch/arm64/boot/dts/amlogic/gxl_p231_1g.dts b/arch/arm64/boot/dts/amlogic/gxl_p231_1g.dts
+index da6fdbbd9fb..75d60c154e7 100644
+--- a/arch/arm64/boot/dts/amlogic/gxl_p231_1g.dts
++++ b/arch/arm64/boot/dts/amlogic/gxl_p231_1g.dts
+@@ -211,7 +211,7 @@
+ 			reg = <0x0 0xc9410000 0x0 0x10000
+ 			0x0 0xc8834540 0x0 0x8
+ 			0x0 0xc8834558 0x0 0xc>;
+-			interrupts = <0 8 1
++			interrupts = <0 8 4
+ 						  0 9 1>;
+ 			phy-mode= "rmii";
+ 			pinctrl-names = "internal_eth_pins";
+diff --git a/arch/arm64/boot/dts/amlogic/gxl_p231_2g.dts b/arch/arm64/boot/dts/amlogic/gxl_p231_2g.dts
+index fa53d131731..9b13113db53 100644
+--- a/arch/arm64/boot/dts/amlogic/gxl_p231_2g.dts
++++ b/arch/arm64/boot/dts/amlogic/gxl_p231_2g.dts
+@@ -222,7 +222,7 @@
+ 			reg = <0x0 0xc9410000 0x0 0x10000
+ 			0x0 0xc8834540 0x0 0x8
+ 			0x0 0xc8834558 0x0 0xc>;
+-			interrupts = <0 8 1
++			interrupts = <0 8 4
+ 						  0 9 1>;
+ 			phy-mode= "rmii";
+ 			pinctrl-names = "internal_eth_pins";
+diff --git a/arch/arm64/boot/dts/amlogic/gxl_p281_1g.dts b/arch/arm64/boot/dts/amlogic/gxl_p281_1g.dts
+index 8e2ccf2f47a..8e3e6f18ae5 100644
+--- a/arch/arm64/boot/dts/amlogic/gxl_p281_1g.dts
++++ b/arch/arm64/boot/dts/amlogic/gxl_p281_1g.dts
+@@ -234,7 +234,7 @@
+ 						reg = <0x0 0xc9410000 0x0 0x10000
+ 						0x0 0xc8834540 0x0 0x8
+ 						0x0 0xc8834558 0x0 0xc>;
+-			interrupts = <0 8 1
++			interrupts = <0 8 4
+ 						  0 9 1>;
+ 						phy-mode= "rmii";
+ 						pinctrl-names = "internal_eth_pins";
+diff --git a/arch/arm64/boot/dts/amlogic/gxl_skt.dts b/arch/arm64/boot/dts/amlogic/gxl_skt.dts
+index 18ef86f6edf..1f44963e120 100644
+--- a/arch/arm64/boot/dts/amlogic/gxl_skt.dts
++++ b/arch/arm64/boot/dts/amlogic/gxl_skt.dts
+@@ -210,7 +210,7 @@
+ 						reg = <0x0 0xc9410000 0x0 0x10000
+ 						0x0 0xc8834540 0x0 0x8
+ 						0x0 0xc8834558 0x0 0xc>;
+-						interrupts = <0 8 1>;
++						interrupts = <0 8 4>;
+ 						phy-mode= "rmii";
+ 						pinctrl-names = "internal_eth_pins";
+ 						pinctrl-0 = <&internal_eth_pins>;
+diff --git a/arch/arm64/boot/dts/amlogic/gxm_q200_2g.dts b/arch/arm64/boot/dts/amlogic/gxm_q200_2g.dts
+index c8680844621..c5da065ba72 100644
+--- a/arch/arm64/boot/dts/amlogic/gxm_q200_2g.dts
++++ b/arch/arm64/boot/dts/amlogic/gxm_q200_2g.dts
+@@ -235,7 +235,7 @@
+ 			reg = <0x0 0xc9410000 0x0 0x10000
+ 			0x0 0xc8834540 0x0 0x8
+ 			0x0 0xc8834558 0x0 0xc>;
+-			interrupts = <0 8 1
++			interrupts = <0 8 4
+ 						  0 9 1>;
+ 			phy-mode= "rmii";
+ 			pinctrl-names = "internal_eth_pins";
+diff --git a/arch/arm64/boot/dts/amlogic/gxm_q201_1g.dts b/arch/arm64/boot/dts/amlogic/gxm_q201_1g.dts
+index 8d54713f185..cc33b1f26d5 100644
+--- a/arch/arm64/boot/dts/amlogic/gxm_q201_1g.dts
++++ b/arch/arm64/boot/dts/amlogic/gxm_q201_1g.dts
+@@ -212,7 +212,7 @@
+ 			reg = <0x0 0xc9410000 0x0 0x10000
+ 			0x0 0xc8834540 0x0 0x8
+ 			0x0 0xc8834558 0x0 0xc>;
+-			interrupts = <0 8 1
++			interrupts = <0 8 4
+ 						  0 9 1>;
+ 			phy-mode= "rmii";
+ 			pinctrl-names = "internal_eth_pins";
+diff --git a/arch/arm64/boot/dts/amlogic/gxm_q201_2g.dts b/arch/arm64/boot/dts/amlogic/gxm_q201_2g.dts
+index c9e56fa4cbd..fad31ccc5df 100644
+--- a/arch/arm64/boot/dts/amlogic/gxm_q201_2g.dts
++++ b/arch/arm64/boot/dts/amlogic/gxm_q201_2g.dts
+@@ -223,7 +223,7 @@
+ 						reg = <0x0 0xc9410000 0x0 0x10000
+ 						0x0 0xc8834540 0x0 0x8
+ 						0x0 0xc8834558 0x0 0xc>;
+-						interrupts = <0 8 1>;
++						interrupts = <0 8 4>;
+ 						phy-mode= "rmii";
+ 						pinctrl-names = "internal_eth_pins";
+ 						pinctrl-0 = <&internal_eth_pins>;
+diff --git a/arch/arm64/boot/dts/amlogic/gxm_skt.dts b/arch/arm64/boot/dts/amlogic/gxm_skt.dts
+index d5d6d086828..965b319a510 100644
+--- a/arch/arm64/boot/dts/amlogic/gxm_skt.dts
++++ b/arch/arm64/boot/dts/amlogic/gxm_skt.dts
+@@ -210,7 +210,7 @@
+ 						reg = <0x0 0xc9410000 0x0 0x10000
+ 						0x0 0xc8834540 0x0 0x8
+ 						0x0 0xc8834558 0x0 0xc>;
+-						interrupts = <0 8 1>;
++						interrupts = <0 8 4>;
+ 						phy-mode= "rmii";
+ 						pinctrl-names = "internal_eth_pins";
+ 						pinctrl-0 = <&internal_eth_pins>;
+diff --git a/arch/arm64/boot/dts/amlogic/gxtvbb_9023_skt.dts b/arch/arm64/boot/dts/amlogic/gxtvbb_9023_skt.dts
+index 2130c79d0e7..f82a90357bd 100644
+--- a/arch/arm64/boot/dts/amlogic/gxtvbb_9023_skt.dts
++++ b/arch/arm64/boot/dts/amlogic/gxtvbb_9023_skt.dts
+@@ -916,7 +916,7 @@
+ 		compatible = "amlogic, gxbb-rmii-dwmac";
+ 		reg = <0x0 0xc9410000 0x0 0x10000
+ 			0x0 0xc8834540 0x0 0x8>;
+-		interrupts = <0 8 1>;
++		interrupts = <0 8 4>;
+ 		phy-mode= "rmii";
+ 		pinctrl-names = "eth_pins";
+ 		pinctrl-0 = <&eth_pins>;
+diff --git a/arch/arm64/boot/dts/amlogic/gxtvbb_p300.dts b/arch/arm64/boot/dts/amlogic/gxtvbb_p300.dts
+index 5cbdc3566b6..1eb4e3aadfc 100644
+--- a/arch/arm64/boot/dts/amlogic/gxtvbb_p300.dts
++++ b/arch/arm64/boot/dts/amlogic/gxtvbb_p300.dts
+@@ -1637,7 +1637,7 @@
+ 		compatible = "amlogic, gxbb-rmii-dwmac";
+ 		reg = <0x0 0xc9410000 0x0 0x10000
+ 			0x0 0xc8834540 0x0 0x8>;
+-		interrupts = <0 8 1>;
++		interrupts = <0 8 4>;
+ 		phy-mode= "rmii";
+ 		pinctrl-names = "eth_pins";
+ 		pinctrl-0 = <&eth_pins>;
+diff --git a/arch/arm64/boot/dts/amlogic/gxtvbb_p301.dts b/arch/arm64/boot/dts/amlogic/gxtvbb_p301.dts
+index ebe90ca2786..4718c3fb1f9 100644
+--- a/arch/arm64/boot/dts/amlogic/gxtvbb_p301.dts
++++ b/arch/arm64/boot/dts/amlogic/gxtvbb_p301.dts
+@@ -1672,7 +1672,7 @@
+ 		compatible = "amlogic, gxbb-rmii-dwmac";
+ 		reg = <0x0 0xc9410000 0x0 0x10000
+ 			0x0 0xc8834540 0x0 0x8>;
+-		interrupts = <0 8 1>;
++		interrupts = <0 8 4>;
+ 		phy-mode= "rmii";
+ 		pinctrl-names = "eth_pins";
+ 		pinctrl-0 = <&eth_pins>;
+diff --git a/arch/arm64/boot/dts/amlogic/gxtvbb_p311.dts b/arch/arm64/boot/dts/amlogic/gxtvbb_p311.dts
+index ada1e191a2d..b9f58a22742 100644
+--- a/arch/arm64/boot/dts/amlogic/gxtvbb_p311.dts
++++ b/arch/arm64/boot/dts/amlogic/gxtvbb_p311.dts
+@@ -1091,7 +1091,7 @@
+ 		compatible = "amlogic, gxbb-rmii-dwmac";
+ 		reg = <0x0 0xc9410000 0x0 0x10000
+ 			0x0 0xc8834540 0x0 0x8>;
+-		interrupts = <0 8 1>;
++		interrupts = <0 8 4>;
+ 		phy-mode= "rmii";
+ 		pinctrl-names = "eth_pins";
+ 		pinctrl-0 = <&eth_pins>;
+diff --git a/arch/arm64/boot/dts/amlogic/gxtvbb_skt.dts b/arch/arm64/boot/dts/amlogic/gxtvbb_skt.dts
+index 69ce64bfe21..62f4600c2ab 100644
+--- a/arch/arm64/boot/dts/amlogic/gxtvbb_skt.dts
++++ b/arch/arm64/boot/dts/amlogic/gxtvbb_skt.dts
+@@ -1176,7 +1176,7 @@
+ 		compatible = "amlogic, gxbb-rmii-dwmac";
+ 		reg = <0x0 0xc9410000 0x0 0x10000
+ 			0x0 0xc8834540 0x0 0x8>;
+-		interrupts = <0 8 1>;
++		interrupts = <0 8 4>;
+ 		phy-mode= "rmii";
+ 		pinctrl-names = "eth_pins";
+ 		pinctrl-0 = <&eth_pins>;
+diff --git a/arch/arm64/boot/dts/amlogic/txl_p320.dts b/arch/arm64/boot/dts/amlogic/txl_p320.dts
+index f3edce95678..f5ad6acb1be 100644
+--- a/arch/arm64/boot/dts/amlogic/txl_p320.dts
++++ b/arch/arm64/boot/dts/amlogic/txl_p320.dts
+@@ -308,7 +308,7 @@
+ 			0x0 0xc8834540 0x0 0x8
+ 			0x0 0xc8834558 0x0 0xc
+ 			0x0 0xc1104484 0x0 0x4>;
+-			interrupts = <0 8 1
++			interrupts = <0 8 4
+ 						  0 9 1>;
+ 			phy-mode= "rmii";
+ 			mc_val = <0x1800>;
+diff --git a/arch/arm64/boot/dts/amlogic/txl_p321.dts b/arch/arm64/boot/dts/amlogic/txl_p321.dts
+index 22115338eab..147ec14f8e4 100644
+--- a/arch/arm64/boot/dts/amlogic/txl_p321.dts
++++ b/arch/arm64/boot/dts/amlogic/txl_p321.dts
+@@ -295,7 +295,7 @@
+ 			0x0 0xc8834540 0x0 0x8
+ 			0x0 0xc8834558 0x0 0xc
+ 			0x0 0xc1104484 0x0 0x4>;
+-			interrupts = <0 8 1
++			interrupts = <0 8 4
+ 						  0 9 1>;
+ 			phy-mode= "rmii";
+ 			mc_val = <0x1800>;
+diff --git a/arch/arm64/boot/dts/amlogic/txl_p321_512m.dts b/arch/arm64/boot/dts/amlogic/txl_p321_512m.dts
+index 79009e14e68..cfc751edf0c 100644
+--- a/arch/arm64/boot/dts/amlogic/txl_p321_512m.dts
++++ b/arch/arm64/boot/dts/amlogic/txl_p321_512m.dts
+@@ -295,7 +295,7 @@
+ 			0x0 0xc8834540 0x0 0x8
+ 			0x0 0xc8834558 0x0 0xc
+ 			0x0 0xc1104484 0x0 0x4>;
+-			interrupts = <0 8 1
++			interrupts = <0 8 4
+ 						  0 9 1>;
+ 			phy-mode= "rmii";
+ 			mc_val = <0x1800>;
+diff --git a/arch/arm64/boot/dts/amlogic/txl_p321_v2.dts b/arch/arm64/boot/dts/amlogic/txl_p321_v2.dts
+index 368955525d4..a9dddb32f96 100644
+--- a/arch/arm64/boot/dts/amlogic/txl_p321_v2.dts
++++ b/arch/arm64/boot/dts/amlogic/txl_p321_v2.dts
+@@ -290,7 +290,7 @@
+ 			0x0 0xc8834540 0x0 0x8
+ 			0x0 0xc8834558 0x0 0xc
+ 			0x0 0xc1104484 0x0 0x4>;
+-			interrupts = <0 8 1
++			interrupts = <0 8 4
+ 						  0 9 1>;
+ 			phy-mode= "rmii";
+ 			mc_val = <0x1800>;
+diff --git a/arch/arm64/boot/dts/amlogic/txl_p341.dts b/arch/arm64/boot/dts/amlogic/txl_p341.dts
+index 98b46103339..a7fe3952419 100644
+--- a/arch/arm64/boot/dts/amlogic/txl_p341.dts
++++ b/arch/arm64/boot/dts/amlogic/txl_p341.dts
+@@ -309,7 +309,7 @@
+ 			0x0 0xc8834540 0x0 0x8
+ 			0x0 0xc8834558 0x0 0xc
+ 			0x0 0xc1104484 0x0 0x4>;
+-			interrupts = <0 8 1
++			interrupts = <0 8 4
+ 						  0 9 1>;
+ 			phy-mode= "rmii";
+ 			mc_val = <0x1800>;
+diff --git a/arch/arm64/boot/dts/amlogic/txl_skt.dts b/arch/arm64/boot/dts/amlogic/txl_skt.dts
+index cb530a8ef55..68e993a0411 100644
+--- a/arch/arm64/boot/dts/amlogic/txl_skt.dts
++++ b/arch/arm64/boot/dts/amlogic/txl_skt.dts
+@@ -275,7 +275,7 @@
+ 			reg = <0x0 0xc9410000 0x0 0x10000
+ 			0x0 0xc8834540 0x0 0x8
+ 			0x0 0xc8834558 0x0 0xc>;
+-			interrupts = <0 8 1>;
++			interrupts = <0 8 4>;
+ 			phy-mode= "rmii";
+ 			mc_val = <0x1800>;
+ 			resets = <&clock GCLK_IDX_ETHERNET>;
+diff --git a/arch/arm64/boot/dts/amlogic/txl_t950_skt.dts b/arch/arm64/boot/dts/amlogic/txl_t950_skt.dts
+index 729699656db..83bb5401b7f 100644
+--- a/arch/arm64/boot/dts/amlogic/txl_t950_skt.dts
++++ b/arch/arm64/boot/dts/amlogic/txl_t950_skt.dts
+@@ -181,7 +181,7 @@
+ 		reg = <0x0 0xc9410000 0x0 0x10000
+ 		0x0 0xc8834540 0x0 0x8
+ 		0x0 0xc8834558 0x0 0xc>;
+-		interrupts = <0 8 1>;
++		interrupts = <0 8 4>;
+ 		phy-mode= "rmii";
+ 		mc_val = <0x1800>;
+ 		resets = <&clock GCLK_IDX_ETHERNET>;
+@@ -313,7 +313,7 @@
+ 			reg = <0x0 0xc9410000 0x0 0x10000
+ 			0x0 0xc8834540 0x0 0x8
+ 			0x0 0xc8834558 0x0 0xc>;
+-			interrupts = <0 8 1>;
++			interrupts = <0 8 4>;
+ 			phy-mode= "rmii";
+ 			mc_val = <0x1800>;
+ 			resets = <&clock GCLK_IDX_ETHERNET>;
+diff --git a/arch/arm64/boot/dts/amlogic/txl_t960_p346.dts b/arch/arm64/boot/dts/amlogic/txl_t960_p346.dts
+index d61bf0ff559..9d95f2e2afe 100644
+--- a/arch/arm64/boot/dts/amlogic/txl_t960_p346.dts
++++ b/arch/arm64/boot/dts/amlogic/txl_t960_p346.dts
+@@ -293,7 +293,7 @@
+ 			0x0 0xc8834540 0x0 0x8
+ 			0x0 0xc8834558 0x0 0xc
+ 			0x0 0xc1104484 0x0 0x4>;
+-			interrupts = <0 8 1
++			interrupts = <0 8 4
+ 						  0 9 1>;
+ 			phy-mode= "rmii";
+ 			mc_val = <0x1800>;
+diff --git a/arch/arm64/boot/dts/amlogic/txl_t960_skt.dts b/arch/arm64/boot/dts/amlogic/txl_t960_skt.dts
+index b2e0c27f975..e9f10d066b7 100644
+--- a/arch/arm64/boot/dts/amlogic/txl_t960_skt.dts
++++ b/arch/arm64/boot/dts/amlogic/txl_t960_skt.dts
+@@ -290,7 +290,7 @@
+ 			0x0 0xc8834540 0x0 0x8
+ 			0x0 0xc8834558 0x0 0xc
+ 			0x0 0xc1104484 0x0 0x4>;
+-			interrupts = <0 8 1
++			interrupts = <0 8 4
+ 						  0 9 1>;
+ 			phy-mode= "rmii";
+ 			mc_val = <0x1800>;
