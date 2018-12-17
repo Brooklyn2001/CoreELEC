@@ -1,0 +1,30 @@
+From 630844777c9d3a335f894a79743d5bccd34249dc Mon Sep 17 00:00:00 2001
+From: Ray <1458889+Raybuntu@users.noreply.github.com>
+Date: Mon, 17 Dec 2018 10:20:48 +0100
+Subject: [PATCH] CEC: temp. disable CEC_INPUT_MASK check
+
+---
+ drivers/amlogic/cec/hdmi_ao_cec.c | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/amlogic/cec/hdmi_ao_cec.c b/drivers/amlogic/cec/hdmi_ao_cec.c
+index d9deabb17bf..329d60057e0 100644
+--- a/drivers/amlogic/cec/hdmi_ao_cec.c
++++ b/drivers/amlogic/cec/hdmi_ao_cec.c
+@@ -1529,11 +1529,11 @@ static void cec_task(struct work_struct *work)
+ 	int ret;
+ 
+ 	dwork = &cec_dev->cec_work;
+-	if (!(cec_dev->tx_dev->cec_func_config &
+-			(1 << CEC_INPUT_MASK))) {
+-		CEC_INFO("CEC input mode disabled\n");
+-		return;
+-	}
++	//if (!(cec_dev->tx_dev->cec_func_config &
++	//		(1 << CEC_INPUT_MASK))) {
++	//	CEC_INFO("CEC input mode disabled\n");
++	//	return;
++	//}
+ 	if (cec_dev &&
+ 			!(cec_dev->hal_flag & (1 << HDMI_OPTION_SYSTEM_CEC_CONTROL))) {
+ 		if (1 << cec_dev->cec_info.log_addr & (1 << 0x0 | 1 << 0xF)) {
